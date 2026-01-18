@@ -1,0 +1,67 @@
+/* ================================
+   TABLE BASE
+================================ */
+.table-header,
+.table-row {
+  display: grid;
+  gap: 12px;
+  padding: 12px 0;
+  align-items: center;
+}
+
+.table-header {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table-row {
+  font-size: 0.95rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table-row:hover {
+  background-color: #f8fafc;
+}
+
+/* ================================
+   COLUMN LAYOUTS
+================================ */
+.table-cols-default {
+  grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr 1fr 1.5fr;
+}
+
+.table-cols-admin {
+  grid-template-columns: 2fr 2.5fr 1.5fr 1fr 1.5fr;
+}
+
+/* ================================
+   TABLE ACTIONS
+================================ */
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.table-actions.center {
+  justify-content: center;
+}
+
+/* ================================
+   RESPONSIVE
+================================ */
+@media (max-width: 768px) {
+  .table-header {
+    display: none;
+  }
+
+  .table-row {
+    gap: 6px;
+    padding: 16px 0;
+  }
+
+  .table-actions {
+    justify-content: flex-start;
+  }
+}

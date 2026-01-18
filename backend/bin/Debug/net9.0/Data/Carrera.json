@@ -1,0 +1,20 @@
+[
+  {
+    "Id": 1,
+    "Nombre": "Ingenier\u00EDa",
+    "DuracionAnios": 5,
+    "Turno": "Ma\u00F1ana",
+    "Modalidad": "Presencial",
+    "Horario": "08:00-12:00",
+    "Estado": "Activa"
+  },
+  {
+    "Id": 2,
+    "Nombre": "Matematicas",
+    "DuracionAnios": 3,
+    "Turno": "Ma\u00F1ana",
+    "Modalidad": "Presencial",
+    "Horario": "18:00-20:00",
+    "Estado": "Activa"
+  }
+]

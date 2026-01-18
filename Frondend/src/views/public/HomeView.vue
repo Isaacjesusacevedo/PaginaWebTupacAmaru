@@ -1,0 +1,83 @@
+<template>
+  <main class="section">
+    <div class="card card-center">
+
+      <img
+        class="card-media"
+        src="@/components/Banner/bannerProfesor.jpg"
+        alt="Panel de administración"
+      />
+
+      <header class="text-center">
+        <h1>Panel de Administración</h1>
+        <p class="subtitle">
+          Seleccioná la opción que deseas gestionar
+        </p>
+      </header>
+
+      <nav class="admin-menu" aria-label="Menú de administración">
+        <ul>
+          <li>
+            <router-link to="/administracion" class="btn btn-primary btn-menu">
+              Gestión de administradores
+            </router-link>
+          </li>
+
+          <li>
+            <router-link to="/carreras" class="btn btn-primary btn-menu">
+              Carreras
+            </router-link>
+          </li>
+
+          <li>
+            <button class="btn btn-secondary btn-menu" disabled>
+              Información académica
+            </button>
+          </li>
+
+          <li>
+            <router-link to="/inscripcion" class="btn btn-primary btn-menu">
+              Formulario de inscripción
+            </router-link>
+          </li>
+
+          <li>
+            <router-link to="/listados" class="btn btn-primary btn-menu">
+              Listados
+            </router-link>
+          </li>
+
+          <li>
+            <button class="btn btn-secondary btn-menu" disabled>
+              Descargas
+            </button>
+          </li>
+
+          <li>
+            <router-link to="/login" class="btn btn-danger btn-menu">
+              Cerrar sesión
+            </router-link>
+          </li>
+        </ul>
+      </nav>
+
+    </div>
+  </main>
+</template>
+
+
+<script setup lang="ts">
+  import { ref, onMounted } from 'vue'
+
+  const mensaje = ref('')
+
+  onMounted(() => {
+    fetch('http://localhost:5089/weatherforecast')
+      .then(res => res.json())
+      .then(data => {
+        mensaje.value = 'Backend conectado'
+        console.log(data)
+      })
+      .catch(err => console.error(err))
+  })
+  </script>
