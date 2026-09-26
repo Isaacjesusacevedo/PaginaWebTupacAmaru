@@ -57,23 +57,17 @@
           </div>
         </div>
 
+        <!-- EMPTY STATE -->
+        <div v-if="!administradores.length && !error" class="table-row table-cols-admin">
+          <span class="table-empty-state">No hay administradores registrados</span>
+        </div>
+
+        <!-- ERROR STATE -->
+        <div v-if="error" class="table-row table-cols-admin">
+          <span class="table-empty-state" style="color: var(--color-danger);">{{ error }}</span>
+        </div>
+
       </div>
-
-      <!-- EMPTY STATE -->
-      <p
-        v-if="!administradores.length && !error"
-        class="text-center text-muted"
-      >
-        No hay administradores registrados
-      </p>
-
-      <!-- ERROR -->
-      <p
-        v-if="error"
-        class="text-center text-danger"
-      >
-        {{ error }}
-      </p>
 
       <!-- FOOTER CTA -->
       <footer class="table-actions center">

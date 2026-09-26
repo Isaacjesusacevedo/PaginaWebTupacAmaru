@@ -33,14 +33,25 @@
 
           <div class="field">
             <label for="password">Contraseña</label>
-            <input
-              id="password"
-              type="password"
-              v-model="password"
-              autocomplete="current-password"
-              required
-              :disabled="loading"
-            />
+            <div class="password-field">
+              <input
+                :type="showPassword ? 'text' : 'password'"
+                id="password"
+                v-model="password"
+                autocomplete="current-password"
+                required
+                :disabled="loading"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                @click="showPassword = !showPassword"
+                :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              >
+                <el-icon v-if="showPassword"><Hide /></el-icon>
+                <el-icon v-else><View /></el-icon>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -73,6 +84,7 @@ const email    = ref('')
 const password = ref('')
 const loading  = ref(false)
 const error    = ref<string | null>(null)
+const showPassword = ref(false)
 
 const API = import.meta.env.VITE_API_URL
 
