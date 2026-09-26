@@ -10,3 +10,11 @@ obj/
 # Visual Studio
 .vs/
 *.user
+
+# Logs
+*.log
+backend.log
+
+# Base de datos local (si se usa SQLite/MDF)
+*.mdf
+*.ldf
