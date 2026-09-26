@@ -46,6 +46,9 @@
   <span></span>
 </div>
 
+<div v-if="listado.length === 0" class="table-row table-cols-default">
+  <span class="text-center" style="grid-column: 1 / -1;">No hay alumnos inscriptos</span>
+</div>
 
       </div>
 

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Backend.Models;
 using Backend.Services;
 
@@ -15,11 +16,13 @@ public class SetupController : ControllerBase
 {
     private readonly IAdminAuthService _authService;
     private readonly IWebHostEnvironment _env;
+    private readonly ILogger<SetupController> _logger;
 
-    public SetupController(IAdminAuthService authService, IWebHostEnvironment env)
+    public SetupController(IAdminAuthService authService, IWebHostEnvironment env, ILogger<SetupController> logger)
     {
         _authService = authService;
         _env = env;
+        _logger = logger;
     }
 
     // POST: api/setup/admin
@@ -50,9 +53,10 @@ public class SetupController : ControllerBase
                           "Este endpoint ya no puede volver a usarse."
             });
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return StatusCode(500, new { error = "Error al crear el administrador inicial." });
+            _logger.LogError(ex, "Error al crear administrador inicial");
+            return StatusCode(500, new { error = "Error al crear el administrador inicial.", detalle = ex.Message });
         }
     }
 }

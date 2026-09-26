@@ -49,7 +49,7 @@ public class AdminAuthService : IAdminAuthService
         await using var cmd = new SqlCommand(
             "SELECT COUNT(*) FROM Administradores", conn);
 
-        var count = (long)(await cmd.ExecuteScalarAsync())!;
+        var count = Convert.ToInt64(await cmd.ExecuteScalarAsync());
         return count > 0;
     }
 

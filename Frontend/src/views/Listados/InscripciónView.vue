@@ -92,47 +92,61 @@
           <h2>Información académica</h2>
           <hr />
 
-          <div class="form-row">
+          <div class="form-checklist mt-2">
+            <p class="checklist-title">
+              <strong>Indicar si posee:</strong>
+            </p>
+
+            <label class="check-item">
+              <input type="checkbox" v-model="documentacion.titulo" />
+              <span class="check-custom"></span>
+              <span class="check-text">Título</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" v-model="documentacion.tituloEnTramite" />
+              <span class="check-custom"></span>
+              <span class="check-text">Título en trámite</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" v-model="documentacion.materiasAdeudadas" />
+              <span class="check-custom"></span>
+              <span class="check-text">Constancia de materias adeudadas</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" v-model="documentacion.alumnoRegular" />
+              <span class="check-custom"></span>
+              <span class="check-text">Constancia de alumno regular</span>
+            </label>
+          </div>
+
+          <!-- CAMPOS TÍTULO -->
+          <div v-if="documentacion.titulo" class="form-row mt-3">
             <div class="field">
               <label>Fecha de egreso del secundario</label>
-              <input type="date" v-model="alumno.FechaInscripcion" />
+              <input type="date" v-model="alumno.FechaInscripcion" required />
             </div>
 
             <div class="field">
               <label>Título secundario</label>
-              <input type="text" v-model="alumno.TituloSecundario" />
+              <input type="text" v-model="alumno.TituloSecundario" required />
             </div>
           </div>
 
-          <div class="form-checklist mt-2">
-  <p class="checklist-title">
-    <strong>Indicar si posee:</strong>
-  </p>
+          <!-- CAMPOS TÍTULO EN TRÁMITE -->
+          <div v-if="documentacion.tituloEnTramite" class="form-row mt-3">
+            <div class="field">
+              <label>Fecha estimada de obtención del título</label>
+              <input type="date" v-model="alumno.FechaEstimadaTitulo" required />
+            </div>
 
-  <label class="check-item">
-    <input type="checkbox" v-model="documentacion.titulo" />
-    <span class="check-custom"></span>
-    <span class="check-text">Título</span>
-  </label>
-
-  <label class="check-item">
-    <input type="checkbox" v-model="documentacion.tituloEnTramite" />
-    <span class="check-custom"></span>
-    <span class="check-text">Título en trámite</span>
-  </label>
-
-  <label class="check-item">
-    <input type="checkbox" v-model="documentacion.materiasAdeudadas" />
-    <span class="check-custom"></span>
-    <span class="check-text">Constancia de materias adeudadas</span>
-  </label>
-
-  <label class="check-item">
-    <input type="checkbox" v-model="documentacion.alumnoRegular" />
-    <span class="check-custom"></span>
-    <span class="check-text">Constancia de alumno regular</span>
-  </label>
-</div>
+            <div class="field">
+              <label>Institución donde cursa</label>
+              <input type="text" v-model="alumno.InstitucionTitulo" required />
+            </div>
+          </div>
 
         </section>
 
@@ -222,6 +236,8 @@ const edad = computed(() => {
     Turno: string
     CarreraId: string
     FechaInscripcion: string
+    FechaEstimadaTitulo: string
+    InstitucionTitulo: string
   }
 
   const alumno = reactive<Alumno>({
@@ -236,7 +252,9 @@ const edad = computed(() => {
     TituloSecundario: "",
     Turno: "",
     CarreraId: "",
-    FechaInscripcion: ""
+    FechaInscripcion: "",
+    FechaEstimadaTitulo: "",
+    InstitucionTitulo: ""
   })
 
   // ---------------------- Documentación ----------------------
@@ -247,8 +265,22 @@ const edad = computed(() => {
     alumnoRegular: false
   })
 
-  watch(() => documentacion.titulo, (v) => { if (v) documentacion.tituloEnTramite = false })
-  watch(() => documentacion.tituloEnTramite, (v) => { if (v) documentacion.titulo = false })
+  watch(() => documentacion.titulo, (v) => { 
+    if (v) {
+      documentacion.tituloEnTramite = false
+    } else {
+      alumno.FechaInscripcion = ""
+      alumno.TituloSecundario = ""
+    }
+  })
+  watch(() => documentacion.tituloEnTramite, (v) => { 
+    if (v) {
+      documentacion.titulo = false
+    } else {
+      alumno.FechaEstimadaTitulo = ""
+      alumno.InstitucionTitulo = ""
+    }
+  })
 
   // ---------------------- Estados ----------------------
   const loading = ref(false)
@@ -289,6 +321,13 @@ const edad = computed(() => {
     alumno.Turno = ""
     alumno.CarreraId = ""
     alumno.FechaInscripcion = ""
+    alumno.FechaEstimadaTitulo = ""
+    alumno.InstitucionTitulo = ""
+    // Reset documentación checkboxes
+    documentacion.titulo = false
+    documentacion.tituloEnTramite = false
+    documentacion.materiasAdeudadas = false
+    documentacion.alumnoRegular = false
   }
 
   const guardarAlumno = async () => {
@@ -297,6 +336,20 @@ const edad = computed(() => {
 
     if (!alumno.Nombre || !alumno.Apellido || !alumno.DNI || !alumno.CarreraId) {
       error.value = "Nombre, Apellido, DNI y Carrera son obligatorios"
+      loading.value = false
+      return
+    }
+
+    // Validación condicional: si tiene título, requiere fecha egreso y título
+    if (documentacion.titulo && (!alumno.FechaInscripcion || !alumno.TituloSecundario)) {
+      error.value = "Si posee título, debe completar fecha de egreso y título secundario"
+      loading.value = false
+      return
+    }
+
+    // Validación condicional: si tiene título en trámite, requiere fecha estimada e institución
+    if (documentacion.tituloEnTramite && (!alumno.FechaEstimadaTitulo || !alumno.InstitucionTitulo)) {
+      error.value = "Si tiene título en trámite, debe completar fecha estimada e institución"
       loading.value = false
       return
     }

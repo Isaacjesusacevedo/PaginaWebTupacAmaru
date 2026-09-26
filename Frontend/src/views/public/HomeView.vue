@@ -30,9 +30,9 @@
           </li>
 
           <li>
-            <button class="btn btn-secondary btn-menu" disabled>
-              Información académica
-            </button>
+            <router-link to="/formularios" class="btn btn-primary btn-menu">
+              Lista de formularios
+            </router-link>
           </li>
 
           <li>
@@ -54,9 +54,9 @@
           </li>
 
           <li>
-            <router-link to="/login" class="btn btn-danger btn-menu">
+            <button class="btn btn-danger btn-menu" @click="logout">
               Cerrar sesión
-            </router-link>
+            </button>
           </li>
         </ul>
       </nav>
@@ -67,17 +67,27 @@
 
 
 <script setup lang="ts">
-  import { ref, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
 
-  const mensaje = ref('')
+const router = useRouter()
+const { cerrarSesion } = useAuth()
 
-  onMounted(() => {
-    fetch('http://localhost:5089/weatherforecast')
-      .then(res => res.json())
-      .then(data => {
-        mensaje.value = 'Backend conectado'
-        console.log(data)
-      })
-      .catch(err => console.error(err))
-  })
-  </script>
+const mensaje = ref('')
+
+const logout = () => {
+  cerrarSesion()
+  router.push('/login')
+}
+
+onMounted(() => {
+  fetch('http://localhost:5089/weatherforecast')
+    .then(res => res.json())
+    .then(data => {
+      mensaje.value = 'Backend conectado'
+      console.log(data)
+    })
+    .catch(err => console.error(err))
+})
+</script>

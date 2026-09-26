@@ -61,6 +61,10 @@
           </div>
         </div>
 
+        <div v-if="carreras.length === 0" class="table-row table-cols-default">
+          <span class="text-center" style="grid-column: 1 / -1;">No hay carreras registradas</span>
+        </div>
+
       </div>
 
       <!-- ERROR -->

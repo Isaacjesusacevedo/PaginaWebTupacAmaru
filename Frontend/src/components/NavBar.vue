@@ -3,7 +3,7 @@
     <div class="logo">
       <RouterLink to="/"><img src="./logs/LogTupac.jpg" alt="Logo" /></RouterLink>
     </div>
-      <nav class="menu">
+    <nav class="menu">
       <RouterLink to="/inscripcion">Inscripción</RouterLink>
       <RouterLink to="/contacto">Contacto</RouterLink>
     </nav>
