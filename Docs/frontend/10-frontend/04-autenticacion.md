@@ -92,8 +92,6 @@ const authHeaders = (): Record<string, string> => {
 6. sessionStorage limpio → isAuthenticated() = false
 ```
 
-> **Nota:** Actualmente el logout se hace navegando a `/login`. El guard `soloInvitado` redirige a `home` si hay sesión, pero no cierra la sesión automáticamente. Se recomienda llamar `cerrarSesion()` explícitamente antes de navegar.
-
 ## Uso en Componentes
 
 ```typescript

@@ -105,12 +105,3 @@ const idNum = Number(id)  // Conversión manual si se necesita number
 |----------|-------------|---------|
 | `VITE_API_URL` | Base URL del backend API | `http://localhost:5089` |
 | `BASE_URL` | Base path del frontend (Vite) | `/` o `/app/` |
-
-## Agregar Nueva Ruta
-
-1. Crear vista en `src/views/<modulo>/NuevaView.vue`
-2. Agregar entrada en `router/index.ts`:
-   ```typescript
-   { path: '/nueva', name: 'nueva', component: () => import('../views/modulo/NuevaView.vue'), meta: { requiereAuth: true } }
-   ```
-3. Agregar enlace en `NavBar.vue` o `HomeView.vue` según corresponda

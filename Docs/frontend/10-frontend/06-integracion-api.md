@@ -16,8 +16,6 @@ Se define en `.env`:
 VITE_API_URL=http://localhost:5089
 ```
 
-> **⚠️ Inconsistencia detectada:** Algunas vistas (`CarreraView.vue`, `HomeView.vue`) usan URL hardcodeada `http://localhost:5089` en lugar de `import.meta.env.VITE_API_URL`. Debe corregirse.
-
 ## Headers Estándar
 
 Generados por `useAuth().authHeaders()`:
@@ -130,7 +128,7 @@ try {
 
 ## Tipado de Respuestas
 
-Interfaces locales en cada vista (no hay tipos compartidos):
+Interfaces locales en cada vista:
 
 ```typescript
 // AdministradorView.vue
@@ -165,8 +163,6 @@ interface AlumnoListado {
 }
 ```
 
-> **Recomendación:** Centralizar tipos en `src/types/api.ts` o similar para evitar duplicación y mantener sincronía con backend.
-
 ## Variables de Entorno Requeridas
 
 | Variable | Descripción | Requerida |
@@ -187,7 +183,7 @@ El backend debe permitir:
 
 ## Timeouts y Reintentos
 
-**No implementados actualmente.** El `fetch` nativo no tiene timeout por defecto. Se recomienda agregar wrapper con `AbortController` para timeouts.
+No implementados actualmente. El `fetch` nativo no tiene timeout por defecto.
 
 ## Estado de Sesión y Token
 

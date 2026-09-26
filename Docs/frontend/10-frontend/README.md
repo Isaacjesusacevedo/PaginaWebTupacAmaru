@@ -41,7 +41,7 @@
 - Archivos de configuración (Vite, TS, ESLint, Prettier)
 - Variables de entorno
 - Scripts disponibles
-- Build producción y Docker
+- Build producción
 
 ---
 
@@ -56,25 +56,3 @@
 | Crear nueva vista/CRUD | [05 - Componentes y Vistas](./05-componentes-vistas.md) |
 | Conectar nuevo endpoint | [06 - Integración API](./06-integracion-api.md) |
 | Configurar build/CI | [07 - Configuración](./07-configuracion.md) |
-
----
-
-## Estado del Proyecto
-
-- **Framework:** Vue 3 + TypeScript + Vite
-- **UI:** Element Plus + estilos propios
-- **Estado:** Pinia (configurado, uso mínimo actual)
-- **Routing:** Vue Router 4 con lazy loading + guards
-- **Auth:** JWT en sessionStorage + composable `useAuth`
-- **API:** Fetch nativo + `VITE_API_URL`
-
-## Próximas Mejoras Sugeridas
-
-1. **Centralizar tipos TypeScript** en `src/types/` para sincronía con backend
-2. **Corregir URLs hardcodeadas** → usar `import.meta.env.VITE_API_URL` en todas las vistas
-3. **Implementar Pinia store** para estado global (usuario, notificaciones, cache)
-4. **Agregar interceptor/timeout** para fetch (wrapper con AbortController)
-5. **Tests unitarios** (Vitest) y E2E (Cypress/Playwright)
-6. **Storybook** para documentación de componentes
-7. **PWA** (service worker, manifest) para instalación
-8. **Internacionalización (i18n)** si se requiere multiidioma

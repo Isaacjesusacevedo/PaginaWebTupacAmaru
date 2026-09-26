@@ -109,7 +109,7 @@ Estructura idéntica a Administradores:
 #### Diferencias clave:
 - **Interfaz `Carrera`:** id, nombre, duracionAnios, turno, modalidad, horario, estado
 - **Tabla columnas:** Nombre, Duración, Turno, Modalidad, Horario, Estado, Acciones
-- **Fetch:** `GET ${API}/api/carreras` (algunas vistas usan URL hardcodeada `http://localhost:5089` - **debe corregirse a `import.meta.env.VITE_API_URL`**)
+- **Fetch:** `GET ${API}/api/carreras`
 
 ---
 

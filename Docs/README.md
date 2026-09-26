@@ -11,7 +11,7 @@ Docs/
 
 ---
 
-## 📦 Backend (ASP.NET Core 9)
+## Backend (ASP.NET Core 9)
 
 **Tecnologías**: .NET 9, SQL Server (LocalDB), JWT Bearer, BCrypt, ADO.NET (`Microsoft.Data.SqlClient`)
 
@@ -68,7 +68,7 @@ Docs/
 
 ---
 
-## 🎨 Frontend (Vue 3 + TypeScript + Vite)
+## Frontend (Vue 3 + TypeScript + Vite)
 
 **Tecnologías**: Vue 3, TypeScript, Vite, Element Plus, Pinia, Vue Router 4, Fetch API
 
@@ -79,11 +79,11 @@ Docs/
 - [Autenticación](./frontend/10-frontend/04-autenticacion.md) — `useAuth` composable, login/logout, headers, guards
 - [Componentes y Vistas](./frontend/10-frontend/05-componentes-vistas.md) — Componentes reutilizables, vistas por módulo, patrones
 - [Integración API](./frontend/10-frontend/06-integracion-api.md) — Cliente HTTP, endpoints por módulo, tipado, errores
-- [Configuración y Build](./frontend/10-frontend/07-configuracion.md) — Vite, TS, ESLint, Prettier, env vars, Docker
+- [Configuración y Build](./frontend/10-frontend/07-configuracion.md) — Vite, TS, ESLint, Prettier, env vars
 
 ---
 
-## 🚀 Inicio Rápido
+## Inicio Rápido
 
 ### Backend
 ```bash
@@ -107,14 +107,14 @@ curl -X POST http://localhost:5089/api/setup/admin -H "Content-Type: application
 
 ### Frontend
 ```bash
-cd instituto/Frondend
+cd instituto/Frontend
 npm install
 npm run dev  # http://localhost:5173 (proxy a backend:5089)
 ```
 
 ---
 
-## 🔗 Integración Backend ↔ Frontend
+## Integración Backend ↔ Frontend
 
 | Aspecto | Backend | Frontend |
 |---------|---------|----------|
@@ -122,16 +122,3 @@ npm run dev  # http://localhost:5173 (proxy a backend:5089)
 | **Auth** | JWT Bearer 8hs | `sessionStorage` + `useAuth` |
 | **CORS** | `AllowAnyOrigin()` (dev) | Proxy Vite `/api` → 5089 |
 | **Endpoints** | Documentados en [05-api-controladores](./backend/05-api-controladores/) | Consumidos en [06-integracion-api](./frontend/10-frontend/06-integracion-api.md) |
-
----
-
-## 📋 Checklist de Desarrollo
-
-- [ ] Backend compila: `dotnet build` sin errores
-- [ ] BD creada y accesible
-- [ ] Primer admin creado vía `/api/setup/admin`
-- [ ] Login funciona y retorna JWT
-- [ ] Endpoints CRUD responden 200/201 con token
-- [ ] Frontend conecta via proxy Vite
-- [ ] CORS permite origen frontend
-- [ ] Variables de entorno configuradas por ambiente

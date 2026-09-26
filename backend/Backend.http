@@ -1,27 +1,15 @@
 @host = http://localhost:5089
 
-# ════════════════════════════════════════
-#  SETUP — Solo funciona si no hay admins
-#  Ya no aplica (primer admin ya existe)
-# ════════════════════════════════════════
-
 POST {{host}}/api/setup/admin
 Content-Type: application/json
 
 {
   "nombre":   "Isaac",
   "apellido": "Acevedo",
-  "email":    "admin@instituto.edu.ar",
-  "password": "Admin1234!",
+  "email":    "isaac.acevedor1610@gmail.com",
+  "password": "Admin1234",
   "role":     "Admin"
 }
-
-###
-
-# ════════════════════════════════════════
-#  AUTH — Login
-#  Copiá el token de la respuesta
-# ════════════════════════════════════════
 
 POST {{host}}/api/auth/login
 Content-Type: application/json
@@ -30,13 +18,6 @@ Content-Type: application/json
   "email":    "admin@instituto.edu.ar",
   "password": "Admin1234!"
 }
-
-###
-
-# ════════════════════════════════════════
-#  SEGUNDO ADMINISTRADOR
-#  Requiere token — ejecutar después del login
-# ════════════════════════════════════════
 
 POST {{host}}/api/administradores
 Content-Type: application/json
@@ -50,24 +31,11 @@ Authorization: Bearer TU_TOKEN_AQUI
   "passwordTemp": "Secretaria123!"
 }
 
-###
-
-# ════════════════════════════════════════
-#  PROFESORES
-# ════════════════════════════════════════
 
 GET {{host}}/api/profesores
 Authorization: Bearer TU_TOKEN_AQUI
 
-###
-
-# ════════════════════════════════════════
-#  CARRERAS
-# ════════════════════════════════════════
-
 GET {{host}}/api/carreras
-
-###
 
 POST {{host}}/api/carreras
 Content-Type: application/json
@@ -82,22 +50,9 @@ Authorization: Bearer TU_TOKEN_AQUI
   "estado": "Activa"
 }
 
-###
-
-# ════════════════════════════════════════
-#  ALUMNOS
-# ════════════════════════════════════════
-
 GET {{host}}/api/alumnos
 Authorization: Bearer TU_TOKEN_AQUI
-
-###
-
-# ════════════════════════════════════════
-#  LISTADO
-# ════════════════════════════════════════
 
 GET {{host}}/api/listado
 Authorization: Bearer TU_TOKEN_AQUI
 
-###
