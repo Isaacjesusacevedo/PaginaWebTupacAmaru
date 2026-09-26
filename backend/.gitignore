@@ -1,0 +1,12 @@
+# Credenciales — NUNCA commitear
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+
+# Binarios y caché de compilación
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user

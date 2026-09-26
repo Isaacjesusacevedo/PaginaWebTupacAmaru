@@ -1,9 +1,14 @@
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+
 namespace Backend.Models;
-public class Administrador
+
+public class Administrador : Persona
 {
-    public int? Id { get; set; }
-    public string? Nombre { get; set; }
-    public string? Apellido { get; set; }
-    public string? Email { get; set; }
-    public string? Roll { get; set; }
+    [Required(ErrorMessage = "El rol es obligatorio.")]
+    [StringLength(50, ErrorMessage = "El rol no puede superar los 50 caracteres.")]
+    public string Role { get; set; } = string.Empty;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [MinLength(8, ErrorMessage = "La contraseña temporal debe tener al menos 8 caracteres.")]
+    public string? PasswordTemp { get; set; }
 }

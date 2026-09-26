@@ -1,77 +1,143 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Backend.Models;
 using Backend.Services;
+using Backend.Exceptions;
 
 namespace Backend.Controllers;
 
 [ApiController]
-[Route("api/[controller]")] // 👈 IMPORTANTE
+[Route("api/carreras")]
 public class CarrerasController : ControllerBase
 {
     private readonly ICrudJsonService<Carrera> _carreraService;
     private readonly ICrudJsonService<Alumno> _alumnoService;
 
-    public CarrerasController()
+    public CarrerasController(
+        ICrudJsonService<Carrera> carreraService,
+        ICrudJsonService<Alumno> alumnoService)
     {
-        _carreraService = new CrudJsonService<Carrera>("Data/Carrera.json");
-        _alumnoService = new CrudJsonService<Alumno>("Data/Alumno.json");
+        _carreraService = carreraService;
+        _alumnoService = alumnoService;
     }
 
     // GET: api/carreras
     [HttpGet]
     public IActionResult GetAll()
     {
-        return Ok(_carreraService.GetAll());
+        try
+        {
+            return Ok(_carreraService.GetAll());
+        }
+        catch (PersistenceException ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { error = "Error interno al obtener las carreras." });
+        }
     }
 
     // GET: api/carreras/1
     [HttpGet("{id:int}")]
     public IActionResult GetById(int id)
     {
-        var carrera = _carreraService.GetById(id);
-        if (carrera == null)
-            return NotFound("Carrera no encontrada");
-
-        return Ok(carrera);
+        try
+        {
+            return Ok(_carreraService.GetById(id));
+        }
+        catch (EntityNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (PersistenceException ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { error = "Error interno al buscar la carrera." });
+        }
     }
 
     // POST: api/carreras
+    [Authorize]
     [HttpPost]
     public IActionResult Create([FromBody] Carrera carrera)
     {
-        var list = _carreraService.GetAll();
-        carrera.Id = list.Count == 0 ? 1 : list.Max(c => c.Id) + 1;
-        carrera.Estado ??= "Activa";
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
 
-        _carreraService.Create(carrera);
-        return CreatedAtAction(nameof(GetById), new { id = carrera.Id }, carrera);
+        try
+        {
+            carrera.Estado ??= "Activa";
+            var creada = _carreraService.Create(carrera);
+            return CreatedAtAction(nameof(GetById), new { id = creada.Id }, creada);
+        }
+        catch (PersistenceException ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { error = "Error interno al crear la carrera." });
+        }
     }
 
     // PUT: api/carreras/1
+    [Authorize]
     [HttpPut("{id:int}")]
     public IActionResult Update(int id, [FromBody] Carrera carrera)
     {
-        var existente = _carreraService.GetById(id);
-        if (existente == null)
-            return NotFound("Carrera no encontrada");
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
 
-        carrera.Id = id; // 👈 CLAVE
-        _carreraService.Update(id, carrera);
-
-        return Ok(carrera);
+        try
+        {
+            _carreraService.Update(id, carrera);
+            return Ok(carrera);
+        }
+        catch (EntityNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (PersistenceException ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { error = "Error interno al actualizar la carrera." });
+        }
     }
 
     // DELETE: api/carreras/1
+    [Authorize]
     [HttpDelete("{id:int}")]
     public IActionResult Delete(int id)
     {
-        var alumnos = _alumnoService.GetAll();
-        bool tieneAlumnos = alumnos.Any(a => a.CarreraId == id);
+        try
+        {
+            // Regla de negocio: no eliminar si hay alumnos inscriptos
+            var alumnos = _alumnoService.GetAll();
+            if (alumnos.Any(a => a.CarreraId == id))
+                return BadRequest(new { error = "No se puede eliminar la carrera porque tiene alumnos inscriptos." });
 
-        if (tieneAlumnos)
-            return BadRequest("No se puede eliminar la carrera porque tiene alumnos inscritos.");
-
-        _carreraService.Delete(id);
-        return NoContent();
+            _carreraService.Delete(id);
+            return NoContent();
+        }
+        catch (EntityNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (PersistenceException ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { error = "Error interno al eliminar la carrera." });
+        }
     }
 }

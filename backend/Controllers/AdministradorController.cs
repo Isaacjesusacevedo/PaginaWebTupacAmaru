@@ -1,75 +1,131 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Backend.Models;
 using Backend.Services;
+using Backend.Exceptions;
 
 namespace Backend.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/administradores")]
 public class AdministradorController : ControllerBase
 {
     private readonly ICrudJsonService<Administrador> _service;
 
-    public AdministradorController()
+    public AdministradorController(ICrudJsonService<Administrador> service)
     {
-        _service = new CrudJsonService<Administrador>("Data/Administrador.json");
+        _service = service;
     }
 
-    // 🔹 GET ALL
+    // GET: api/administradores
     [HttpGet]
     public IActionResult GetAll()
     {
-        return Ok(_service.GetAll());
+        try
+        {
+            return Ok(_service.GetAll());
+        }
+        catch (PersistenceException ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { error = "Error interno al obtener los administradores." });
+        }
     }
 
-    // 🔹 GET BY ID
-    [HttpGet("{id}")]
+    // GET: api/administradores/1
+    [HttpGet("{id:int}")]
     public IActionResult GetById(int id)
     {
-        var admin = _service.GetById(id);
-
-        if (admin == null)
-            return NotFound("Administrador no encontrado");
-
-        return Ok(admin);
+        try
+        {
+            return Ok(_service.GetById(id));
+        }
+        catch (EntityNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (PersistenceException ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { error = "Error interno al buscar el administrador." });
+        }
     }
 
-    // 🔹 CREATE
+    // POST: api/administradores
     [HttpPost]
     public IActionResult Create([FromBody] Administrador administrador)
     {
-        var list = _service.GetAll();
-        administrador.Id = list.Count == 0 ? 1 : list.Max(a => a.Id) + 1;
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
 
-        _service.Create(administrador);
-        return Ok(administrador);
+        try
+        {
+            var creado = _service.Create(administrador);
+            return CreatedAtAction(nameof(GetById), new { id = creado.Id }, creado);
+        }
+        catch (PersistenceException ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { error = "Error interno al crear el administrador." });
+        }
     }
 
-    // 🔹 UPDATE (EDITAR)
-    [HttpPut("{id}")]
+    // PUT: api/administradores/1
+    [HttpPut("{id:int}")]
     public IActionResult Update(int id, [FromBody] Administrador administrador)
     {
-        var existente = _service.GetById(id);
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
 
-        if (existente == null)
-            return NotFound("Administrador no encontrado");
-
-        administrador.Id = id; // aseguramos consistencia
-        _service.Update(id, administrador);
-
-        return Ok(administrador);
+        try
+        {
+            _service.Update(id, administrador);
+            return Ok(administrador);
+        }
+        catch (EntityNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (PersistenceException ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { error = "Error interno al actualizar el administrador." });
+        }
     }
 
-    // 🔹 DELETE (ELIMINAR)
-    [HttpDelete("{id}")]
+    // DELETE: api/administradores/1
+    [HttpDelete("{id:int}")]
     public IActionResult Delete(int id)
     {
-        var existente = _service.GetById(id);
-
-        if (existente == null)
-            return NotFound("Administrador no encontrado");
-
-        _service.Delete(id);
-        return NoContent();
+        try
+        {
+            _service.Delete(id);
+            return NoContent();
+        }
+        catch (EntityNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (PersistenceException ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { error = "Error interno al eliminar el administrador." });
+        }
     }
 }

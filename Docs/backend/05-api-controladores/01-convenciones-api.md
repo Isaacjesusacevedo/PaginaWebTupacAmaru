@@ -1,0 +1,152 @@
+# Convenciones de API REST
+
+## Estándares Generales
+
+| Aspecto | Convención |
+|---------|------------|
+| **Base Path** | `/api/{recurso-plural}` |
+| **Verbos HTTP** | GET, POST, PUT, DELETE |
+| **Status Codes** | 200, 201, 204, 400, 401, 403, 404, 409, 500 |
+| **Content-Type** | `application/json` (request & response) |
+| **Auth** | JWT Bearer Token en header `Authorization: Bearer <token>` |
+| **CORS** | Permitido todo origen/método/headers (desarrollo) |
+| **Error Format** | `{ "error": "mensaje descriptivo" }` |
+
+---
+
+## Mapeo HTTP Status Codes
+
+| Código | Cuándo | Ejemplo |
+|--------|--------|---------|
+| **200 OK** | GET exitoso, PUT exitoso | `GET /api/alumnos/1` |
+| **201 Created** | POST exitoso | `POST /api/carreras` |
+| **204 No Content** | DELETE exitoso | `DELETE /api/profesores/1` |
+| **400 Bad Request** | ModelState inválido, regla de negocio (FK no existe) | Email inválido, CarreraId inexistente |
+| **401 Unauthorized** | Token faltante, expirado, inválido, credenciales incorrectas | Login fallido |
+| **403 Forbidden** | Token válido pero sin permisos (rol) | Admin intenta endpoint de SuperAdmin |
+| **404 Not Found** | Recurso no existe (GetById, Update, Delete) | `GET /api/alumnos/999` |
+| **409 Conflict** | Setup admin cuando ya existe | `POST /api/setup/admin` (2da vez) |
+| **500 Internal Server Error** | Excepción no controlada, error BD | SqlException, NullReference |
+
+---
+
+## Estructura de Respuestas
+
+### Éxito - Colección (GET All)
+```json
+[
+  { "id": 1, "nombre": "Juan", "apellido": "Pérez", ... },
+  { "id": 2, "nombre": "María", "apellido": "Gómez", ... }
+]
+```
+
+### Éxito - Elemento Único (GET ById, POST, PUT)
+```json
+{ "id": 1, "nombre": "Juan", "apellido": "Pérez", "email": "juan@test.com", ... }
+```
+
+### Éxito - Login (POST /api/auth/login)
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiraEn": "2026-09-25T20:30:00Z",
+  "admin": {
+    "id": 1,
+    "nombre": "Admin",
+    "apellido": "Principal",
+    "email": "admin@tupac.edu",
+    "role": "Admin"
+  }
+}
+```
+
+### Error (4xx, 5xx)
+```json
+{ "error": "Email o contraseña incorrectos." }
+```
+
+### Error Validación (400 ModelState)
+```json
+{
+  "Email": ["El email es obligatorio."],
+  "Password": ["La contraseña debe tener al menos 6 caracteres."]
+}
+```
+
+---
+
+## Convenciones de Nombres en JSON
+
+- **Propiedades**: PascalCase (coincide con C# models)
+  ```json
+  { "Nombre": "Juan", "FechaNacimiento": "2000-01-15T00:00:00" }
+  ```
+- **Enums/Strings**: Valores tal cual (`"Role": "Admin"`, `"Estado": "Activa"`)
+- **Fechas**: ISO 8601 (`"2026-09-25T15:30:00Z"`)
+- **Nulls**: Omitidos o `null` explícito (configurado `JsonIgnoreCondition.WhenWritingNull`)
+
+---
+
+## Versionado
+
+**Actual**: Sin versionado en URL (v1 implícito)  
+**Futuro**: `/api/v1/...` → `/api/v2/...` si breaking changes
+
+---
+
+## Paginación / Filtrado (No Implementado)
+
+> Endpoints `GetAll` retornan **todo** sin paginación.  
+> Para datasets grandes, agregar:
+```
+GET /api/alumnos?page=1&pageSize=20&search=perez&carreraId=3
+```
+
+---
+
+## Headers de Respuesta Útiles
+
+| Header | Valor | Endpoint |
+|--------|-------|----------|
+| `Location` | `/api/alumnos/123` | POST (201 Created) |
+| `WWW-Authenticate` | `Bearer` | 401 Unauthorized |
+
+---
+
+## Rate Limiting (No Implementado)
+
+> Recomendado para producción:
+- `POST /api/auth/login`: 5 req/min/IP
+- `POST /api/setup/admin`: 1 req/hora/IP
+- CRUD autenticados: 100 req/min/user
+
+---
+
+## Documentación OpenAPI/Swagger (No Configurado)
+
+> Para agregar:
+```csharp
+// Program.cs
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Instituto API", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        { new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } }, Array.Empty<string>() }
+    });
+});
+
+// En pipeline (solo Dev)
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+```
