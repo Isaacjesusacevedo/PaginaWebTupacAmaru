@@ -27,8 +27,10 @@ const router = createRouter({
     { path: '/eliminarcarreras/:id', name: 'eliminarcarreras', component: () => import('../views/carrera/EliminarCarreraView.vue'), meta: { requiereAuth: true }, props: true },
 
     // ── Formularios (requieren login) ───────────────────────────────────────
-    { path: '/formularios',       name: 'formularios',      component: () => import('../views/public/FormulariosView.vue'),      meta: { requiereAuth: true } },
-    { path: '/agregarformulario', name: 'agregarformulario', component: () => import('../views/public/AgregarFormularioView.vue'), meta: { requiereAuth: true } },
+    { path: '/formularios',         name: 'formularios',          component: () => import('../views/public/FormulariosView.vue'),          meta: { requiereAuth: true } },
+    { path: '/agregarformulario',   name: 'agregarformulario',    component: () => import('../views/public/AgregarFormularioView.vue'),    meta: { requiereAuth: true } },
+    { path: '/editarformulario/:id', name: 'editarformulario',    component: () => import('../views/public/EditarFormularioView.vue'),    meta: { requiereAuth: true }, props: true },
+    { path: '/eliminarformulario/:id', name: 'eliminarformulario', component: () => import('../views/public/EliminarFormularioView.vue'), meta: { requiereAuth: true }, props: true },
 
     // ── Listados (requieren login) ──────────────────────────────────────────
     { path: '/listados', name: 'listados', component: () => import('../views/Listados/ListadoView.vue'), meta: { requiereAuth: true } },

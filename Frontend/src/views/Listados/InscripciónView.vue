@@ -234,7 +234,7 @@ const edad = computed(() => {
     Telefono: string
     TituloSecundario: string
     Turno: string
-    CarreraId: string
+    CarreraId: number
     FechaInscripcion: string
     FechaEstimadaTitulo: string
     InstitucionTitulo: string
@@ -251,7 +251,7 @@ const edad = computed(() => {
     Telefono: "",
     TituloSecundario: "",
     Turno: "",
-    CarreraId: "",
+    CarreraId: 0,
     FechaInscripcion: "",
     FechaEstimadaTitulo: "",
     InstitucionTitulo: ""
@@ -319,7 +319,7 @@ const edad = computed(() => {
     alumno.Telefono = ""
     alumno.TituloSecundario = ""
     alumno.Turno = ""
-    alumno.CarreraId = ""
+    alumno.CarreraId = 0
     alumno.FechaInscripcion = ""
     alumno.FechaEstimadaTitulo = ""
     alumno.InstitucionTitulo = ""

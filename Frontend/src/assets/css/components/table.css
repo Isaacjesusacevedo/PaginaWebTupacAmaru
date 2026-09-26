@@ -21,6 +21,22 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Texto en celdas: truncar con ellipsis por defecto */
+.table-row > span,
+.table-header > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Excepción: columna Nombre (primera) permite wrap controlado */
+.table-row > span:first-child,
+.table-header > span:first-child {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
 .table-row:hover {
   background-color: #f8fafc;
 }
@@ -28,12 +44,19 @@
 /* ================================
    COLUMN LAYOUTS
 =============================== */
+/* 7 columnas: Nombre | Duración | Turno | Modalidad | Horario | Estado | Acciones */
 .table-cols-default {
-  grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr 1fr 1.5fr;
+  grid-template-columns: minmax(280px, 3fr) 1fr 1fr 1fr 1fr 1fr minmax(120px, 1.5fr);
 }
 
+/* 5 columnas: Nombre | Apellido | Email | Rol | Acciones (Administradores) */
 .table-cols-admin {
-  grid-template-columns: 2fr 2.5fr 1.5fr 1fr 1.5fr;
+  grid-template-columns: minmax(180px, 2fr) minmax(180px, 2fr) minmax(220px, 2.5fr) 1fr minmax(120px, 1.5fr);
+}
+
+/* 5 columnas: Nombre | Estado | Fecha apertura | Fecha cierre | Acciones (Formularios) */
+.table-cols-formularios {
+  grid-template-columns: minmax(280px, 3fr) 1fr 1.5fr 1.5fr minmax(120px, 1.5fr);
 }
 
 /* ================================
@@ -42,6 +65,8 @@
 .table-actions {
   display: flex;
   gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .table-actions.center {
@@ -57,6 +82,7 @@
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .estado-abierto {
@@ -97,7 +123,21 @@
     padding: 16px 0;
   }
 
+  .table-row > span,
+  .table-header > span {
+    white-space: normal;
+    word-break: break-word;
+  }
+
   .table-actions {
     justify-content: flex-start;
+  }
+
+  .table-cols-default {
+    grid-template-columns: 1fr;
+  }
+
+  .table-cols-admin {
+    grid-template-columns: 1fr;
   }
 }

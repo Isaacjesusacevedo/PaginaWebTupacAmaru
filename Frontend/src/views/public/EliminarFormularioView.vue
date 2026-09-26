@@ -6,19 +6,19 @@
       <img
         class="card-media"
         src="@/components/Banner/bannerProfesor.jpg"
-        alt="Banner formularios"
+        alt="Banner formulario"
       />
 
       <!-- HEADER -->
       <header class="text-center">
-        <h1>Lista de Formularios</h1>
+        <h1>Eliminar Formulario</h1>
         <p class="subtitle">
-          Gestión de formularios académicos
+          ¿Estás seguro de que deseas eliminar este formulario?
         </p>
       </header>
 
       <!-- TABLE -->
-      <div class="table">
+      <div v-if="formulario" class="table">
 
         <!-- TABLE HEADER -->
         <div class="table-header table-cols-formularios">
@@ -29,12 +29,8 @@
           <span>Acciones</span>
         </div>
 
-        <!-- TABLE ROWS -->
-        <div
-          v-for="formulario in formularios"
-          :key="formulario.id"
-          class="table-row table-cols-formularios"
-        >
+        <!-- TABLE ROW -->
+        <div class="table-row table-cols-formularios">
           <span>{{ formulario.nombre }}</span>
           <span>
             <span class="estado-badge" :class="getEstadoClass(formulario.estado)">
@@ -45,39 +41,26 @@
           <span>{{ formulario.fechaCierre }}</span>
 
           <div class="table-actions center">
-            <router-link
-              class="btn btn-primary"
-              :to="`/editarformulario/${formulario.id}`"
-            >
-              <el-icon><Edit /></el-icon>
-            </router-link>
-
             <button
               class="btn btn-danger"
-              @click="eliminar(formulario.id)"
+              @click="eliminarFormulario"
+              :disabled="loading"
             >
-              <el-icon><Delete /></el-icon>
+              {{ loading ? 'Eliminando...' : 'Eliminar' }}
             </button>
-          </div>
-        </div>
 
-        <div v-if="formularios.length === 0" class="table-row table-cols-formularios">
-          <span class="text-center" style="grid-column: 1 / -1;">No hay formularios registrados</span>
+            <router-link to="/formularios" class="btn btn-secondary">
+              Cancelar
+            </router-link>
+          </div>
         </div>
 
       </div>
 
       <!-- ERROR -->
-      <p v-if="error" class="text-center" style="color: var(--color-danger);">
+      <p v-if="error" class="text-center text-danger">
         {{ error }}
       </p>
-
-      <!-- FOOTER CTA -->
-      <footer class="table-actions center">
-        <router-link class="btn btn-primary" to="/agregarformulario">
-          Agregar formulario
-        </router-link>
-      </footer>
 
     </div>
   </main>
@@ -85,7 +68,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
 interface Formulario {
@@ -94,27 +77,67 @@ interface Formulario {
   estado: 'Abierto' | 'Cerrado' | 'Borrador'
   fechaApertura: string
   fechaCierre: string
+  descripcion: string
 }
 
 const router = useRouter()
+const route  = useRoute()
 const { authHeaders } = useAuth()
 const API = import.meta.env.VITE_API_URL
 
-const formularios = ref<Formulario[]>([])
+const loading = ref(false)
 const error = ref<string | null>(null)
+const formulario = ref<Formulario | null>(null)
+const formularioId = ref<number>(0)
 
-const cargarFormularios = async () => {
+onMounted(() => {
+  if (route.params.id) {
+    formularioId.value = Number(route.params.id)
+    cargarFormulario()
+  }
+})
+
+// Cargar el formulario
+const cargarFormulario = async () => {
   try {
-    const res = await fetch(`${API}/api/formularios`, { headers: authHeaders() })
+    const res = await fetch(`${API}/api/formularios/${formularioId.value}`)
     if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-    formularios.value = await res.json()
+    formulario.value = await res.json()
   } catch (err: unknown) {
-    console.error('Error al cargar formularios:', err)
+    console.error(err)
     if (err instanceof Error) {
-      error.value = `No se pudieron cargar los formularios: ${err.message}`
+      error.value = err.message
     } else {
-      error.value = 'No se pudieron cargar los formularios'
+      error.value = 'No se pudo cargar el formulario'
     }
+  }
+}
+
+// Eliminar el formulario
+const eliminarFormulario = async () => {
+  if (!formularioId.value) return
+
+  loading.value = true
+  error.value = null
+
+  try {
+    const res = await fetch(`${API}/api/formularios/${formularioId.value}`, {
+      method:  'DELETE',
+      headers: authHeaders()
+    })
+
+    if (!res.ok) {
+      const msg = await res.text()
+      throw new Error(msg)
+    }
+
+    router.push('/formularios')
+  } catch (err) {
+    error.value = err instanceof Error
+      ? err.message
+      : 'Error al eliminar el formulario'
+  } finally {
+    loading.value = false
   }
 }
 
@@ -126,12 +149,4 @@ const getEstadoClass = (estado: string): string => {
     default: return 'estado-cerrado'
   }
 }
-
-const eliminar = (id: number) => {
-  if (confirm('¿Eliminar este formulario?')) {
-    alert(`Eliminar formulario ${id} - pendiente`)
-  }
-}
-
-onMounted(cargarFormularios)
 </script>

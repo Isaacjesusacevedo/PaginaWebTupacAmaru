@@ -86,4 +86,19 @@ BEGIN
 END
 GO
 
+-- 6. Tabla Formularios
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'Formularios' AND xtype = 'U')
+BEGIN
+    CREATE TABLE Formularios (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        Nombre NVARCHAR(200) NOT NULL,
+        Estado NVARCHAR(20) NOT NULL DEFAULT 'Borrador',
+        FechaApertura DATETIME2 NOT NULL,
+        FechaCierre DATETIME2 NOT NULL,
+        Descripcion NVARCHAR(1000) NULL,
+        FechaCreacion DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+    );
+END
+GO
+
 PRINT 'Base de datos InstitutoDB y tablas creadas exitosamente.';

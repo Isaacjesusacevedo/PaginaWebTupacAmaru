@@ -35,7 +35,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience         = true,
             ValidAudience            = builder.Configuration["Jwt:Audience"],
             ValidateLifetime         = true,
-            ClockSkew                = TimeSpan.Zero   // sin margen de gracia en expiración
+            ClockSkew                = TimeSpan.FromMinutes(5)   // margen de gracia 5 min
         };
 
         // Devolver JSON en respuestas 401/403 en lugar del HTML por defecto
@@ -66,13 +66,23 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        options.JsonSerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+        options.JsonSerializerOptions.WriteIndented = false;
     });
+
+// Configurar HttpClient/Json para UTF-8 en todo el pipeline
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
+});
 
 // ── Servicios de persistencia — SQL Server ────────────────────────────────────
 builder.Services.AddScoped<ICrudJsonService<Carrera>,       CarreraSqlServerService>();
 builder.Services.AddScoped<ICrudJsonService<Alumno>,        AlumnoSqlServerService>();
 builder.Services.AddScoped<ICrudJsonService<Administrador>, AdministradorSqlServerService>();
 builder.Services.AddScoped<ICrudJsonService<Profesor>,      ProfesorSqlServerService>();
+builder.Services.AddScoped<ICrudJsonService<Formulario>,    FormularioSqlServerService>();
 
 // ── Servicio de autenticación con Supabase ───────────────────────────────────
 builder.Services.AddScoped<IAdminAuthService, AdminAuthService>();
