@@ -62,31 +62,49 @@
             Para cambiar la contraseña, ingresá la nueva y confirmá. Requiere re-autenticación.
           </p>
 
-          <div class="form-row">
-            <div class="field">
-              <label for="nuevaPassword">Nueva Contraseña</label>
-              <input
-                id="nuevaPassword"
-                v-model="nuevaPassword"
-                type="password"
-                autocomplete="new-password"
-                placeholder="Mínimo 8 caracteres"
-                :disabled="loadingPassword"
-              />
-            </div>
+<div class="form-row">
+              <div class="field password-field">
+                <label for="nuevaPassword">Nueva Contraseña</label>
+                <input
+                  id="nuevaPassword"
+                  v-model="nuevaPassword"
+                  :type="showNuevaPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  placeholder="Mínimo 8 caracteres"
+                  :disabled="loadingPassword"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  @click="showNuevaPassword = !showNuevaPassword"
+                  :aria-label="showNuevaPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                >
+                  <el-icon v-if="showNuevaPassword"><Hide /></el-icon>
+                  <el-icon v-else><View /></el-icon>
+                </button>
+              </div>
 
-            <div class="field">
-              <label for="confirmarPassword">Confirmar Nueva Contraseña</label>
-              <input
-                id="confirmarPassword"
-                v-model="confirmarPassword"
-                type="password"
-                autocomplete="new-password"
-                placeholder="Repetir nueva contraseña"
-                :disabled="loadingPassword"
-              />
+              <div class="field password-field">
+                <label for="confirmarPassword">Confirmar Nueva Contraseña</label>
+                <input
+                  id="confirmarPassword"
+                  v-model="confirmarPassword"
+                  :type="showConfirmarPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  placeholder="Repetir nueva contraseña"
+                  :disabled="loadingPassword"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  @click="showConfirmarPassword = !showConfirmarPassword"
+                  :aria-label="showConfirmarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                >
+                  <el-icon v-if="showConfirmarPassword"><Hide /></el-icon>
+                  <el-icon v-else><View /></el-icon>
+                </button>
+              </div>
             </div>
-          </div>
 
           <div class="form-actions fieldset-actions">
             <button
@@ -141,16 +159,25 @@
       Para editar los datos de un administrador, por favor ingrese su contraseña actual.
     </p>
     <div class="form-row">
-      <div class="field">
+      <div class="field password-field">
         <label for="reauthPassword">Contraseña actual</label>
         <input
           id="reauthPassword"
           v-model="reauthPassword"
-          type="password"
+          :type="showReauthPassword ? 'text' : 'password'"
           autocomplete="current-password"
           placeholder="Ingresá tu contraseña actual"
           @keyup.enter="confirmReauth"
         />
+        <button
+          type="button"
+          class="password-toggle"
+          @click="showReauthPassword = !showReauthPassword"
+          :aria-label="showReauthPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+        >
+          <el-icon v-if="showReauthPassword"><Hide /></el-icon>
+          <el-icon v-else><View /></el-icon>
+        </button>
       </div>
     </div>
     <template #footer>
@@ -184,6 +211,9 @@ const loadingPassword = ref(false)
 const errorPassword = ref<string | null>(null)
 const nuevaPassword = ref('')
 const confirmarPassword = ref('')
+const showNuevaPassword = ref(false)
+const showConfirmarPassword = ref(false)
+const showReauthPassword = ref(false)
 
 // Validación reactiva de contraseñas
 const passwordsValidas = computed(() => {
