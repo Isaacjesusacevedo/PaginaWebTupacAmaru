@@ -123,22 +123,20 @@
         Para editar los datos de un administrador, por favor ingrese su contraseña actual.
       </p>
 
-      <div class="form-row">
-        <div class="field password-field">
-          <label for="reauthPassword">Contraseña actual</label>
-          <el-input
-            id="reauthPassword"
-            v-model="reauthPassword"
-            :show-password="true"
-            type="password"
-            autocomplete="current-password"
-            placeholder="Ingresa tu contraseña actual"
-            :disabled="loadingReauth"
-            @keyup.enter="confirmReauth"
-            class="reauth-input"
-            autofocus
-          />
-        </div>
+      <div class="reauth-input-wrapper">
+        <label for="reauthPassword" class="form-label">Contraseña actual</label>
+        <el-input
+          id="reauthPassword"
+          v-model="reauthPassword"
+          :show-password="true"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Ingresa tu contraseña actual"
+          :disabled="loadingReauth"
+          @keyup.enter="confirmReauth"
+          class="reauth-input"
+          autofocus
+        />
       </div>
 
       <p v-if="reauthError" class="form-error text-center">{{ reauthError }}</p>
@@ -149,7 +147,7 @@
     </div>
 
     <template #footer>
-      <div class="form-actions" style="justify-content: flex-end; gap: 12px;">
+      <div class="form-actions" style="justify-content: center; gap: 12px;">
         <el-button @click="cancelReauth" :disabled="loadingReauth">Cancelar</el-button>
         <el-button
           type="primary"
