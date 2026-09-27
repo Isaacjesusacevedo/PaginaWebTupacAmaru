@@ -39,6 +39,7 @@ Generados por `useAuth().authHeaders()`:
 | Método | Endpoint | Vista | Descripción |
 |--------|----------|-------|-------------|
 | POST | `/api/auth/login` | `LoginView` | Login, retorna `{ token, admin }` |
+| POST | `/api/auth/verify-password` | `EditarAdministradorView` | Verifica password actual |
 
 ### Administradores
 | Método | Endpoint | Vista | Descripción |
@@ -46,28 +47,41 @@ Generados por `useAuth().authHeaders()`:
 | GET | `/api/administradores` | `AdministradorView` | Listado completo |
 | GET | `/api/administradores/:id` | `EditarAdministradorView`, `EliminarAdministradorView` | Detalle por ID |
 | POST | `/api/administradores` | `AgregarAdministradorView` | Crear nuevo |
-| PUT | `/api/administradores/:id` | `EditarAdministradorView` | Actualizar |
+| PUT | `/api/administradores/:id` | `EditarAdministradorView` | Actualizar datos |
+| PUT | `/api/administradores/:id/password` | `EditarAdministradorView` | Cambiar contraseña |
 | DELETE | `/api/administradores/:id` | `EliminarAdministradorView` | Eliminar |
 
 ### Carreras
 | Método | Endpoint | Vista | Descripción |
 |--------|----------|-------|-------------|
-| GET | `/api/carreras` | `CarreraView` | Listado completo |
+| GET | `/api/carreras` | `CarreraView`, `InscripciónView` | Listado completo (público) |
 | GET | `/api/carreras/:id` | `EditarCarreraView`, `EliminarCarreraView` | Detalle por ID |
 | POST | `/api/carreras` | `AgregarCarreraView` | Crear nueva |
 | PUT | `/api/carreras/:id` | `EditarCarreraView` | Actualizar |
 | DELETE | `/api/carreras/:id` | `EliminarCarreraView` | Eliminar |
 
-### Listados / Inscripciones
+### Alumnos
 | Método | Endpoint | Vista | Descripción |
 |--------|----------|-------|-------------|
-| GET | `/api/listado` | `ListadoView` | Alumnos inscriptos por carrera |
-| POST | `/api/inscripcion` | `InscripciónView` | Nueva inscripción pública |
+| GET | `/api/alumnos` | (admin) | Listado completo |
+| GET | `/api/alumnos/:id` | (admin) | Detalle por ID |
+| POST | `/api/alumnos` | `InscripciónView` | **Pública** - Nueva inscripción |
+| PUT | `/api/alumnos/:id` | (admin) | Actualizar |
+| DELETE | `/api/alumnos/:id` | (admin) | Eliminar |
 
-### Health Check
+### Formularios
 | Método | Endpoint | Vista | Descripción |
 |--------|----------|-------|-------------|
-| GET | `/weatherforecast` | `HomeView` | Test conectividad backend |
+| GET | `/api/formularios` | `FormulariosView` | Listado completo |
+| GET | `/api/formularios/:id` | `EditarFormularioView`, `EliminarFormularioView` | Detalle por ID |
+| POST | `/api/formularios` | `AgregarFormularioView` | Crear nuevo |
+| PUT | `/api/formularios/:id` | `EditarFormularioView` | Actualizar |
+| DELETE | `/api/formularios/:id` | `EliminarFormularioView` | Eliminar |
+
+### Listados / Reportes
+| Método | Endpoint | Vista | Descripción |
+|--------|----------|-------|-------------|
+| GET | `/api/listado` | `ListadoView` | Alumnos inscriptos por carrera (join) |
 
 ## Patrones de Request
 
@@ -88,16 +102,25 @@ const res = await fetch(`${API}/api/administradores/${id}`, { headers: authHeade
 const res = await fetch(`${API}/api/administradores`, {
   method: 'POST',
   headers: authHeaders(),
-  body: JSON.stringify({ nombre, apellido, email, password, role })
+  body: JSON.stringify({ nombre, apellido, email, role, passwordTemp: 'Cambiar1234!' })
 })
 ```
 
-### PUT Actualizar
+### PUT Actualizar (datos)
 ```typescript
 const res = await fetch(`${API}/api/administradores/${id}`, {
   method: 'PUT',
   headers: authHeaders(),
-  body: JSON.stringify({ nombre, apellido, email, role, password })
+  body: JSON.stringify({ nombre, apellido, email })
+})
+```
+
+### PUT Cambiar Contraseña
+```typescript
+const res = await fetch(`${API}/api/administradores/${id}/password`, {
+  method: 'PUT',
+  headers: authHeaders(),
+  body: JSON.stringify({ passwordActual: '...', nuevaPassword: '...' })
 })
 ```
 
@@ -132,12 +155,11 @@ Interfaces locales en cada vista:
 
 ```typescript
 // AdministradorView.vue
-interface Administrador {
+interface AdministradorView {
   id: number
   nombre: string
   apellido: string
   email: string
-  role: string
 }
 
 // CarreraView.vue
@@ -160,6 +182,16 @@ interface AlumnoListado {
   carrera: string
   turno: string
   edad: number
+}
+
+// FormulariosView.vue
+interface Formulario {
+  id: number
+  nombre: string
+  estado: 'Abierto' | 'Cerrado' | 'Borrador'
+  fechaApertura: string
+  fechaCierre: string
+  descripcion: string
 }
 ```
 

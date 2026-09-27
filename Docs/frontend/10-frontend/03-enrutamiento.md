@@ -31,6 +31,10 @@ const router = createRouter({
 | `/agregarcarreras` | `agregarcarreras` | `AgregarCarreraView` | `requiereAuth: true` | - |
 | `/editarcarrera/:id` | `editarcarrera` | `EditarCarreraView` | `requiereAuth: true` | `true` |
 | `/eliminarcarreras/:id` | `eliminarcarreras` | `EliminarCarreraView` | `requiereAuth: true` | `true` |
+| `/formularios` | `formularios` | `FormulariosView` | `requiereAuth: true` | - |
+| `/agregarformulario` | `agregarformulario` | `AgregarFormularioView` | `requiereAuth: true` | - |
+| `/editarformulario/:id` | `editarformulario` | `EditarFormularioView` | `requiereAuth: true` | `true` |
+| `/eliminarformulario/:id` | `eliminarformulario` | `EliminarFormularioView` | `requiereAuth: true` | `true` |
 | `/listados` | `listados` | `ListadoView` | `requiereAuth: true` | - |
 | `* (404)` | `not-found` | `NotFoundView` | - | - |
 
@@ -83,7 +87,7 @@ Usuario accede a ruta
 └────────┬─────────┘
          │ No
          ▼
-    Permitir acceso
+     Permitir acceso
 ```
 
 ## Props en Rutas Dinámicas

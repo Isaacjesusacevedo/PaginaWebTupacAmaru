@@ -61,6 +61,46 @@ Content-Type: application/json
 
 ---
 
+## POST /api/auth/verify-password  🔐 **Requiere JWT**
+
+Verifica que la contraseña actual del usuario autenticado sea correcta.  
+Usado por el frontend antes de permitir cambios sensibles (ej. editar admin, cambiar password).
+
+### Request
+```http
+POST /api/auth/verify-password
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "password": "MiPassActual123"
+}
+```
+
+| Campo | Tipo | Requerido | Validación |
+|-------|------|-----------|------------|
+| password | string | Sí | Contraseña actual |
+
+### Response 200 OK
+```json
+{ "mensaje": "Contraseña verificada correctamente" }
+```
+
+### Response 401 Unauthorized
+```json
+{ "error": "Contraseña incorrecta" }
+```
+```json
+{ "error": "Token inválido" }
+```
+
+### Response 500 Internal Server Error
+```json
+{ "error": "Error interno al verificar contraseña" }
+```
+
+---
+
 ## Flujo de Autenticación
 
 ```
@@ -107,7 +147,7 @@ Content-Type: application/json
 **Configuración** (`Program.cs` + `appsettings.json`):
 - **Algoritmo**: HMAC-SHA256
 - **Expiración**: 8 horas
-- **ClockSkew**: `TimeSpan.Zero` (sin gracia)
+- **ClockSkew**: `TimeSpan.FromMinutes(5)` (margen de gracia 5 min)
 - **Key**: `Jwt:Key` (mín 32 chars)
 - **Issuer**: `Jwt:Issuer`
 - **Audience**: `Jwt:Audience`
@@ -134,6 +174,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | `401 { "error": "No autenticado. Iniciá sesión." }` | Token faltante/expirado/inválido | Re-login |
 | `403 { "error": "No tenés permiso para realizar esta acción." }` | Token válido pero sin rol/permiso | Verificar rol del usuario |
 | `401 { "error": "Email o contraseña incorrectos." }` | Credenciales inválidas | Verificar email/password |
+| `401 { "error": "Contraseña incorrecta" }` | verify-password falló | Verificar password actual |
+| `401 { "error": "Token inválido" }` | verify-password sin claim email | Re-login |
 
 ---
 

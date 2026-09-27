@@ -13,7 +13,7 @@ public interface ICrudJsonService<T> where T : class
 }
 ```
 
-Todos los 4 servicios implementan esta interfaz.
+Todos los 5 servicios implementan esta interfaz.
 
 ---
 
@@ -129,6 +129,32 @@ cmd.Parameters.AddWithValue("@Estado", (object?)entity.Estado ?? "Activa");
 
 ---
 
+## 5. FormularioSqlServerService
+
+**Archivo**: `Services/FormularioSqlServerService.cs`
+
+### Tabla: `Formularios`
+
+### Métodos
+
+| Método | SQL | Comportamiento Especial |
+|--------|-----|------------------------|
+| `GetAll()` | `SELECT 7 columnas ORDER BY Id` | |
+| `GetById(id)` | `SELECT 7 columnas WHERE Id = @Id` | |
+| `Create(entity)` | `INSERT 6 columnas + SCOPE_IDENTITY()` | |
+| `Update(id, entity)` | `UPDATE 6 columnas WHERE Id = @Id` | |
+| `Delete(id)` | `DELETE FROM Formularios WHERE Id = @Id` | **Hard delete** |
+
+### Campos
+
+- `Nombre` (requerido)
+- `Estado` (default 'Borrador')
+- `FechaApertura` (requerido, DATETIME2)
+- `FechaCierre` (requerido, DATETIME2)
+- `Descripcion` (opcional, NVARCHAR(1000))
+
+---
+
 ## Comparativa de Patrones DELETE
 
 | Entidad | Tipo Delete | Justificación |
@@ -137,6 +163,7 @@ cmd.Parameters.AddWithValue("@Estado", (object?)entity.Estado ?? "Activa");
 | **Alumno** | Hard (`DELETE`) | RGPD/derecho al olvido, no hay dependencias fuertes |
 | **Carrera** | Hard (`DELETE`) | Validación previa en controller (no alumnos) |
 | **Profesor** | Hard (`DELETE`) | Simple, sin dependencias actuales |
+| **Formulario** | Hard (`DELETE`) | Simple, sin dependencias actuales |
 
 > **Nota**: Alumnos tiene FK a Carreras pero **no** ON DELETE CASCADE. El controller valida antes de borrar carrera.
 

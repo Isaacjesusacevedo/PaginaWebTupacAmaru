@@ -16,8 +16,11 @@ public interface IAdminAuthService
     Task<AdminResult?> LoginAsync(string email, string password);
     Task<bool> HayAdminsAsync();
     Task CrearAdminAsync(string nombre, string apellido, string email, string password, string role);
+    Task ChangePasswordAsync(string email, string passwordActual, string nuevaPassword);
 }
 ```
+
+> **Nota**: No hay método `VerifyPasswordAsync` separado. El endpoint `POST /api/auth/verify-password` reutiliza `LoginAsync` internamente en el controller.
 
 ---
 
@@ -120,6 +123,59 @@ public async Task CrearAdminAsync(string nombre, string apellido, string email, 
 - **Activo = 1**: Por defecto activo
 - **Email normalizado**: Lowercase + trim
 - **Sin validación de unicidad en código**: Confía en constraint UNIQUE de BD (lanza SqlException → PersistenceException → 500)
+
+---
+
+### 4. ChangePasswordAsync(email, passwordActual, nuevaPassword)
+
+**Propósito**: Cambiar contraseña de admin verificando la actual.  
+Usado por `AdministradorController.ChangePassword()` → `PUT /api/administradores/{id}/password`.
+
+```csharp
+public async Task ChangePasswordAsync(string email, string passwordActual, string nuevaPassword)
+{
+    await using var conn = new SqlConnection(_connectionString);
+    await conn.OpenAsync();
+
+    // Verificar contraseña actual
+    await using var cmd = new SqlCommand(
+        @"SELECT PasswordHash FROM Administradores WHERE Email = @Email AND Activo = 1",
+        conn);
+    cmd.Parameters.AddWithValue("@Email", email.Trim().ToLower());
+
+    await using var reader = await cmd.ExecuteReaderAsync();
+    if (!await reader.ReadAsync())
+        throw new UnauthorizedAccessException("Usuario no encontrado");
+
+    var hash = reader.GetString(reader.GetOrdinal("PasswordHash"));
+    if (!BCrypt.Net.BCrypt.Verify(passwordActual, hash))
+        throw new UnauthorizedAccessException("Contraseña actual incorrecta");
+
+    // Actualizar contraseña
+    var newHash = BCrypt.Net.BCrypt.HashPassword(nuevaPassword, workFactor: 12);
+    await reader.CloseAsync();
+
+    await using var updateCmd = new SqlCommand(
+        @"UPDATE Administradores SET PasswordHash = @PasswordHash WHERE Email = @Email",
+        conn);
+    updateCmd.Parameters.AddWithValue("@PasswordHash", newHash);
+    updateCmd.Parameters.AddWithValue("@Email", email.Trim().ToLower());
+
+    await updateCmd.ExecuteNonQueryAsync();
+}
+```
+
+**Flujo**:
+1. Buscar admin por email (solo activos)
+2. Si no existe → `UnauthorizedAccessException("Usuario no encontrado")`
+3. Verificar `passwordActual` con `BCrypt.Verify`
+4. Si inválido → `UnauthorizedAccessException("Contraseña actual incorrecta")`
+5. Hash nueva contraseña con workFactor 12
+6. UPDATE PasswordHash en BD
+
+**Excepciones**:
+- `UnauthorizedAccessException` → 401 en controller
+- `Exception` genérico → 500 en controller
 
 ---
 

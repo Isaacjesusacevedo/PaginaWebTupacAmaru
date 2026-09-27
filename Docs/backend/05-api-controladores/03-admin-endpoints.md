@@ -159,6 +159,53 @@ Content-Type: application/json
 
 ---
 
+## PUT /api/administradores/{id}/password  🔐 **Requiere JWT**
+
+Cambia la contraseña del administrador autenticado.  
+Requiere contraseña actual verificada (vía `POST /api/auth/verify-password` en frontend).
+
+### Request
+```http
+PUT /api/administradores/1/password
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "passwordActual": "MiPassActual123",
+  "nuevaPassword": "MiNuevaPass456"
+}
+```
+
+| Campo | Tipo | Requerido | Validación |
+|-------|------|-----------|------------|
+| passwordActual | string | Sí | Debe coincidir con hash actual |
+| nuevaPassword | string | Sí | Mín 8 caracteres |
+
+### Response 200 OK
+```json
+{ "mensaje": "Contraseña actualizada correctamente" }
+```
+
+### Response 400 Bad Request
+```json
+{ "PasswordActual": ["La contraseña actual es obligatoria."] }
+```
+
+### Response 401 Unauthorized
+```json
+{ "error": "La contraseña actual es incorrecta." }
+```
+```json
+{ "error": "Token inválido" }
+```
+
+### Response 500 Internal Server Error
+```json
+{ "error": "Error interno al cambiar la contraseña." }
+```
+
+---
+
 ## DELETE /api/administradores/{id}
 
 Elimina (soft delete) un administrador.
@@ -190,10 +237,11 @@ Authorization: Bearer <token>
 | GET /api/administradores/{id} | ✅ | Admin, SuperAdmin |
 | POST /api/administradores | ✅ | SuperAdmin (futuro policy) |
 | PUT /api/administradores/{id} | ✅ | SuperAdmin (futuro policy) |
+| PUT /api/administradores/{id}/password | ✅ | Admin, SuperAdmin (propio usuario) |
 | DELETE /api/administradores/{id} | ✅ | SuperAdmin (futuro policy) |
 
 > **Actual**: Cualquier admin autenticado puede todo.  
-> **Futuro**: Policy `RequireRole("SuperAdmin")` para escritura.
+> **Futuro**: Policy `RequireRole("SuperAdmin")` para escritura (excepto change-password propio).
 
 ---
 
@@ -203,4 +251,6 @@ Authorization: Bearer <token>
 |-------|-------|-------|
 | Email único | BD (UNIQUE constraint) | 500 (mejorar a 409) |
 | Password mín 8 chars (create) | DataAnnotation `PasswordTemp` | 400 ModelState |
+| Password mín 8 chars (change) | DataAnnotation `ChangePasswordDto` | 400 ModelState |
 | Solo admins activos | Service `WHERE Activo=1` | 404 si inactivo |
+| Password actual correcta | `AdminAuthService.ChangePasswordAsync` | 401 Unauthorized |

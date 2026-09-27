@@ -39,10 +39,11 @@ Docs/
 ### [API / Controladores](./backend/05-api-controladores/)
 - [Convenciones API](./backend/05-api-controladores/01-convenciones-api.md) — REST standards, status codes, formatos, versionado
 - [Auth Endpoints](./backend/05-api-controladores/02-auth-endpoints.md) — `POST /api/auth/login`, JWT generation, claims
-- [Administradores](./backend/05-api-controladores/03-admin-endpoints.md) — CRUD completo `/api/administradores`
+- [Administradores](./backend/05-api-controladores/03-admin-endpoints.md) — CRUD completo `/api/administradores` + change-password
 - [Alumnos](./backend/05-api-controladores/04-alumnos-endpoints.md) — CRUD + inscripción pública `/api/alumnos`
 - [Carreras](./backend/05-api-controladores/05-carreras-endpoints.md) — CRUD + catálogo público `/api/carreras`
 - [Profesores](./backend/05-api-controladores/06-profesores-endpoints.md) — CRUD `/api/profesores`
+- [Formularios](./backend/05-api-controladores/09-formularios-endpoints.md) — CRUD `/api/formularios`
 - [Listados](./backend/05-api-controladores/07-listados-endpoints.md) — Join en memoria `/api/listado`
 - [Setup Inicial](./backend/05-api-controladores/08-setup-endpoint.md) — `POST /api/setup/admin` (solo Dev)
 

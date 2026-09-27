@@ -38,10 +38,33 @@ Se importan via alias `@/components/Banner/archivo.jpg`.
   - Menú con enlaces a: Administradores, Carreras, Inscripción, Listados
   - Botones deshabilitados: Información académica, Descargas
   - Botón "Cerrar sesión" → navega a `/login`
-  - `onMounted`: Health check a `http://localhost:5089/weatherforecast` (test backend)
+  - `onMounted`: Health check a `${API}/` (test backend conectividad)
 
 #### `ContactoView.vue` - `/contacto`
 - Vista simple estática de información de contacto.
+
+#### `FormulariosView.vue` - `/formularios`
+- **Meta:** `requiereAuth: true`
+- **UI:** Tabla con columnas: Nombre, Estado, Fecha apertura, Fecha cierre, Acciones
+- **Fetch:** `GET ${API}/api/formularios` con `authHeaders()`
+- **Acciones:** Editar (router-link) + Eliminar (router-link)
+- **Estados:** loading, error, empty state
+- **CTA footer:** "Agregar formulario" → `/agregarformulario`
+
+#### `AgregarFormularioView.vue` - `/agregarformulario`
+- **Meta:** `requiereAuth: true`
+- **Formulario:** nombre, estado (select), fechaApertura, fechaCierre, descripcion
+- **Submit:** `POST ${API}/api/formularios`
+
+#### `EditarFormularioView.vue` - `/editarformulario/:id`
+- **Meta:** `requiereAuth: true`, `props: true`
+- **Carga:** `GET ${API}/api/formularios/${id}`
+- **Submit:** `PUT ${API}/api/formularios/${id}`
+
+#### `EliminarFormularioView.vue` - `/eliminarformulario/:id`
+- **Meta:** `requiereAuth: true`, `props: true`
+- **Carga:** `GET ${API}/api/formularios/${id}`
+- **Acción:** `DELETE ${API}/api/formularios/${id}`
 
 ---
 
@@ -54,6 +77,7 @@ Se importan via alias `@/components/Banner/archivo.jpg`.
   - POST a `${API}/api/auth/login`
   - En éxito: `guardarSesion(token, admin)` + `router.push({ name: 'home' })`
   - En error: muestra mensaje de error
+- **Feature:** Toggle password visibility (botón ojo con icons View/Hide)
 
 ---
 
@@ -69,29 +93,35 @@ Patrón CRUD consistente en 4 vistas:
 | `EliminarAdministradorView.vue` | `/eliminaradministrador/:id` | `id` | **Delete** |
 
 #### `AdministradorView.vue` (Listado)
-- **Tabla** con columnas: Nombre, Apellido, Email, Rol, Acciones
+- **Tabla** con columnas: Nombre, Apellido, Email, Acciones
 - **Acciones:** Botones Editar (router-link) + Eliminar (router-link) con icons Element Plus
 - **Fetch:** `GET ${API}/api/administradores` con `authHeaders()`
 - **Estados:** loading, error, empty state
 - **CTA footer:** "Agregar administrador" → `/agregaradministracion`
 
 #### `AgregarAdministradorView.vue` (Crear)
-- **Formulario reactivo:** nombre, apellido, email, password, role (select)
+- **Formulario reactivo:** nombre, apellido, email, role (select), passwordTemp (oculto, default)
 - **Validación:** required en campos
 - **Submit:** `POST ${API}/api/administradores` con body JSON
 - **Éxito:** `router.push({ name: 'administracion' })`
 
-#### `EditarAdministradorView.vue` (Editar)
+#### `EditarAdministradorView.vue` (Editar) ⭐ **Re-autenticación**
 - **Props:** `defineProps<{ id: string }>()`
-- **Carga inicial:** `GET ${API}/api/administradores/${id}` → popula formulario
-- **Submit:** `PUT ${API}/api/administradores/${id}`
-- **Nota:** Password opcional (solo si se quiere cambiar)
+- **Flujo único:** Antes de cargar datos → modal de verificación de contraseña actual
+  1. Abre modal `showReauthDialog`
+  2. Usuario ingresa password actual
+  3. `POST ${API}/api/auth/verify-password` → si OK, guarda `passwordVerificada` en ref (memoria)
+  4. Carga datos admin: `GET ${API}/api/administradores/${id}`
+- **Submit datos:** `PUT ${API}/api/administradores/${id}` (nombre, apellido, email)
+- **Cambio password opcional:** Si usuario ingresa nueva → `PUT ${API}/api/administradores/${id}/password` usando `passwordVerificada` guardada
+- **Limpieza:** `onUnmounted` limpia `passwordVerificada`
 
 #### `EliminarAdministradorView.vue` (Eliminar)
 - **Props:** `defineProps<{ id: string }>()`
 - **UI:** Confirmación con datos del admin (fetch GET previo)
 - **Acción:** `DELETE ${API}/api/administradores/${id}`
 - **Éxito:** redirect a listado
+- ⚠️ **Deuda técnica:** Usa `http://localhost:5089` hardcoded (2 líneas)
 
 ---
 
@@ -110,6 +140,7 @@ Estructura idéntica a Administradores:
 - **Interfaz `Carrera`:** id, nombre, duracionAnios, turno, modalidad, horario, estado
 - **Tabla columnas:** Nombre, Duración, Turno, Modalidad, Horario, Estado, Acciones
 - **Fetch:** `GET ${API}/api/carreras`
+- ⚠️ **Deuda técnica:** `CarreraView.vue` usa `http://localhost:5089` hardcoded (1 línea)
 
 ---
 
@@ -125,7 +156,9 @@ Estructura idéntica a Administradores:
 #### `InscripciónView.vue` - `/inscripcion`
 - **Acceso público** (sin auth, sin navbar)
 - **Formulario extenso:** datos personales, contacto, carrera, turno, modalidad, horario
-- **Submit:** `POST ${API}/api/inscripcion`
+- **Carreras:** `GET ${API}/api/carreras` (público)
+- **Submit:** `POST ${API}/api/alumnos` (público, `[AllowAnonymous]`)
+- ⚠️ **Deuda técnica:** Usa `http://localhost:5089` hardcoded (2 líneas)
 
 ---
 
@@ -196,5 +229,5 @@ const idNum = Number(id)
 
 Define:
 - Variables CSS (colores, spacing, breakpoints)
-- Clases utilitarias: `.section`, `.card`, `.card-center`, `.card-lg`, `.table`, `.table-header`, `.table-row`, `.table-cols-admin`, `.table-cols-default`, `.table-actions`, `.btn`, `.btn-primary`, `.btn-success`, `.btn-danger`, `.btn-secondary`, `.btn-menu`, `.text-center`, `.text-muted`, `.text-danger`, `.error-msg`, `.center`
+- Clases utilitarias: `.section`, `.card`, `.card-center`, `.card-lg`, `.table`, `.table-header`, `.table-row`, `.table-cols-admin`, `.table-cols-default`, `.table-cols-formularios`, `.table-actions`, `.btn`, `.btn-primary`, `.btn-success`, `.btn-danger`, `.btn-secondary`, `.btn-menu`, `.text-center`, `.text-muted`, `.text-danger`, `.error-msg`, `.center`
 - Reset básico y tipografía

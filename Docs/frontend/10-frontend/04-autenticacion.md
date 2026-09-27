@@ -71,25 +71,49 @@ const authHeaders = (): Record<string, string> => {
 6. Redirect a HomeView (dashboard)
 ```
 
+## Flujo de Verificación de Contraseña (Re-auth)
+
+Usado en `EditarAdministradorView.vue` antes de permitir edición:
+
+```
+1. Usuario navega a /editaradministrador/:id
+       │
+       ▼
+2. Se abre modal de re-autenticación (showReauthDialog = true)
+       │
+       ▼
+3. Usuario ingresa contraseña actual
+       │
+       ▼
+4. POST /api/auth/verify-password { password } con JWT
+       │
+       ▼
+5. Si OK → passwordVerificada se guarda en memoria (ref)
+       │
+       ▼
+6. Carga datos del admin (GET /api/administradores/:id)
+       │
+       ▼
+7. Usuario edita y guarda (PUT /api/administradores/:id)
+       │
+       ▼
+8. Si quiere cambiar password → usa passwordVerificada en
+   PUT /api/administradores/:id/password { passwordActual, nuevaPassword }
+```
+
 ## Flujo de Logout
 
 ```
-1. Usuario click "Cerrar sesión" en HomeView.vue
+1. Usuario click "Cerrar sesión" en NavBar/HomeView
        │
        ▼
-2. Router navega a /login (ruta con meta.soloInvitado: true)
+2. useAuth().cerrarSesion() → limpia sessionStorage
        │
        ▼
-3. Navigation guard detecta soloInvitado + autenticado
+3. router.push({ name: 'login' })
        │
        ▼
-4. Redirect a home → but wait, need explicit logout call
-       │
-       ▼
-5. En LoginView o componente: useAuth().cerrarSesion()
-       │
-       ▼
-6. sessionStorage limpio → isAuthenticated() = false
+4. Navigation guard (soloInvitado) permite acceso a /login
 ```
 
 ## Uso en Componentes
@@ -129,6 +153,14 @@ router.beforeEach((to) => {
 })
 ```
 
+### Metas de Ruta
+
+| Meta | Rutas | Comportamiento |
+|------|-------|----------------|
+| `requiereAuth: true` | `/`, `/administracion`, `/carreras`, `/formularios`, `/listados`, `/agregar*`, `/editar*`, `/eliminar*` | Redirige a `/login` si no autenticado |
+| `soloInvitado: true` | `/login` | Redirige a `/` si ya autenticado |
+| (sin meta) | `/contacto`, `/inscripcion` | Acceso público |
+
 ## Variables de Entorno
 
 | Variable | Uso |
@@ -143,3 +175,5 @@ Se accede via `import.meta.env.VITE_API_URL` en componentes.
 - **No persistencia:** No hay "recordar sesión" implementado
 - **Headers automáticos:** `authHeaders()` inyecta Bearer token en cada petición
 - **Validación en backend:** El frontend confía en que el backend valida expiración/firma del JWT
+- **Re-autenticación sensible:** `EditarAdministradorView` exige password actual antes de cargar datos
+- **Password en memoria:** Contraseña verificada se guarda solo en `ref` (se limpia en `onUnmounted`)
