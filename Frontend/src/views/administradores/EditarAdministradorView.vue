@@ -113,12 +113,23 @@
   >
     <template #header>
       <div class="dialog-header">
-        <el-icon class="dialog-icon"><Lock /></el-icon>
-        <span>Verificación de Seguridad</span>
+        <div class="dialog-header-icon">
+          <el-icon class="dialog-header-icon-inner"><Lock /></el-icon>
+        </div>
+        <div class="dialog-title-wrapper">
+          <span class="dialog-title">Verificación de Seguridad</span>
+          <span class="dialog-subtitle">Confirma tu identidad para continuar</span>
+        </div>
       </div>
     </template>
 
     <div class="dialog-content">
+      <div class="dialog-illustration">
+        <div class="dialog-illustration-bg">
+          <el-icon class="dialog-icon-large"><User /></el-icon>
+        </div>
+      </div>
+      
       <p class="dialog-message">
         Para editar los datos de un administrador, por favor ingrese su contraseña actual.
       </p>
@@ -147,8 +158,8 @@
     </div>
 
     <template #footer>
-      <div class="form-actions" style="justify-content: center; gap: 12px;">
-        <el-button @click="cancelReauth" :disabled="loadingReauth">Cancelar</el-button>
+      <div class="dialog-footer">
+        <el-button @click="cancelReauth" :disabled="loadingReauth" variant="light">Cancelar</el-button>
         <el-button
           type="primary"
           @click="confirmReauth"
@@ -167,7 +178,7 @@
 import { reactive, ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElDialog } from 'element-plus'
-import { Lock } from '@element-plus/icons-vue'
+import { Lock, User } from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'
 
 const route = useRoute()
