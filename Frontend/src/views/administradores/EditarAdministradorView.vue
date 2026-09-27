@@ -76,27 +76,6 @@
               <el-icon v-else><View /></el-icon>
             </button>
           </div>
-
-          <div class="field password-field">
-            <label for="confirmarPassword">Confirmar Nueva Contraseña</label>
-            <input
-              id="confirmarPassword"
-              v-model="confirmarPassword"
-              :type="showConfirmarPassword ? 'text' : 'password'"
-              autocomplete="new-password"
-              placeholder="Repetir nueva contraseña (dejar vacío para no cambiar)"
-              :disabled="loading"
-            />
-            <button
-              type="button"
-              class="password-toggle"
-              @click="showConfirmarPassword = !showConfirmarPassword"
-              :aria-label="showConfirmarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-            >
-              <el-icon v-if="showConfirmarPassword"><Hide /></el-icon>
-              <el-icon v-else><View /></el-icon>
-            </button>
-          </div>
         </div>
 
         <p v-if="errorPassword" class="form-error text-center">{{ errorPassword }}</p>
@@ -191,14 +170,12 @@ const error = ref<string | null>(null)
 const loadingPassword = ref(false)
 const errorPassword = ref<string | null>(null)
 const nuevaPassword = ref('')
-const confirmarPassword = ref('')
 const showNuevaPassword = ref(false)
-const showConfirmarPassword = ref(false)
 const showReauthPassword = ref(false)
 
-// Validación reactiva de contraseñas
-const passwordsValidas = computed(() => {
-  return nuevaPassword.value.length >= 8 && nuevaPassword.value === confirmarPassword.value
+// Validación reactiva de contraseña (mínimo 8 caracteres)
+const passwordValida = computed(() => {
+  return nuevaPassword.value.length >= 8
 })
 
 // Estados para re-autenticación (entrar a editar)
@@ -335,8 +312,8 @@ const guardarAdministrador = async () => {
   try {
     // Validar contraseña si se quiere cambiar
     const quiereCambiarPassword = nuevaPassword.value.trim() !== ''
-    if (quiereCambiarPassword && !passwordsValidas.value) {
-      errorPassword.value = 'Las contraseñas no coinciden o son muy cortas (mín. 8 caracteres)'
+    if (quiereCambiarPassword && !passwordValida.value) {
+      errorPassword.value = 'La contraseña debe tener al menos 8 caracteres'
       loading.value = false
       return
     }
@@ -366,9 +343,9 @@ const guardarAdministrador = async () => {
 
     // 2. Si se quiere cambiar la contraseña, pedir re-autenticación y cambiarla
     if (nuevaPassword.value.trim() !== '') {
-      // Validar que las contraseñas coincidan
-      if (!passwordsValidas.value) {
-        errorPassword.value = 'Las contraseñas no coinciden o son muy cortas (mín. 8 caracteres)'
+      // Validar longitud mínima
+      if (!passwordValida.value) {
+        errorPassword.value = 'La contraseña debe tener al menos 8 caracteres'
         loading.value = false
         return
       }
@@ -413,7 +390,6 @@ const guardarAdministrador = async () => {
 
         ElMessage.success('Contraseña actualizada correctamente')
         nuevaPassword.value = ''
-        confirmarPassword.value = ''
       } catch (err: unknown) {
         // Si el usuario canceló el prompt, ElMessageBox lanza un error específico
         if (err && typeof err === 'object' && 'type' in err && err.type === 'cancel') {
