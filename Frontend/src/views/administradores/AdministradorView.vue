@@ -25,7 +25,6 @@
           <span>Nombre</span>
           <span>Apellido</span>
           <span>Email</span>
-          <span>Rol</span>
           <span>Acciones</span>
         </div>
 
@@ -38,7 +37,6 @@
           <span>{{ admin.nombre }}</span>
           <span>{{ admin.apellido }}</span>
           <span>{{ admin.email }}</span>
-          <span>{{ admin.role }}</span>
 
           <div class="table-actions center">
             <router-link
@@ -87,18 +85,36 @@
 import { ref, onMounted } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 
-interface Administrador {
+/**
+ * Interfaz completa que devuelve la API (incluye campos sensibles).
+ * NOTA: El frontend ignora `role` y `passwordHash` en la vista,
+ * pero la API los envía y son visibles en Network tab.
+ * A futuro: el backend debería usar un DTO sin campos sensibles.
+ */
+interface AdministradorApi {
   id: number
   nombre: string
   apellido: string
   email: string
-  role: string   // corregido: era "roll"
+  role: string
+  passwordHash?: string
+}
+
+/**
+ * Interfaz usada en la vista (solo campos no sensibles).
+ * El frontend NO renderiza ni usa `role` ni `passwordHash`.
+ */
+interface AdministradorView {
+  id: number
+  nombre: string
+  apellido: string
+  email: string
 }
 
 const { authHeaders } = useAuth()
 const API = import.meta.env.VITE_API_URL
 
-const administradores = ref<Administrador[]>([])
+const administradores = ref<AdministradorView[]>([])
 const loading = ref(true)
 const error   = ref<string | null>(null)
 
@@ -106,7 +122,14 @@ const cargarAdministradores = async () => {
   try {
     const res = await fetch(`${API}/api/administradores`, { headers: authHeaders() })
     if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-    administradores.value = await res.json()
+    // Mapeamos solo los campos que necesitamos en la vista
+    const data: AdministradorApi[] = await res.json()
+    administradores.value = data.map(a => ({
+      id: a.id,
+      nombre: a.nombre,
+      apellido: a.apellido,
+      email: a.email
+    }))
   } catch (err) {
     console.error(err)
     error.value = 'No se pudieron cargar los administradores'
