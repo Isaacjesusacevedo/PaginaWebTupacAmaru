@@ -126,7 +126,7 @@
     <div class="dialog-content">
       <div class="dialog-illustration">
         <div class="dialog-illustration-bg">
-          <el-icon class="dialog-icon-large"><User /></el-icon>
+          <el-icon class="dialog-icon-large" :size="40"><User /></el-icon>
         </div>
       </div>
       

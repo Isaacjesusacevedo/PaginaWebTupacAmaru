@@ -31,7 +31,9 @@ body {
   /* Colores */
   --color-primary: #396bd7;
   --color-primary-hover: #1d4ed8;
-  --color-danger: #dc2626;
+  --color-primary-light: #5b8ae8;
+  --color-primary-dark: #102760;
+  --color-primary-rgb: 57, 107, 215;
 
   --color-bg: #f1f5f9;
   --color-card: #ffffff;
