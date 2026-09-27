@@ -59,68 +59,57 @@
         <div class="form-section">
           <h3 class="form-section-title">Cambiar Contraseña</h3>
           <p class="form-section-description">
-            Para cambiar la contraseña, ingresá la nueva y confirmá. Requiere re-autenticación.
+            Para cambiar la contraseña, completá la nueva y confirmá. Requiere tu contraseña actual.
           </p>
 
-<div class="form-row">
-              <div class="field password-field">
-                <label for="nuevaPassword">Nueva Contraseña</label>
-                <input
-                  id="nuevaPassword"
-                  v-model="nuevaPassword"
-                  :type="showNuevaPassword ? 'text' : 'password'"
-                  autocomplete="new-password"
-                  placeholder="Mínimo 8 caracteres"
-                  :disabled="loadingPassword"
-                />
-                <button
-                  type="button"
-                  class="password-toggle"
-                  @click="showNuevaPassword = !showNuevaPassword"
-                  :aria-label="showNuevaPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-                >
-                  <el-icon v-if="showNuevaPassword"><Hide /></el-icon>
-                  <el-icon v-else><View /></el-icon>
-                </button>
-              </div>
-
-              <div class="field password-field">
-                <label for="confirmarPassword">Confirmar Nueva Contraseña</label>
-                <input
-                  id="confirmarPassword"
-                  v-model="confirmarPassword"
-                  :type="showConfirmarPassword ? 'text' : 'password'"
-                  autocomplete="new-password"
-                  placeholder="Repetir nueva contraseña"
-                  :disabled="loadingPassword"
-                />
-                <button
-                  type="button"
-                  class="password-toggle"
-                  @click="showConfirmarPassword = !showConfirmarPassword"
-                  :aria-label="showConfirmarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-                >
-                  <el-icon v-if="showConfirmarPassword"><Hide /></el-icon>
-                  <el-icon v-else><View /></el-icon>
-                </button>
-              </div>
+          <div class="form-row">
+            <div class="field password-field">
+              <label for="nuevaPassword">Nueva Contraseña</label>
+              <input
+                id="nuevaPassword"
+                v-model="nuevaPassword"
+                :type="showNuevaPassword ? 'text' : 'password'"
+                autocomplete="new-password"
+                placeholder="Mínimo 8 caracteres (dejar vacío para no cambiar)"
+                :disabled="loading"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                @click="showNuevaPassword = !showNuevaPassword"
+                :aria-label="showNuevaPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              >
+                <el-icon v-if="showNuevaPassword"><Hide /></el-icon>
+                <el-icon v-else><View /></el-icon>
+              </button>
             </div>
 
-          <div class="form-actions fieldset-actions">
-            <button
-              type="button"
-              class="btn btn-warning"
-              @click="cambiarPassword"
-              :disabled="loadingPassword || !passwordsValidas"
-            >
-              {{ loadingPassword ? 'Actualizando...' : 'Actualizar Contraseña' }}
-            </button>
+            <div class="field password-field">
+              <label for="confirmarPassword">Confirmar Nueva Contraseña</label>
+              <input
+                id="confirmarPassword"
+                v-model="confirmarPassword"
+                :type="showConfirmarPassword ? 'text' : 'password'"
+                autocomplete="new-password"
+                placeholder="Repetir nueva contraseña"
+                :disabled="loading"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                @click="showConfirmarPassword = !showConfirmarPassword"
+                :aria-label="showConfirmarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              >
+                <el-icon v-if="showConfirmarPassword"><Hide /></el-icon>
+                <el-icon v-else><View /></el-icon>
+              </button>
+            </div>
           </div>
 
           <p v-if="errorPassword" class="form-error text-center">{{ errorPassword }}</p>
         </div>
 
-        <!-- ACTIONS (datos generales) -->
+        <!-- ACTIONS -->
         <div class="form-actions">
           <button
             class="btn btn-success"
@@ -144,7 +133,7 @@
     </div>
   </main>
 
-  <!-- RE-AUTENTICACIÓN MODAL -->
+  <!-- RE-AUTENTICACIÓN MODAL (para entrar a editar) -->
   <el-dialog
     v-model="showReauthDialog"
     title="Confirmar identidad"
@@ -220,7 +209,7 @@ const passwordsValidas = computed(() => {
   return nuevaPassword.value.length >= 8 && nuevaPassword.value === confirmarPassword.value
 })
 
-// Estados para re-autenticación
+// Estados para re-autenticación (entrar a editar)
 const showReauthDialog = ref(true)
 const loadingReauth = ref(false)
 const reauthPassword = ref('')
@@ -345,15 +334,22 @@ const handleReauthClose = (done: () => void) => {
   }
 }
 
-// 🔹 Guardar cambios (datos generales: nombre, apellido, email)
+// 🔹 Guardar cambios (datos generales: nombre, apellido, email + opcional contraseña)
 const guardarAdministrador = async () => {
   loading.value = true
   error.value = null
+  errorPassword.value = null
 
   try {
-    // Enviamos solo los campos que el formulario maneja
-    // El ID va en la URL, no en el body
-    // NO enviamos campos de contraseña (se manejan en endpoint separado)
+    // Validar contraseña si se quiere cambiar
+    const quiereCambiarPassword = nuevaPassword.value.trim() !== ''
+    if (quiereCambiarPassword && !passwordsValidas.value) {
+      errorPassword.value = 'Las contraseñas no coinciden o son muy cortas (mín. 8 caracteres)'
+      loading.value = false
+      return
+    }
+
+    // 1. Primero guardamos los datos generales (nombre, apellido, email)
     const payload = {
       nombre: admin.nombre,
       apellido: admin.apellido,
@@ -375,73 +371,73 @@ const guardarAdministrador = async () => {
     }
 
     ElMessage.success('Datos actualizados correctamente')
+
+    // 2. Si se quiere cambiar la contraseña, pedir re-autenticación y cambiarla
+    if (nuevaPassword.value.trim() !== '') {
+      // Validar que las contraseñas coincidan
+      if (!passwordsValidas.value) {
+        errorPassword.value = 'Las contraseñas no coinciden o son muy cortas (mín. 8 caracteres)'
+        loading.value = false
+        return
+      }
+
+      // 🔐 RE-AUTENTICACIÓN: Pedir contraseña actual via ElMessageBox
+      let passwordActual: string
+      try {
+        const { value: passwordActual } = await ElMessageBox.prompt(
+          'Por seguridad, ingresá tu contraseña actual para confirmar el cambio de contraseña:',
+          'Confirmar identidad',
+          {
+            confirmButtonText: 'Confirmar',
+            cancelButtonText: 'Cancelar',
+            inputType: 'password',
+            inputPlaceholder: 'Contraseña actual',
+            inputPattern: /^.{1,}$/,
+            inputValidator: (val) => val.length > 0 || 'La contraseña es obligatoria',
+            distinguishCancelAndClose: true
+          }
+        )
+
+        // Enviar cambio de contraseña al backend
+        const payload = {
+          passwordActual,
+          nuevaPassword: nuevaPassword.value
+        }
+
+        const res = await fetch(
+          `${API}/api/administradores/${admin.id}/password`,
+          {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify(payload)
+          }
+        )
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          const msg = data.error || (res.status === 401 ? 'Contraseña actual incorrecta' : 'Error al cambiar la contraseña')
+          throw new Error(msg)
+        }
+
+        ElMessage.success('Contraseña actualizada correctamente')
+        nuevaPassword.value = ''
+        confirmarPassword.value = ''
+      } catch (err: unknown) {
+        // Si el usuario canceló el prompt, ElMessageBox lanza un error específico
+        if (err && typeof err === 'object' && 'type' in err && err.type === 'cancel') {
+          // Usuario canceló el cambio de contraseña, pero los datos generales ya se guardaron
+          ElMessage.warning('Cambio de contraseña cancelado, pero los datos se guardaron')
+        } else {
+          throw err
+        }
+      }
+    }
+
     router.push('/administracion')
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Error al actualizar administrador'
   } finally {
     loading.value = false
-  }
-}
-
-// 🔹 Cambiar contraseña con re-autenticación
-const cambiarPassword = async () => {
-  // Validaciones previas
-  if (!passwordsValidas.value) {
-    errorPassword.value = 'Las contraseñas no coinciden o son muy cortas (mín. 8 caracteres)'
-    return
-  }
-
-  errorPassword.value = null
-  loadingPassword.value = true
-
-  try {
-    // 🔐 RE-AUTENTICACIÓN: Pedir contraseña actual via ElMessageBox
-    const { value: passwordActual } = await ElMessageBox.prompt(
-      'Por seguridad, ingresá tu contraseña actual para confirmar el cambio:',
-      'Confirmar identidad',
-      {
-        confirmButtonText: 'Confirmar',
-        cancelButtonText: 'Cancelar',
-        inputType: 'password',
-        inputPlaceholder: 'Contraseña actual',
-        inputPattern: /^.{1,}$/,
-        inputValidator: (val) => val.length > 0 || 'La contraseña es obligatoria',
-        distinguishCancelAndClose: true
-      }
-    )
-
-    // Enviar cambio de contraseña al backend
-    const payload = {
-      passwordActual,
-      nuevaPassword: nuevaPassword.value
-    }
-
-    const res = await fetch(
-      `${API}/api/administradores/${admin.id}/password`,
-      {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify(payload)
-      }
-    )
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      const msg = data.error || (res.status === 401 ? 'Contraseña actual incorrecta' : 'Error al cambiar la contraseña')
-      throw new Error(msg)
-    }
-
-    ElMessage.success('Contraseña actualizada correctamente')
-    nuevaPassword.value = ''
-    confirmarPassword.value = ''
-  } catch (err: unknown) {
-    // Si el usuario canceló el prompt, ElMessageBox lanza un error específico
-    if (err && typeof err === 'object' && 'type' in err && err.type === 'cancel') {
-      return // Usuario canceló, no mostrar error
-    }
-    errorPassword.value = err instanceof Error ? err.message : 'Error al cambiar la contraseña'
-  } finally {
-    loadingPassword.value = false
   }
 }
 </script>
