@@ -53,23 +53,15 @@
 
           <div class="field password-field">
             <label for="nuevaPassword">Nueva Contraseña</label>
-            <input
+            <el-input
               id="nuevaPassword"
               v-model="nuevaPassword"
-              :type="showNuevaPassword ? 'text' : 'password'"
+              :show-password="true"
+              type="password"
               autocomplete="new-password"
               placeholder="Mínimo 8 caracteres (dejar vacío para no cambiar)"
               :disabled="loading"
             />
-            <button
-              type="button"
-              class="password-toggle"
-              @click="showNuevaPassword = !showNuevaPassword"
-              :aria-label="showNuevaPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-            >
-              <el-icon v-if="showNuevaPassword"><Hide /></el-icon>
-              <el-icon v-else><View /></el-icon>
-            </button>
           </div>
         </div>
 
@@ -193,7 +185,6 @@ const error = ref<string | null>(null)
 // Estados específicos para cambio de contraseña
 const errorPassword = ref<string | null>(null)
 const nuevaPassword = ref('')
-const showNuevaPassword = ref(false)
 
 // Validación reactiva de contraseña (mínimo 8 caracteres)
 const passwordValida = computed(() => {
