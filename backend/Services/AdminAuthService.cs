@@ -1,4 +1,5 @@
 using Microsoft.Data.SqlClient;
+using BCrypt.Net;
 using Backend.Models;
 
 namespace Backend.Services;
@@ -12,6 +13,38 @@ public class AdminAuthService : IAdminAuthService
         _connectionString = config.GetConnectionString("SqlServer")
             ?? throw new InvalidOperationException(
                 "La cadena de conexión 'SqlServer' no está configurada en appsettings.json.");
+    }
+
+    public async Task ChangePasswordAsync(string email, string passwordActual, string nuevaPassword)
+    {
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+
+        // Verificar contraseña actual
+        await using var cmd = new SqlCommand(
+            @"SELECT PasswordHash FROM Administradores WHERE Email = @Email AND Activo = 1",
+            conn);
+        cmd.Parameters.AddWithValue("@Email", email.Trim().ToLower());
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+        if (!await reader.ReadAsync())
+            throw new UnauthorizedAccessException("Usuario no encontrado");
+
+        var hash = reader.GetString(reader.GetOrdinal("PasswordHash"));
+        if (!BCrypt.Net.BCrypt.Verify(passwordActual, hash))
+            throw new UnauthorizedAccessException("Contraseña actual incorrecta");
+
+        // Actualizar contraseña
+        var newHash = BCrypt.Net.BCrypt.HashPassword(nuevaPassword, workFactor: 12);
+        await reader.CloseAsync();
+
+        await using var updateCmd = new SqlCommand(
+            @"UPDATE Administradores SET PasswordHash = @PasswordHash WHERE Email = @Email",
+            conn);
+        updateCmd.Parameters.AddWithValue("@PasswordHash", newHash);
+        updateCmd.Parameters.AddWithValue("@Email", email.Trim().ToLower());
+
+        await updateCmd.ExecuteNonQueryAsync();
     }
 
     public async Task<AdminResult?> LoginAsync(string email, string password)

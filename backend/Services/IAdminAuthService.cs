@@ -15,4 +15,7 @@ public interface IAdminAuthService
 
     /// <summary>Crea un nuevo administrador con la contraseña hasheada con BCrypt.</summary>
     Task CrearAdminAsync(string nombre, string apellido, string email, string password, string role);
+
+    /// <summary>Cambia la contraseña de un administrador verificando la actual.</summary>
+    Task ChangePasswordAsync(string email, string passwordActual, string nuevaPassword);
 }

@@ -12,10 +12,12 @@ namespace Backend.Controllers;
 public class AdministradorController : ControllerBase
 {
     private readonly ICrudJsonService<Administrador> _service;
+    private readonly IAdminAuthService _authService;
 
-    public AdministradorController(ICrudJsonService<Administrador> service)
+    public AdministradorController(ICrudJsonService<Administrador> service, IAdminAuthService authService)
     {
         _service = service;
+        _authService = authService;
     }
 
     // GET: api/administradores
@@ -126,6 +128,36 @@ public class AdministradorController : ControllerBase
         catch (Exception)
         {
             return StatusCode(500, new { error = "Error interno al eliminar el administrador." });
+        }
+    }
+
+    // PUT: api/administradores/1/password
+    [HttpPut("{id:int}/password")]
+    public async Task<IActionResult> ChangePassword(int id, [FromBody] ChangePasswordDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            // El email del usuario autenticado se obtiene del token JWT
+            var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
+                ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Email)?.Value;
+            
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized(new { error = "Token inválido" });
+
+            await _authService.ChangePasswordAsync(email, dto.PasswordActual, dto.NuevaPassword);
+            
+            return Ok(new { mensaje = "Contraseña actualizada correctamente" });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { error = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { error = "Error interno al cambiar la contraseña." });
         }
     }
 }
