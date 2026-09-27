@@ -85,7 +85,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
 interface Formulario {
@@ -96,7 +95,6 @@ interface Formulario {
   fechaCierre: string
 }
 
-const router = useRouter()
 const { authHeaders } = useAuth()
 const API = import.meta.env.VITE_API_URL
 

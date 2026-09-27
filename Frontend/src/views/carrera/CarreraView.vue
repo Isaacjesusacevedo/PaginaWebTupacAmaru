@@ -96,12 +96,14 @@ interface Carrera {
   estado: string
 }
 
+const API = import.meta.env.VITE_API_URL
+
 const carreras = ref<Carrera[]>([])
 const error = ref<string | null>(null)
 
-  const cargarCarreras = async () => {
+const cargarCarreras = async () => {
   try {
-    const res = await fetch('http://localhost:5089/api/carreras')
+    const res = await fetch(`${API}/api/carreras`)
     if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
     carreras.value = await res.json()
   } catch (err: unknown) {
@@ -113,7 +115,6 @@ const error = ref<string | null>(null)
     }
   }
 }
-
 
 onMounted(cargarCarreras)
 </script>

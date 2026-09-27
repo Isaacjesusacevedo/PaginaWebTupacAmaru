@@ -37,178 +37,146 @@ El sistema expone un **panel interno** accesible por personal administrativo (JW
 
 ---
 
-## 2. Arquitectura General
+## 2. Arquitectura General (N-Tier: AD → BR → API)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
+┌────────────────────────────────────────────────────────────────────────────┐
 │                        CLIENTE (Navegador)                      │
 │  Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router │
-└────────────────────────────┬────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────────────┘
                              │ HTTPS / REST API + JWT
                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      SERVIDOR (ASP.NET Core 9)                  │
-│  Controllers → Services (SqlServerBaseService) → SQL Server     │
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      ASP.NET CORE 9 API (Presentation)          │
+│  Controllers → BR Services → AD Repositories → SQL Server       │
 │  JWT Auth + BCrypt (workFactor:12) + Global Exception Handling  │
 └─────────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    SQL SERVER EXPRESS (DESKTOP-DQ8JUA\G)        │
+│         Tablas: Administradores, Alumnos, Carreras,             │
+│                 Profesores, Formularios                         │
+└──────────────────────────────────────────────────────────────┘
 ```
+
+**Capas del Backend (N-Tier):**
+- **API Layer** (`Instituto.API`): Controllers, Middleware, DI, JWT, CORS
+- **BR Layer** (`Instituto.BR`): 6 Servicios con lógica de negocio, validaciones, Result Pattern
+- **AD Layer** (`Instituto.AD`): 6 Repositorios tipados, `AccesoDB` (ADO.NET), Entidades de dominio
 
 **Patrones aplicados:**
-- **Backend**: Repository genérico (`SqlServerBaseService<T>` + `ICrudJsonService<T>`), DTOs, Exception handling tipado, DI, Clean Architecture por capas.
-- **Frontend**: Composition API, Componentes por vista, CSS modular (BEM-like), Route Guards, Composable `useAuth`.
+- **Backend**: Repository pattern, Template Method (`AccesoDB`), DI, Result Pattern (`ServiceResult<T>`), Exception handling tipado
+- **Frontend**: Composition API, Componentes por vista, CSS modular (BEM-like), Route Guards, Composable `useAuth`
+
+## 3. Estructura de Directorios (Solution)
+
+```
+Instituto.sln
+├── Instituto.AD/              # Data Access Layer
+├── Instituto.BR/              # Business Rules Layer
+├── Instituto.API/             # Presentation Layer (ASP.NET Core)
+├── Instituto.AD.Test/         # Unit tests AD (MSTest + Moq)
+├── Instituto.BR.Test/         # Unit tests BR (MSTest + Moq)
+├── Instituto.API.Test/        # Integration tests API (MSTest + WebApplicationFactory)
+├── Database/                  # Scripts SQL compartidos
+├── Docs/                      # Documentación
+└── Frontend/                  # Vue 3 + Vite
+```
+
+## Responsabilidades por Capa
+
+### API Layer (`Instituto.API`)
+- **Recibe** HTTP requests, validan `ModelState`
+- **Delegan** a servicios BR (no contienen lógica de negocio)
+- **Manejan** excepciones de dominio → HTTP status codes
+- **Retornan** `IActionResult` con JSON serializado (`ApiResponse<T>`)
+- **Middleware**: JWT Auth, CORS, Global Exception Handler
+
+### BR Layer (`Instituto.BR`)
+- **Contienen** lógica de negocio y reglas de validación
+- **Orquestan** validaciones cruzadas (ej. Alumno valida Carrera existe)
+- **Ejecutan** operaciones via Repositories (AD)
+- **Manejan** `ServiceResult<T>` pattern para éxito/fallo tipado
+- **Servicios**: `CarreraService`, `AlumnoService`, `AdministradorService`, `ProfesorService`, `FormularioService`, `ListadoService`
+- **Auth**: `AdministradorService` con BCrypt (workFactor: 12), JWT claims
+
+### AD Layer (`Instituto.AD`)
+- **Repositorios** tipados por entidad (`ICarreraRepository`, `IAlumnoRepository`, etc.)
+- **AccesoDB**: Wrapper ADO.NET genérico (`ExecuteReader/NonQuery/Scalar`, parámetros tipados)
+- **Mapeo**: `SqlDataReader` → Entidades (manual mapping)
+- **SQL**: Parameterizado, sin ORM, sin reflexión
+- **Entidades AD**: Separadas de BR/API, sin dependencias externas
 
 ---
 
-## 3. Estructura de Directorios
+## Modelos de Dominio (AD Layer)
 
 ```
-instituto/
-├── README.md                    # Este archivo
-├── .gitignore                   # Exclusiones globales
-├── PROYECTO.md                  # Documentación técnica detallada
-│
-├── backend/                     # ASP.NET Core 9 API
-│   ├── backend.sln
-│   ├── Backend.csproj
-│   ├── Program.cs               # Entry point, DI, JWT, CORS, Middleware
-│   ├── appsettings.json         # Configuración (conexión, JWT)
-│   ├── appsettings.Development.json
-│   ├── Backend.http             # Tests HTTP (REST Client)
-│   ├── .gitignore
-│   │
-│   ├── Controllers/
-│   │   ├── AuthController.cs        # POST /api/auth/login, /verify-password
-│   │   ├── SetupController.cs       # POST /api/setup/admin (solo Dev, 1 vez)
-│   │   ├── CarreraController.cs     # CRUD Carreras
-│   │   ├── AlumnosController.cs     # CRUD Alumnos + validación CarreraId
-│   │   ├── AdministradorController  # CRUD Admins (JWT) + change-password
-│   │   ├── ProfesorController.cs    # CRUD Profesores (JWT)
-│   │   ├── FormularioController.cs  # CRUD Formularios (JWT)
-│   │   └── ListadoController.cs     # Join Alumno + Carrera
-│   │
-│   ├── Models/
-│   │   ├── Persona.cs          # Base abstracta (Id, Nombre, Apellido, Email)
-│   │   ├── Alumno.cs           # Hereda Persona + DNI, FechaNac, CarreraId, Edad
-│   │   ├── Administrador.cs    # Hereda Persona + Role + PasswordHash + Activo
-│   │   ├── Profesor.cs         # Hereda Persona + Telefono, Especialidad
-│   │   ├── Carrera.cs          # Entidad independiente
-│   │   ├── Formulario.cs       # Entidad independiente
-│   │   ├── LoginDto.cs
-│   │   ├── SetupAdminDto.cs
-│   │   ├── AdminResult.cs
-│   │   ├── ChangePasswordDto.cs
-│   │   └── VerifyPasswordDto.cs
-│   │
-│   ├── DTOs/
-│   │   └── AlumnoListadoDTO.cs # Proyección Alumno + Carrera
-│   │
-│   ├── Services/
-│   │   ├── ICrudJsonService.cs         # Interfaz genérica CRUD
-│   │   ├── SqlServerBaseService.cs     # Base ADO.NET + Template Methods
-│   │   ├── IAdminAuthService.cs        # Interfaz auth
-│   │   ├── AdminAuthService.cs         # Login/Registro JWT + BCrypt
-│   │   ├── CarreraSqlServerService
-│   │   ├── AlumnoSqlServerService
-│   │   ├── AdministradorSqlServerService
-│   │   ├── ProfesorSqlServerService
-│   │   └── FormularioSqlServerService
-│   │
-│   ├── Exceptions/
-│   │   ├── EntityNotFoundException.cs  # → 404
-│   │   └── PersistenceException.cs     # → 500
-│   │
-│   ├── Database/
-│   │   └── CreateDatabase.sql    # Script creación BD + tablas
-│   │
-│   └── Properties/launchSettings.json
-│
-└── Frontend/                    # Vue 3 + Vite
-    ├── package.json
-    ├── vite.config.ts
-    ├── tsconfig.json / .app / .node
-    ├── eslint.config.ts
-    ├── .env                     # VITE_API_URL=http://localhost:5089
-    ├── .gitignore
-    │
-    ├── index.html
-    │
-    └── src/
-        ├── main.ts              # Bootstrap: Vue, Pinia, Router, Element Plus, Icons
-        ├── App.vue              # Layout raíz + NavBar + RouterView
-        │
-        ├── router/index.ts      # Rutas + Guards (requiereAuth, soloInvitado)
-        │
-        ├── composables/
-        │   └── useAuth.ts       # Token/Admin en sessionStorage + helpers
-        │
-        ├── components/
-        │   ├── NavBar.vue       # Logo + links + logout (oculto en /inscripcion)
-        │   └── ... (TheWelcome, WelcomeItem - legacy)
-        │
-        ├── views/
-        │   ├── public/
-        │   │   ├── HomeView.vue          # Dashboard admin (menu cards)
-        │   │   ├── ContactoView.vue
-        │   │   ├── FormulariosView.vue   # Listado formularios
-        │   │   ├── AgregarFormularioView.vue
-        │   │   ├── EditarFormularioView.vue
-        │   │   └── EliminarFormularioView.vue
-        │   ├── auth/
-        │   │   └── LoginView.vue         # Login JWT + toggle password
-        │   ├── carrera/
-        │   │   ├── CarreraView.vue       # Tabla + CRUD
-        │   │   ├── AgregarCarreraView.vue
-        │   │   ├── EditarCarreraView.vue
-        │   │   └── EliminarCarreraView.vue
-        │   ├── administradores/
-        │   │   ├── AdministradorView.vue # Tabla + empty/error states
-        │   │   ├── AgregarAdministradorView.vue
-        │   │   ├── EditarAdministradorView.vue  # Re-auth + change password
-        │   │   └── EliminarAdministradorView.vue
-        │   └── Listados/
-        │       ├── ListadoView.vue       # Join Alumno+Carrera (JWT)
-        │       └── InscripciónView.vue   # Formulario público dinámico
-        │
-        └── assets/css/
-            ├── base/
-            │   ├── main.css        # Entry point
-            │   └── global.css      # Variables CSS, reset, utilidades
-            ├── components/
-            │   ├── buttons.css     # .btn, variants, sizes
-            │   ├── card.css        # .card, .card-center, .card-lg, .card-header, .card-title
-            │   ├── forms.css       # .form, .form-row, .field, .form-actions
-            │   ├── innputs.css     # Inputs, selects, .password-field, .password-toggle
-            │   ├── table.css       # .table, .table-header, .table-row, .table-empty-state, badges
-            │   ├── navbar.css      # .navbar, .menu
-            │   └── admin-menu.css  # Grid botones dashboard
-            └── layout/
-                └── section.css     # .section (centrado + padding)
+Persona (abstract)
+├── Id, Nombre, Apellido, Email
+    ├── Administrador: +Role, PasswordHash, Activo, FechaCreacion
+    ├── Alumno: +DNI, FechaNacimiento, Direccion, Nacionalidad, FechaInscripcion, Telefono, TituloSecundario, Turno, CarreraId, Edad (calculada)
+    ├── Profesor: +Telefono, Especialidad
+    └── Carrera (independiente): Id, Nombre, DuracionAnios, Turno, Modalidad, Horario, Estado, FechaCreacion
+    └── Formulario (independiente): Id, Nombre, Estado, FechaApertura, FechaCierre, Descripcion, FechaCreacion
 ```
+
+### DTOs (BR Layer)
+- **Input**: `LoginDto`, `SetupAdminDto`, `ChangePasswordDto`, `VerifyPasswordDto`
+- **Output**: `AdminResult` (record), `ServiceResult<T>`, `ServiceResult`, `AlumnoListadoDto`, `ListadoItem`
 
 ---
 
-## 4. Back-end — ASP.NET Core 9 + SQL Server
+## Exceptions (Cross-Cutting)
+
+| Excepción | HTTP Status | Uso |
+|-----------|-------------|-----|
+| `EntityNotFoundException` | 404 | Recurso no encontrado / inactivo |
+| `PersistenceException` | 500 | Error BD / IO / Constraint violation |
+| `UnauthorizedAccessException` | 401 | Credenciales inválidas / password incorrecto |
+
+---
+
+## Convenciones de Nombres (Actualizadas)
+
+| Elemento | Convención | Ejemplo |
+|----------|------------|---------|
+| **Projects** | `Instituto.{Layer}` | `Instituto.AD`, `Instituto.BR`, `Instituto.API` |
+| **Controllers** | `{Entidad}Controller` | `AlumnosController`, `AuthController` |
+| **Services** | `{Entidad}Service` | `AlumnoService`, `AdministradorService` |
+| **Repositories** | `{Entidad}Repository` | `AlumnoRepository`, `CarreraRepository` |
+| **Interfaces** | `I{Funcionalidad}` | `IAlumnoRepository`, `IAlumnoService` |
+| **DTOs Input** | `{Accion}{Entidad}Dto` | `SetupAdminDto`, `LoginDto`, `ChangePasswordDto` |
+| **DTOs Output** | `{Entidad}Result` / `{Entidad}Dto` | `AdminResult`, `AlumnoListadoDto`, `ServiceResult<T>` |
+| **Exceptions** | `{Contexto}Exception` | `PersistenceException`, `EntityNotFoundException` |
+| **Result Pattern** | `ServiceResult<T>` | `ServiceResult<Alumno>`, `ServiceResult` |
+| **SQL Tables** | Plural PascalCase | `Administradores`, `Alumnos`, `Formularios` |
+| **SQL Columns** | PascalCase | `Nombre`, `FechaNacimiento`, `PasswordHash` |
+| **SQL Params** | `@NombreParametro` | `@Email`, `@Id`, `@PasswordHash` |
+
+## 4. Back-end — ASP.NET Core 9 + SQL Server Express
 
 ### 4.1 Stack y Dependencias
 
 | Paquete | Versión | Propósito |
 |---------|---------|-----------|
-| `Microsoft.AspNetCore` | 9.0 (SDK) | Framework web |
-| `Microsoft.AspNetCore.Authentication.JwtBearer` | 9.0.5 | Autenticación JWT Bearer |
-| `Microsoft.AspNetCore.OpenApi` | 9.0.5 | Generación de OpenAPI/Swagger |
-| `Microsoft.Data.SqlClient` | 5.2.2 | Driver SQL Server (ADO.NET) |
-| `BCrypt.Net-Next` | 4.0.3 | Hash de contraseñas |
-| `System.Text.Json` | Built-in | Serialización |
+| Microsoft.AspNetCore | 9.0 (SDK) | Framework web |
+| Microsoft.AspNetCore.Authentication.JwtBearer | 9.0.5 | Autenticación JWT Bearer |
+| Microsoft.AspNetCore.OpenApi | 9.0.5 | Generación de OpenAPI/Swagger |
+| Microsoft.Data.SqlClient | 5.2.2 | Driver SQL Server (ADO.NET) |
+| BCrypt.Net-Next | 4.0.3 | Hash de contraseñas |
+| System.Text.Json | Built-in | Serialización |
 
-**Target Framework**: `net9.0`  
+**Target Framework**: net9.0  
 **Características C#**: Nullable reference types, implicit usings.
 
 ---
 
-### 4.2 Punto de Entrada: `Program.cs`
+### 4.2 Punto de Entrada: Instituto.API/Program.cs
 
 ```csharp
-// ── CORS para el front-end Vue
+// CORS para el front-end Vue
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("VueCors", policy =>
@@ -217,7 +185,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// ── JWT Authentication
+// JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key no configurado.");
 
@@ -245,24 +213,33 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// ── Controllers + JSON options
+// Controllers + JSON options
 builder.Services.AddControllers()
     .AddJsonOptions(o => { o.JsonSerializerOptions.PropertyNameCaseInsensitive = true; });
 
-// ── Servicios de persistencia — SQL Server
-builder.Services.AddScoped<ICrudJsonService<Carrera>, CarreraSqlServerService>();
-builder.Services.AddScoped<ICrudJsonService<Alumno>, AlumnoSqlServerService>();
-builder.Services.AddScoped<ICrudJsonService<Administrador>, AdministradorSqlServerService>();
-builder.Services.AddScoped<ICrudJsonService<Profesor>, ProfesorSqlServerService>();
-builder.Services.AddScoped<ICrudJsonService<Formulario>, FormularioSqlServerService>();
+// Repositories (AD Layer)
+var connectionString = builder.Configuration.GetConnectionString("SqlServer")
+    ?? throw new InvalidOperationException("ConnectionStrings:SqlServer no configurado.");
 
-// ── Servicio de autenticación
-builder.Services.AddScoped<IAdminAuthService, AdminAuthService>();
+builder.Services.AddScoped<ICarreraRepository>(_ => new CarreraRepository(connectionString));
+builder.Services.AddScoped<IAlumnoRepository>(_ => new AlumnoRepository(connectionString));
+builder.Services.AddScoped<IAdministradorRepository>(_ => new AdministradorRepository(connectionString));
+builder.Services.AddScoped<IProfesorRepository>(_ => new ProfesorRepository(connectionString));
+builder.Services.AddScoped<IFormularioRepository>(_ => new FormularioRepository(connectionString));
+builder.Services.AddScoped<IListadoRepository>(_ => new ListadoRepository(connectionString));
 
-// ── Middleware global de errores
+// Services (BR Layer)
+builder.Services.AddScoped<ICarreraService, CarreraService>();
+builder.Services.AddScoped<IAlumnoService, AlumnoService>();
+builder.Services.AddScoped<IAdministradorService, AdministradorService>();
+builder.Services.AddScoped<IProfesorService, ProfesorService>();
+builder.Services.AddScoped<IFormularioService, FormularioService>();
+builder.Services.AddScoped<IListadoService, ListadoService>();
+
+// Middleware global de errores
 app.UseExceptionHandler(errorApp => { ... });
 
-// ── Pipeline
+// Pipeline
 app.UseRouting();
 app.UseCors("VueCors");
 app.UseAuthentication();
@@ -274,8 +251,8 @@ app.Run();
 ```
 
 **Puertos (launchSettings.json):**
-- HTTP: `http://localhost:5089`
-- HTTPS: `https://localhost:7217`
+- HTTP: http://localhost:5127
+- HTTPS: https://localhost:7244
 
 ---
 
@@ -297,8 +274,8 @@ Persona (abstract)
     │   ├── Telefono         [Phone] [StringLength(50)]
     │   ├── TituloSecundario [StringLength(200)]
     │   ├── Turno            [StringLength(50)]
-    │   ├── CarreraId        [Required] [Range(1, int.MaxValue)]  ← FK
-    │   └── Edad             (propiedad calculada — no persiste)
+    │   ├── CarreraId        [Required] [Range(1, int.MaxValue)]  <-- FK
+    │   └── Edad             (propiedad calculada -- no persiste)
     │
     ├── Administrador
     │   ├── Role             [Required] [StringLength(50)]  // Admin | SuperAdmin
@@ -331,41 +308,37 @@ Formulario (independiente)
 
 ### 4.4 Excepciones Personalizadas
 
-Ubicadas en `Backend/Exceptions/`. Desacoplan el servicio de la lógica HTTP.
+Ubicadas en Instituto.AD/Exceptions/. Desacoplan el servicio de la lógica HTTP.
 
-#### `EntityNotFoundException`
-Lanzada cuando una entidad buscada por `Id` no existe (o está inactiva para Admin).
+#### EntityNotFoundException
+Lanzada cuando una entidad buscada por Id no existe (o está inactiva para Admin).
 
 ```csharp
 public class EntityNotFoundException : Exception
 {
     public EntityNotFoundException(string message) : base(message) { }
     public EntityNotFoundException(string entityName, int id)
-        : base($"{entityName} con Id {id} no fue encontrado/a.") { }
+        : base(entityName + " con Id " + id + " no fue encontrado/a.") { }
 }
-```
-**Se lanza en**: `GetById`, `Update`, `Delete` (y `GetById` de Admin filtra `Activo=1`).  
-**Capturada en**: controladores → `404 Not Found`.
+Se lanza en: GetById, Update, Delete (y GetById de Admin filtra Activo=1).
+Capturada en: controladores -> 404 Not Found.
 
-#### `PersistenceException`
+#### PersistenceException
 Lanzada ante cualquier error de BD (SqlException, timeout, constraint violation, etc.).
 
-```csharp
 public class PersistenceException : Exception
 {
     public PersistenceException(string message) : base(message) { }
     public PersistenceException(string message, Exception inner) : base(message, inner) { }
 }
-```
-**Se lanza en**: operaciones ADO.NET (ExecuteReader, ExecuteNonQuery, etc.).  
-**Capturada en**: controladores → `500 Internal Server Error`.
+Se lanza en: operaciones ADO.NET (ExecuteReader, ExecuteNonQuery, etc.).
+Capturada en: controladores -> 500 Internal Server Error.
 
 ---
 
 ### 4.5 Data Transfer Objects (DTOs)
 
-#### `AdminResult` (record inmutable)
-```csharp
+#### AdminResult (record inmutable)
 public record AdminResult(
     int    Id,
     string Nombre,
@@ -373,203 +346,314 @@ public record AdminResult(
     string Email,
     string Role
 );
-```
-- **Sin PasswordHash** → Nunca expone credenciales.
+- Sin PasswordHash -> Nunca expone credenciales.
 - Serializado directamente en JWT claims y response JSON.
 
-#### `AlumnoListadoDto`
-Proyección plana de un alumno con información de su carrera. Usada por `ListadoController`.
+#### AlumnoListadoDto
+Proyección plana de un alumno con información de su carrera. Usada por ListadoController.
 
-```csharp
 public class AlumnoListadoDto
 {
     public int AlumnoId { get; set; }
-    public string? NombreCompleto { get; set; }  // "Apellido, Nombre"
+    public string NombreCompleto { get; set; }  // Apellido, Nombre
     public int DNI { get; set; }
-    public string? Email { get; set; }
-    public string? Carrera { get; set; }         // Nombre carrera o "Sin carrera"
-    public string? Turno { get; set; }
+    public string Email { get; set; }
+    public string Carrera { get; set; }         // Nombre carrera o Sin carrera
+    public string Turno { get; set; }
     public int Edad { get; set; }
 }
-```
 
-#### Otros DTOs
-- `LoginDto` — email + password
-- `SetupAdminDto` — nombre, apellido, email, password, role
-- `ChangePasswordDto` — passwordActual, nuevaPassword
-- `VerifyPasswordDto` — password
+Otros DTOs:
+- LoginDto -- email + password
+- SetupAdminDto -- nombre, apellido, email, password, role
+- ChangePasswordDto -- passwordActual, nuevaPassword
+- VerifyPasswordDto -- password
+- ListadoItem -- Item para listados (AD layer)
 
 ---
 
-### 4.6 Servicios
+### 4.6 Capa de Servicios (Business Rules Layer -- Instituto.BR)
 
-#### Interfaz Común: `ICrudJsonService<T>`
-```csharp
-public interface ICrudJsonService<T> where T : class
+#### Registro en DI Container (API Layer)
+
+builder.Services.AddScoped<ICarreraRepository>(_ => new CarreraRepository(connectionString));
+builder.Services.AddScoped<IAlumnoRepository>(_ => new AlumnoRepository(connectionString));
+builder.Services.AddScoped<IAdministradorRepository>(_ => new AdministradorRepository(connectionString));
+builder.Services.AddScoped<IProfesorRepository>(_ => new ProfesorRepository(connectionString));
+builder.Services.AddScoped<IFormularioRepository>(_ => new FormularioRepository(connectionString));
+builder.Services.AddScoped<IListadoRepository>(_ => new ListadoRepository(connectionString));
+
+builder.Services.AddScoped<ICarreraService, CarreraService>();
+builder.Services.AddScoped<IAlumnoService, AlumnoService>();
+builder.Services.AddScoped<IAdministradorService, AdministradorService>();
+builder.Services.AddScoped<IProfesorService, ProfesorService());
+builder.Services.AddScoped<IFormularioService, FormularioService());
+builder.Services.AddScoped<IListadoService, ListadoService());
+
+- Scoped: Una instancia por request HTTP
+- Interfaces: Desacopla API de implementación concreta
+- Capas: API -> BR -> AD (unidireccional)
+
+---
+
+#### AccesoDB (Data Access Layer - Instituto.AD)
+
+Archivo: Instituto.AD/AccesoDB.cs
+
+Wrapper ADO.NET genérico que encapsula Microsoft.Data.SqlClient.
+
+Métodos Públicos:
+| Método | Uso | Retorna |
+|--------|-----|---------|
+| GetData(sql, params?) | SELECT múltiple | SqlDataReader |
+| Execute(sql, params) | INSERT/UPDATE/DELETE | int (rows affected) |
+| ExecuteScalar(sql, params) | INSERT con SCOPE_IDENTITY / COUNT | object |
+
+Manejo de Parámetros:
+var parametros = new DBParameters()
+    .Agregar("@Email", email.Trim().ToLower())
+    .Agregar("@Id", id)
+    .Agregar("@Fecha", fecha ?? (object)DBNull.Value);
+
+---
+
+#### Repositorios (AD Layer)
+
+Interfaz base genérica:
+public interface IRepository
 {
-    List<T> GetAll();
+    List GetAll();
     T GetById(int id);
     T Create(T entity);
     void Update(int id, T entity);
     void Delete(int id);
+    bool Exists(int id);
 }
-```
-Los 5 servicios implementan esta interfaz.
 
-#### Base: `SqlServerBaseService<T>` (Template Method)
-Clase base abstracta con ADO.NET puro. Centraliza:
-- Conexión (`Microsoft.Data.SqlClient`)
-- `EnsureConnectionAsync()`
-- `ExecuteReaderAsync`, `ExecuteNonQueryAsync`, `ExecuteScalarAsync`
-- **Template Methods** que subclases implementan:
-  - `GetSelectAllSql()`, `GetSelectByIdSql()`, `GetInsertSql()`, `GetUpdateSql()`, `GetDeleteSql()`
-  - `MapReaderToEntity(SqlDataReader)` — abstracto
-  - `SetParameters(SqlCommand, T, bool isCreate)` — abstracto
-- Manejo de excepciones: `SqlException` → `PersistenceException`, Id no encontrado → `EntityNotFoundException`
+Repositorios Implementados:
 
-#### 1. `AdministradorSqlServerService`
-- **Tabla**: `Administradores`
-- **Soft delete**: `GetAll`/`GetById` filtran `WHERE Activo = 1`; `Delete` → `UPDATE SET Activo=0`.
-- **Password**: En `Create`, hashea `PasswordTemp` (o fallback "Cambiar1234!") con BCrypt(12). `Update` no toca password.
+| Repositorio | Entidad | Métodos Especiales |
+|-------------|---------|-------------------|
+| CarreraRepository | Carrera | Exists(int id) |
+| AlumnoRepository | Alumno | ExistsByDNI, ExistsByEmail, ExistsByCarreraId |
+| AdministradorRepository | Administrador | GetByEmail, ExistsByEmail, Count, UpdatePasswordHash |
+| ProfesorRepository | Profesor | ExistsByEmail |
+| FormularioRepository | Formulario | Exists(int id) |
+| ListadoRepository | ListadoItem (DTO) | GetListado() (join memoria) |
 
-#### 2. `AlumnoSqlServerService`
-- **Tabla**: `Alumnos`
-- **Hard delete**: `DELETE FROM Alumnos WHERE Id = @Id`.
-- **NULL handling**: `DBNull.Value` para campos opcionales (`Direccion`, `Nacionalidad`, etc.).
-- **FechaInscripcion**: Default `DateTime.Now` en servicio si null.
+---
 
-#### 3. `CarreraSqlServerService`
-- **Tabla**: `Carreras`
-- **Hard delete**: Validado en controller (no alumnos).
-- **Estado**: Default `'Activa'` si null.
+### 4.7 Servicios CRUD (BR Layer)
 
-#### 4. `ProfesorSqlServerService`
-- **Tabla**: `Profesores`
-- **Hard delete**. Sin FKs, sin validaciones cruzadas. Email UNIQUE en BD.
+#### Result Pattern
+public class ServiceResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; }
+    
+    public static ServiceResult Ok(string message = Operación exitosa) => 
+        new() { Success = true, Message = message };
+    public static ServiceResult Fail(string message) => 
+        new() { Success = false, Message = message };
+}
 
-#### 5. `FormularioSqlServerService`
-- **Tabla**: `Formularios`
-- **Hard delete**. Campos: Nombre, Estado (default Borrador), FechaApertura, FechaCierre, Descripcion.
+public class ServiceResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; }
+    public T Data { get; set; }
+    
+    public static ServiceResult Ok(T data, string message = Operación exitosa) => 
+        new() { Success = true, Message = message, Data = data };
+    public static ServiceResult Fail(string message) => 
+        new() { Success = false, Message = message };
+}
 
-#### Auth: `AdminAuthService` (`IAdminAuthService`)
-```csharp
-public interface IAdminAuthService
+Servicios Implementados:
+
+| Servicio | Entidad | Validaciones Especiales |
+|----------|---------|------------------------|
+| CarreraService | Carrera | Duración 1-10 años, no eliminar si tiene alumnos |
+| AlumnoService | Alumno | DNI/Email únicos, CarreraId existe, DNI 7-8 dígitos |
+| AdministradorService | Administrador | Email único, password >=8 chars, BCrypt workFactor 12 |
+| ProfesorService | Profesor | Email único |
+| FormularioService | Formulario | Fechas válidas, estado válido, FechaCierre > FechaApertura |
+| ListadoService | ListadoItem | Join memoria Alumno+Carrera |
+
+Ejemplo: CarreraService.Delete (validación cruzada)
+public ServiceResult Delete(int id)
+{
+    if (!repository.Exists(id))
+        return ServiceResult.Fail("La carrera con Id " + id + " no existe.");
+
+    // Validación cruzada: no eliminar si tiene alumnos
+    if (alumnoRepository.ExistsByCarreraId(id))
+        return ServiceResult.Fail("No se puede eliminar la carrera porque tiene alumnos inscriptos.");
+
+    repository.Delete(id);
+    return ServiceResult.Ok("Carrera eliminada correctamente.");
+)
+
+---
+
+### 4.8 AdminAuthService (Autenticación)
+
+Archivo: Instituto.BR/Services/AdministradorService.cs
+Interface: IAdministradorService
+
+public interface IAdministradorService
 {
     Task<AdminResult?> LoginAsync(string email, string password);
     Task<bool> HayAdminsAsync();
-    Task CrearAdminAsync(string nombre, string apellido, string email, string password, string role);
-    Task ChangePasswordAsync(string email, string passwordActual, string nuevaPassword);
-}
-```
+    Task CrearPrimerAdminAsync(SetupAdminDto dto);
+    ServiceResult ChangePassword(int id, string passwordActual, string nuevaPassword);
+    ServiceResult ChangePasswordByEmail(string email, string passwordActual, string nuevaPassword);
+)
 
-| Método | Propósito |
-|--------|-----------|
-| `LoginAsync` | Valida credenciales, retorna `AdminResult` (sin hash). Usa `BCrypt.Verify`. |
-| `HayAdminsAsync` | `COUNT(*)` para setup inicial. |
-| `CrearAdminAsync` | Inserta admin con `PasswordHash = BCrypt.Hash(password, 12)`. |
-| `ChangePasswordAsync` | Verifica `passwordActual` con `BCrypt.Verify`, actualiza a nuevo hash (workFactor 12). Lanza `UnauthorizedAccessException` si falla. |
+LoginAsync
+public async Task<AdminResult?> LoginAsync(string email, string password)
+{
+    var admin = repository.GetByEmail(email);
+    if (admin == null) return null;
+    if (!BCryptNet.Verify(password, admin.PasswordHash)) return null;
+    
+    return new AdminResult(admin.Id, admin.Nombre, admin.Apellido, admin.Email, admin.Role);
+)
 
-**BCrypt Configuration**: Work factor 12 (~250ms CPU 2024, recomendado 2024+).
+- Case-insensitive email: Trim().ToLower()
+- Solo activos: Repositorio filtra Activo = 1
+- BCrypt verify: Compara password plano vs hash almacenado
+
+CrearPrimerAdminAsync
+public async Task<AdminResult?> CrearPrimerAdminAsync(SetupAdminDto dto)
+{
+    if (HayAdmins()) return null;
+    
+    var admin = new Administrador { Nombre = dto.Nombre, ... };
+    var result = Create(admin, dto.Password);
+    return result.Success ? new AdminResult(...) : null;
+)
+
+- Work factor 12: Balance seguridad/performance (2024+)
+- BCrypt.HashPassword: Genera hash seguro
+- Solo si no hay admins: HayAdmins() check
+
+ChangePassword
+public ServiceResult ChangePassword(int id, string passwordActual, string nuevaPassword)
+{
+    var admin = repository.GetById(id);
+    if (admin == null) return ServiceResult.Fail("Admin no encontrado");
+    
+    if (!BCryptNet.Verify(passwordActual, admin.PasswordHash))
+        return ServiceResult.Fail("Contraseña actual incorrecta");
+    
+    var newHash = BCryptNet.HashPassword(nuevaPassword, workFactor: 12);
+    repository.UpdatePasswordHash(id, newHash);
+    return ServiceResult.Ok("Contraseña actualizada correctamente.");
+)
 
 ---
 
-### 4.7 Controladores y Endpoints API
+### 4.9 Controladores y Endpoints API
 
 Todos los controladores:
-- Reciben servicios por **DI** en constructor.
-- Validan `ModelState.IsValid` en POST/PUT.
-- Retornan `201 Created` (con `Location` header) en POST.
-- Encapsulan en `try-catch` tipado: `EntityNotFoundException`→404, `PersistenceException`→500, `UnauthorizedAccessException`→401, `Exception`→500.
-- `[Authorize]` en clase (excepto Auth, Setup, Carreras GET públicos).
+- Reciben servicios por DI en constructor.
+- Validan ModelState.IsValid en POST/PUT.
+- Retornan 201 Created (con Location header) en POST.
+- Encapsulan en try-catch tipado: EntityNotFoundException->404, PersistenceException->500, UnauthorizedAccessException->401, Exception->500.
+- [Authorize] en clase (excepto Auth, Setup, Carreras GET públicos).
 
-#### `AuthController` — `/api/auth`
+AuthController -- /api/auth
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| `POST` | `/api/auth/login` | Público | Login → JWT (8h) + admin data |
-| `POST` | `/api/auth/verify-password` | JWT | Verifica password actual del usuario autenticado |
+| POST | /api/auth/login | Público | Login -> JWT (8h) + admin data |
+| POST | /api/auth/verify-password | JWT | Verifica password actual del usuario autenticado |
 
-#### `SetupController` — `/api/setup`
+SetupController -- /api/setup
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| `POST` | `/api/setup/admin` | Público (solo Dev) | Crea primer admin si no hay ninguno. `_env.IsDevelopment()` gate. |
+| POST | /api/setup/admin | Público (solo Dev) | Crea primer admin si no hay ninguno. _env.IsDevelopment() gate. |
 
-#### `CarreraController` — `/api/carreras`
+CarreraController -- /api/carreras
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| `GET` | `/api/carreras` | Público | Catálogo público |
-| `GET` | `/api/carreras/{id}` | Público | Detalle público |
-| `POST` | `/api/carreras` | JWT | Crear |
-| `PUT` | `/api/carreras/{id}` | JWT | Actualizar |
-| `DELETE` | `/api/carreras/{id}` | JWT | Eliminar (validación: no hay alumnos) |
+| GET | /api/carreras | Público | Catálogo público |
+| GET | /api/carreras/{id} | Público | Detalle público |
+| POST | /api/carreras | JWT | Crear |
+| PUT | /api/carreras/{id} | JWT | Actualizar |
+| DELETE | /api/carreras/{id} | JWT | Eliminar (validación: no hay alumnos) |
 
-#### `AlumnosController` — `/api/alumnos`
+AlumnosController -- /api/alumnos
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| `GET` | `/api/alumnos` | JWT | Listado admin |
-| `GET` | `/api/alumnos/{id}` | JWT | Detalle |
-| `POST` | `/api/alumnos` | **Público** | Inscripción web (`[AllowAnonymous]`) |
-| `PUT` | `/api/alumnos/{id}` | JWT | Actualizar |
-| `DELETE` | `/api/alumnos/{id}` | JWT | Eliminar |
+| GET | /api/alumnos | JWT | Listado admin |
+| GET | /api/alumnos/{id} | JWT | Detalle |
+| POST | /api/alumnos | Público | Inscripción web ([AllowAnonymous]) |
+| PUT | /api/alumnos/{id} | JWT | Actualizar |
+| DELETE | /api/alumnos/{id} | JWT | Eliminar |
 
-**Validación**: `CarreraId` debe existir (`_carreraService.GetById` en Create/Update).
+Validación: CarreraId debe existir (carreraService.GetById en Create/Update).
 
-#### `AdministradorController` — `/api/administradores`
+AdministradorController -- /api/administradores
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| `GET` | `/api/administradores` | JWT | Listado (solo Activo=1) |
-| `GET` | `/api/administradores/{id}` | JWT | Detalle |
-| `POST` | `/api/administradores` | JWT | Crear (hash password) |
-| `PUT` | `/api/administradores/{id}` | JWT | Actualizar (no password) |
-| `PUT` | `/api/administradores/{id}/password` | JWT | **Cambiar password** (verifica actual) |
-| `DELETE` | `/api/administradores/{id}` | JWT | Soft delete (Activo=0) |
+| GET | /api/administradores | JWT | Listado (solo Activo=1) |
+| GET | /api/administradores/{id} | JWT | Detalle |
+| POST | /api/administradores | JWT | Crear (hash password) |
+| PUT | /api/administradores/{id} | JWT | Actualizar (no password) |
+| PUT | /api/administradores/{id}/password | JWT | Cambiar password (verifica actual) |
+| DELETE | /api/administradores/{id} | JWT | Soft delete (Activo=0) |
 
-#### `ProfesorController` — `/api/profesores`
-CRUD completo idéntico a Administrador (sin soft delete, sin password change). `[Authorize]` en clase.
+ProfesorController -- /api/profesores
+CRUD completo idéntico a Administrador (sin soft delete, sin password change). [Authorize] en clase.
 
-#### `FormularioController` — `/api/formularios`
-CRUD completo. `[Authorize]` en clase. Estados: `Borrador` | `Abierto` | `Cerrado`.
+FormularioController -- /api/formularios
+CRUD completo. [Authorize] en clase. Estados: Borrador | Abierto | Cerrado.
 
-#### `ListadoController` — `/api/listado`
+ListadoController -- /api/listado
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| `GET` | `/api/listado` | JWT | Join en memoria Alumno+Carrera → `AlumnoListadoDto[]` |
+| GET | /api/listado | JWT | Join en memoria Alumno+Carrera -> AlumnoListadoDto[] |
 
 ---
 
-### 4.8 Base de Datos
+### 4.9 Base de Datos
 
-**SQL Server (LocalDB para desarrollo)**  
-Script: `backend/Database/CreateDatabase.sql`
+SQL Server Express (DESKTOP-DQ8JUA\G)
+Script: Instituto.API/Database/CreateDatabase.sql
 
 | Tabla | Columnas clave | Índices / Constraints |
 |-------|----------------|----------------------|
-| `Administradores` | Id, Nombre, Apellido, Email, PasswordHash, Role, Activo, FechaCreacion | PK Id, UNIQUE Email, IX_Email |
-| `Carreras` | Id, Nombre, DuracionAnios, Turno, Modalidad, Horario, Estado, FechaCreacion | PK Id, CHECK DuracionAnios 1-10 |
-| `Alumnos` | Id, Nombre, Apellido, Email, DNI, FechaNacimiento, Direccion, Nacionalidad, FechaInscripcion, Telefono, TituloSecundario, Turno, CarreraId, FechaCreacion | PK Id, UNIQUE DNI, FK CarreraId→Carreras, IX_CarreraId, IX_DNI |
-| `Profesores` | Id, Nombre, Apellido, Email, Telefono, Especialidad, FechaCreacion | PK Id, UNIQUE Email, IX_Email |
-| `Formularios` | Id, Nombre, Estado, FechaApertura, FechaCierre, Descripcion, FechaCreacion | PK Id |
+| Administradores | Id, Nombre, Apellido, Email, PasswordHash, Role, Activo, FechaCreacion | PK Id, UNIQUE Email, IX_Email |
+| Carreras | Id, Nombre, DuracionAnios, Turno, Modalidad, Horario, Estado, FechaCreacion | PK Id, CHECK DuracionAnios 1-10 |
+| Alumnos | Id, Nombre, Apellido, Email, DNI, FechaNacimiento, Direccion, Nacionalidad, FechaInscripcion, Telefono, TituloSecundario, Turno, CarreraId, FechaCreacion | PK Id, UNIQUE DNI, FK CarreraId->Carreras, IX_CarreraId, IX_DNI |
+| Profesores | Id, Nombre, Apellido, Email, Telefono, Especialidad, FechaCreacion | PK Id, UNIQUE Email, IX_Email |
+| Formularios | Id, Nombre, Estado, FechaApertura, FechaCierre, Descripcion, FechaCreacion | PK Id |
 
 ---
 
-### 4.9 Configuración
+### 4.10 Configuración
 
-**`appsettings.Development.json`:**
-```json
+Instituto.API/appsettings.Development.json:
 {
-  "ConnectionStrings": {
-    "SqlServer": "Server=(localdb)\\MSSQLLocalDB;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;"
+  ConnectionStrings: {
+    SqlServer: Server=DESKTOP-DQ8JUA\\G;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;
   },
-  "Jwt": {
-    "Key": "Tupac@Amaru#Instituto!JWT$2026*Clave&MuySecreta=32chars",
-    "Issuer": "InstitutoTupacAmaru",
-    "Audience": "InstitutoTupacAmaruAdmin"
-  }
+  Jwt: {
+    Key: Tupac@Amaru#Instituto!JWT$2026*Clave&MuySecreta=32chars,
+    Issuer: InstitutoTupacAmaru,
+    Audience: InstitutoTupacAmaruAdmin
+  },
+  Logging: {
+    LogLevel: {
+      Default: Information,
+      Microsoft.AspNetCore: Warning
+    }
+  },
+  AllowedHosts: *
 }
-```
 
-> **Nota**: En desarrollo usar *User Secrets* (`dotnet user-secrets`) para la clave JWT.
-
----
+Nota: En desarrollo usar User Secrets (dotnet user-secrets) para la clave JWT.
 
 ## 5. Front-end — Vue 3 + TypeScript + Vite
 
@@ -578,37 +662,37 @@ Script: `backend/Database/CreateDatabase.sql`
 #### Producción
 | Paquete | Versión | Propósito |
 |---------|---------|-----------|
-| `vue` | 3.5+ | Framework reactivo (Composition API) |
-| `typescript` | 5.8+ | Tipado estricto |
-| `vite` | 7+ | Bundler & Dev Server |
-| `vue-router` | 4.5+ | SPA Routing + Guards |
-| `pinia` | 3+ | Estado global (auth store) |
-| `element-plus` | 2.11+ | Componentes UI |
-| `@element-plus/icons-vue` | 1.1+ | Iconografía |
+| vue | 3.5+ | Framework reactivo (Composition API) |
+| typescript | 5.8+ | Tipado estricto |
+| vite | 7+ | Bundler & Dev Server |
+| vue-router | 4.5+ | SPA Routing + Guards |
+| pinia | 3+ | Estado global (auth store) |
+| element-plus | 2.11+ | Componentes UI |
+| @element-plus/icons-vue | 1.1+ | Iconografía |
 
 #### Desarrollo
 | Paquete | Versión | Propósito |
 |---------|---------|-----------|
-| `eslint` | 9+ | Linting |
-| `prettier` | 3.6+ | Formato |
-| `vue-tsc` | 3+ | Type-check |
+| eslint | 9+ | Linting |
+| prettier | 3.6+ | Formato |
+| vue-tsc | 3+ | Type-check |
 
 ---
 
 ### 5.2 Configuración
 
-**`.env`:**
+**.env:**
 ```env
-VITE_API_URL=http://localhost:5089
+VITE_API_URL=http://localhost:5127
 ```
 
-**`vite.config.ts`**: alias `@` → `./src`, plugin Vue, devTools.
+**vite.config.ts**: alias @ -> ./src, plugin Vue, devTools.
 
-**`tsconfig.app.json`**: strict mode, alias `@/*`, DOM lib.
+**tsconfig.app.json**: strict mode, alias @/*, DOM lib.
 
 ---
 
-### 5.3 Inicialización: `main.ts`
+### 5.3 Inicialización: main.ts
 
 ```typescript
 import './assets/css/base/main.css'
@@ -636,30 +720,30 @@ app.mount('#app')
 
 ### 5.4 Sistema de Rutas y Guards
 
-**Archivo:** `src/router/index.ts`
+**Archivo:** src/router/index.ts
 
 | Ruta | Nombre | Componente | Meta | Props |
 |------|--------|------------|------|-------|
-| `/` | `home` | `HomeView` | `requiereAuth: true` | - |
-| `/contacto` | `contacto` | `ContactoView` | - | - |
-| `/inscripcion` | `inscripcion` | `InscripciónView` | - | - |
-| `/login` | `login` | `LoginView` | `soloInvitado: true` | - |
-| `/administracion` | `administracion` | `AdministradorView` | `requiereAuth: true` | - |
-| `/agregaradministracion` | `agregaradministracion` | `AgregarAdministradorView` | `requiereAuth: true` | - |
-| `/editaradministrador/:id` | `editaradministrador` | `EditarAdministradorView` | `requiereAuth: true` | `true` |
-| `/eliminaradministrador/:id` | `eliminaradministrador` | `EliminarAdministradorView` | `requiereAuth: true` | `true` |
-| `/carreras` | `carreras` | `CarreraView` | `requiereAuth: true` | - |
-| `/agregarcarreras` | `agregarcarreras` | `AgregarCarreraView` | `requiereAuth: true` | - |
-| `/editarcarrera/:id` | `editarcarrera` | `EditarCarreraView` | `requiereAuth: true` | `true` |
-| `/eliminarcarreras/:id` | `eliminarcarreras` | `EliminarCarreraView` | `requiereAuth: true` | `true` |
-| `/formularios` | `formularios` | `FormulariosView` | `requiereAuth: true` | - |
-| `/agregarformulario` | `agregarformulario` | `AgregarFormularioView` | `requiereAuth: true` | - |
-| `/editarformulario/:id` | `editarformulario` | `EditarFormularioView` | `requiereAuth: true` | `true` |
-| `/eliminarformulario/:id` | `eliminarformulario` | `EliminarFormularioView` | `requiereAuth: true` | `true` |
-| `/listados` | `listados` | `ListadoView` | `requiereAuth: true` | - |
-| `*` | `not-found` | `NotFound` | - | - |
+| / | home | HomeView | requiereAuth: true | - |
+| /contacto | contacto | ContactoView | - | - |
+| /inscripcion | inscripcion | InscripciónView | - | - |
+| /login | login | LoginView | soloInvitado: true | - |
+| /administracion | administracion | AdministradorView | requiereAuth: true | - |
+| /agregaradministracion | agregaradministracion | AgregarAdministradorView | requiereAuth: true | - |
+| /editaradministrador/:id | editaradministrador | EditarAdministradorView | requiereAuth: true | true |
+| /eliminaradministrador/:id | eliminaradministrador | EliminarAdministradorView | requiereAuth: true | true |
+| /carreras | carreras | CarreraView | requiereAuth: true | - |
+| /agregarcarreras | agregarcarreras | AgregarCarreraView | requiereAuth: true | - |
+| /editarcarrera/:id | editarcarrera | EditarCarreraView | requiereAuth: true | true |
+| /eliminarcarreras/:id | eliminarcarreras | EliminarCarreraView | requiereAuth: true | true |
+| /formularios | formularios | FormulariosView | requiereAuth: true | - |
+| /agregarformulario | agregarformulario | AgregarFormularioView | requiereAuth: true | - |
+| /editarformulario/:id | editarformulario | EditarFormularioView | requiereAuth: true | true |
+| /eliminarformulario/:id | eliminarformulario | EliminarFormularioView | requiereAuth: true | true |
+| /listados | listados | ListadoView | requiereAuth: true | - |
+| * | not-found | NotFound | - | - |
 
-**Guards globales (`router.beforeEach`):**
+**Guards globales (router.beforeEach):**
 ```typescript
 router.beforeEach((to) => {
   const { isAuthenticated } = useAuth()
@@ -675,7 +759,7 @@ router.beforeEach((to) => {
 
 ---
 
-### 5.5 Composable: `useAuth.ts`
+### 5.5 Composable: useAuth.ts
 
 ```typescript
 const TOKEN_KEY = 'auth_token'
@@ -714,9 +798,9 @@ export function useAuth() {
 }
 ```
 
-- **Almacenamiento**: `sessionStorage` (expira al cerrar pestaña).
-- **Logout**: Limpia `sessionStorage` + redirect `/login`.
-- **Re-autenticación sensible**: `EditarAdministradorView` exige password actual antes de cargar datos (`POST /api/auth/verify-password`), guarda password verificada en `ref` memoria (se limpia en `onUnmounted`).
+- Almacenamiento: sessionStorage (expira al cerrar pestaña).
+- Logout: Limpia sessionStorage + redirect /login.
+- Re-autenticación sensible: EditarAdministradorView exige password actual antes de cargar datos (POST /api/auth/verify-password), guarda password verificada en ref memoria (se limpia en onUnmounted).
 
 ---
 
@@ -725,45 +809,44 @@ export function useAuth() {
 #### Módulo Público
 | Vista | Ruta | Descripción |
 |-------|------|-------------|
-| `HomeView` | `/` | Dashboard admin (cards menú), health check `${API}/` |
-| `ContactoView` | `/contacto` | Info contacto estática |
-| `FormulariosView` | `/formularios` | Tabla formularios + CRUD |
-| `AgregarFormularioView` | `/agregarformulario` | Formulario crear |
-| `EditarFormularioView` | `/editarformulario/:id` | Formulario editar |
-| `EliminarFormularioView` | `/eliminarformulario/:id` | Confirmar eliminar |
+| HomeView | / | Dashboard admin (cards menú), health check ${API}/ |
+| ContactoView | /contacto | Info contacto estática |
+| FormulariosView | /formularios | Tabla formularios + CRUD |
+| AgregarFormularioView | /agregarformulario | Formulario crear |
+| EditarFormularioView | /editarformulario/:id | Formulario editar |
+| EliminarFormularioView | /eliminarformulario/:id | Confirmar eliminar |
 
 #### Módulo Auth
 | Vista | Ruta | Descripción |
 |-------|------|-------------|
-| `LoginView` | `/login` | Login JWT + toggle password (View/Hide icons) |
+| LoginView | /login | Login JWT + toggle password (View/Hide icons) |
 
 #### Módulo Administradores
 | Vista | Ruta | Descripción |
 |-------|------|-------------|
-| `AdministradorView` | `/administracion` | Listado tabla (Nombre, Apellido, Email, Acciones) |
-| `AgregarAdministradorView` | `/agregaradministracion` | Formulario crear (role select, passwordTemp oculto) |
-| `EditarAdministradorView` | `/editaradministrador/:id` | **Re-auth modal** → carga datos → PUT datos + opcional PUT password |
-| `EliminarAdministradorView` | `/eliminaradministrador/:id` | Confirmar + DELETE |
+| AdministradorView | /administracion | Listado tabla (Nombre, Apellido, Email, Acciones) |
+| AgregarAdministradorView | /agregaradministracion | Formulario crear (role select, passwordTemp oculto) |
+| EditarAdministradorView | /editaradministrador/:id | Re-auth modal -> carga datos -> PUT datos + opcional PUT password |
+| EliminarAdministradorView | /eliminaradministrador/:id | Confirmar + DELETE |
 
 #### Módulo Carreras
 | Vista | Ruta | Descripción |
 |-------|------|-------------|
-| `CarreraView` | `/carreras` | Listado tabla (Nombre, Duración, Turno, Modalidad, Horario, Estado, Acciones) |
-| `AgregarCarreraView` | `/agregarcarreras` | Formulario crear |
-| `EditarCarreraView` | `/editarcarrera/:id` | Formulario editar |
-| `EliminarCarreraView` | `/eliminarcarreras/:id` | Confirmar + DELETE (error si hay alumnos) |
+| CarreraView | /carreras | Listado tabla (Nombre, Duración, Turno, Modalidad, Horario, Estado, Acciones) |
+| AgregarCarreraView | /agregarcarreras | Formulario crear |
+| EditarCarreraView | /editarcarrera/:id | Formulario editar |
+| EliminarCarreraView | /eliminarcarreras/:id | Confirmar + DELETE (error si hay alumnos) |
 
 #### Módulo Listados
 | Vista | Ruta | Descripción |
 |-------|------|-------------|
-| `ListadoView` | `/listados` | Tabla Alumno+Carrera (join) |
-| `InscripciónView` | `/inscripcion` | **Público** — Formulario extenso, carga carreras dinámicas, POST `/api/alumnos` |
+| ListadoView | /listados | Tabla Alumno+Carrera (join) |
+| InscripciónView | /inscripcion | Público -- Formulario extenso, carga carreras dinámicas, POST /api/alumnos |
 
 ---
 
-### 5.7 Estilos CSS (Modular, sin `<style>` en .vue)
+### 5.7 Estilos CSS (Modular, sin style en .vue)
 
-```
 src/assets/css/
 ├── base/
 │   ├── main.css      # @import de todo
@@ -778,32 +861,68 @@ src/assets/css/
 │   └── admin-menu.css # Grid botones dashboard
 └── layout/
     └── section.css   # .section (centrado + padding)
-```
 
-**Principio**: Las vistas solo usan clases globales. Variables en `global.css` (single source of truth).
+Principio: Las vistas solo usan clases globales. Variables en global.css (single source of truth).
 
 ---
 
 ### 5.8 Integración con la API
 
-**Base URL:** `import.meta.env.VITE_API_URL` (configurado en `.env`)
+Base URL: import.meta.env.VITE_API_URL (configurado en .env)
 
-**Headers:** `useAuth().authHeaders()` → Bearer token automático.
+Headers: useAuth().authHeaders() -> Bearer token automático.
 
-**Patrón estándar:**
+Patrón estándar:
 ```typescript
 const API = import.meta.env.VITE_API_URL
 const { authHeaders } = useAuth()
 
-const res = await fetch(`${API}/api/administradores`, { headers: authHeaders() })
-if (!res.ok) throw new Error(`HTTP ${res.status}`)
+const res = await fetch(${API}/api/administradores, { headers: authHeaders() })
+if (!res.ok) throw new Error(HTTP ${res.status})
 const data = await res.json()
 ```
 
-**Endpoints consumidos por módulo:**
-- Ver `Docs/frontend/10-frontend/06-integracion-api.md` para tabla completa.
+Endpoints consumidos por módulo:
+- Ver Docs/frontend/10-frontend/06-integracion-api.md para tabla completa.
 
 ---
+
+### 5.9 Configuración y Build
+
+**.env:**
+```env
+VITE_API_URL=http://localhost:5127
+```
+
+**vite.config.ts**: alias @ -> ./src, plugin Vue, devTools.
+
+**tsconfig.app.json**: strict mode, alias @/*, DOM lib.
+
+**Scripts disponibles:**
+```bash
+npm run dev        # Servidor desarrollo (Vite)
+npm run build      # Build producción (type-check + vite build)
+npm run preview    # Preview build
+npm run lint       # ESLint + fix
+npm run format     # Prettier
+npm run type-check # vue-tsc --build
+```
+
+---
+
+### 5.10 Configuración y Build
+
+vite.config.ts: alias @ -> ./src, plugin Vue, devTools.
+
+tsconfig.app.json: strict mode, alias @/*, DOM lib.
+
+Scripts disponibles:
+npm run dev        # Servidor desarrollo (Vite)
+npm run build      # Build producción (type-check + vite build)
+npm run preview    # Preview build
+npm run lint       # ESLint + fix
+npm run format     # Prettier
+npm run type-check # vue-tsc --build
 
 ## 6. Paradigma y Metodología de Desarrollo
 
@@ -964,47 +1083,39 @@ Exception          → PersistenceEx → catch(Exception)           →   500 + 
 
 ### 8.2 Requisitos Técnicos — Back-end
 - .NET 9 SDK
-- SQL Server LocalDB (desarrollo)
-- `backend/Data/` no requerido (usa BD real)
-- User Secrets para `Jwt:Key` en dev
-- CORS `AllowAnyOrigin` (solo dev)
+- SQL Server Express (DESKTOP-DQ8JUA\G)
+- Instituto.AD/Data/ no requerido (usa BD real)
+- User Secrets para Jwt:Key en dev
+- CORS AllowAnyOrigin (solo dev)
 
 ### 8.3 Requisitos Técnicos — Front-end
 - Node.js ≥ 20, npm
-- `npm install` en `Frontend/`
-- `npm run dev` → `http://localhost:5173`
-- Backend en `http://localhost:5089`
+- npm install en Frontend/
+- npm run dev → http://localhost:5176
+- Backend en http://localhost:5127
 
 ### 8.4 Comandos de Inicio
 
 ```bash
 # 1. Base de Datos (ejecutar en SSMS / Azure Data Studio / VS Code)
-# Archivo: backend/Database/CreateDatabase.sql
+# Archivo: Instituto.API/Database/CreateDatabase.sql
 
 # 2. Back-end
-cd backend
+cd Instituto.API
 dotnet run --environment Development
-# → http://localhost:5089 | https://localhost:7217
+# → http://localhost:5127 | https://localhost:7244
 
 # 3. Front-end (otra terminal)
 cd Frontend
 npm install    # solo primera vez
 npm run dev
-# → http://localhost:5173
+# → http://localhost:5176
 
 # 4. Crear primer admin (una sola vez)
-POST http://localhost:5089/api/setup/admin
-Content-Type: application/json
-{
-  "nombre": "Admin",
-  "apellido": "Sistema",
-  "email": "admin@tupac.edu.ar",
-  "password": "Password123",
-  "role": "SuperAdmin"
-}
+curl -X POST http://localhost:5127/api/setup/admin   -H "Content-Type: application/json"   -d '{"nombre":"Super","apellido":"Admin","email":"admin@tupac.edu.ar","password":"Password123","role":"SuperAdmin"}'
 
 # 5. Login
-# Abrir http://localhost:5173/login con credenciales del paso 4
+# Abrir http://localhost:5176/login con credenciales del paso 4
 ```
 
 ---
@@ -1014,14 +1125,14 @@ Content-Type: application/json
 ### Bugs Críticos Activos
 | Ubicación | Problema | Severidad |
 |-----------|----------|-----------|
-| `InscripciónView.vue` | `CarreraId: string` vs `number` (backend) → 400 potencial | **Crítica** |
-| 6 archivos Vue | `http://localhost:5089` hardcoded (no `VITE_API_URL`) | **Crítica** |
+| InscripciónView.vue | CarreraId: string vs number (backend) -> 400 potencial | Crítica |
+| 6 archivos Vue | localhost:5089 hardcoded (no VITE_API_URL) | Crítica |
 
 ### Deuda Técnica — Back-end
 | Item | Prioridad | Estado |
 |------|-----------|--------|
 | Sin capa DTO para GET administradores (expone PasswordHash, Role) | Alta | ❌ |
-| `ex.Message.Contains("Carrera")` frágil en `AlumnosController.cs:112` | Media | ❌ |
+| ex.Message.Contains("Carrera") frágil en AlumnosController.cs | Media | ❌ |
 | Sin rate limiting | Alta | ❌ |
 | Sin paginación en GET All | Media | ❌ |
 | Sin Swagger/OpenAPI | Media | ❌ |
@@ -1031,44 +1142,43 @@ Content-Type: application/json
 ### Deuda Técnica — Front-end
 | Item | Prioridad | Estado |
 |------|-----------|--------|
-| Sin capa de servicios API centralizada (`src/services/`) | Alta | ❌ |
-| `HomeView.vue` health check hardcoded `http://localhost:5089/weatherforecast` | Alta | ❌ |
-| Nombre archivo `InscripciónView.vue` con `ó` (riesgo Linux/CI) | Media | ❌ |
-| Typo `innputs.css` → `inputs.css` | Baja | ❌ |
-| Carpeta `Frondend` en docs antiguas → `Frontend` | Baja | ❌ |
-| 6 archivos con `localhost:5089` hardcoded | Crítica | ❌ |
+| Sin capa de servicios API centralizada (src/services/) | Alta | ❌ |
+| HomeView.vue health check hardcoded http://localhost:5127/ | Alta | ❌ |
+| Nombre archivo InscripciónView.vue con ó (riesgo Linux/CI) | Media | ❌ |
+| Typo innputs.css → inputs.css | Baja | ❌ |
+| Carpeta Frondend en docs antiguas → Frontend | Baja | ❌ |
 
 ### Fortalezas del Diseño Actual
-- Herencia `Persona` elimina duplicación en 3 entidades.
-- `SqlServerBaseService<T>` genérico, template methods, ADO.NET robusto.
+- Herencia Persona elimina duplicación en 3 entidades.
+- AccesoDB genérico, template methods, ADO.NET robusto.
 - Separación clara: Controllers / Services / Models / DTOs / Exceptions.
 - Data Annotations centralizan validaciones en modelo (single source of truth).
 - Excepciones tipadas → mapeo HTTP limpio sin acoplamiento.
 - JWT stateless + BCrypt 12 + claims estándar.
-- Frontend: Composition API, CSS modular, Route Guards, `useAuth` composable.
-- `EditarAdministradorView`: re-autenticación segura + password en memoria (limpieza `onUnmounted`).
+- Frontend: Composition API, CSS modular, Route Guards, useAuth composable.
+- EditarAdministradorView: re-autenticación segura + password en memoria (limpieza onUnmounted).
 
 ---
 
 ## 10. Hoja de Ruta — Próximos Pasos
 
 ### Completado (v1.0.0)
-- [x] Arquitectura SQL Server + ADO.NET (`SqlServerBaseService`)
+- [x] Arquitectura N-Tier (AD → BR → API) con SQL Server Express
 - [x] JWT Authentication + BCrypt workFactor 12
 - [x] 8 Controladores con CRUD completo
-- [x] 5 Servicios CRUD + AuthService
+- [x] 6 Servicios CRUD + AuthService
 - [x] Excepciones tipadas + middleware global errores
 - [x] Route Guards + sessionStorage + re-auth modal
-- [x] CSS modular sin `<style>` en componentes
-- [x] Documentación modular en `Docs/`
+- [x] CSS modular sin style en componentes
+- [x] Documentación modular en Docs/
 
 ### Prioridad Crítica
-- [ ] Corregir `CarreraId: string` → `number` en `InscripciónView.vue`
-- [ ] Migrar 6 archivos a `VITE_API_URL` (eliminar localhost hardcoded)
+- [ ] Corregir CarreraId: string → number en InscripciónView.vue
+- [ ] Migrar 6 archivos a VITE_API_URL (eliminar localhost hardcoded)
 - [ ] Crear vistas de Profesores (Frontend)
 
 ### Prioridad Alta
-- [ ] Capa de servicios API centralizada (`src/services/`)
+- [ ] Capa de servicios API centralizada (src/services/)
 - [ ] DTO para administradores (no exponer PasswordHash/Role en GET)
 - [ ] Rate limiting (ASP.NET Core built-in)
 - [ ] Paginación en listados
@@ -1076,10 +1186,10 @@ Content-Type: application/json
 - [ ] Swagger/OpenAPI
 
 ### Prioridad Media
-- [ ] Renombrar `InscripciónView.vue` → `InscripcionView.vue`
-- [ ] Fix `ex.Message.Contains("Carrera")` → tipar excepción FK
-- [ ] Renombrar `innputs.css` → `inputs.css`
-- [ ] Validación `FechaCierre > FechaApertura` en backend (Formularios)
+- [ ] Renombrar InscripciónView.vue → InscripcionView.vue
+- [ ] Fix ex.Message.Contains("Carrera") -> tipar excepción FK
+- [ ] Renombrar innputs.css -> inputs.css
+- [ ] Validación FechaCierre > FechaApertura en backend (Formularios)
 
 ### Prioridad Baja
 - [ ] Auditoria login (IP, user-agent, timestamp)
@@ -1093,9 +1203,9 @@ Content-Type: application/json
 
 | Versión | Fecha | Cambios Principales |
 |---------|-------|---------------------|
-| **1.0.0** | 2026-09-27 | **Migración completa a SQL Server + JWT**: `SqlServerBaseService`, 8 controllers, 5 servicios CRUD, AuthService, excepciones tipadas, middleware global, route guards, re-autenticación, CSS modular, documentación completa en `Docs/`. |
-| 0.1.1 | 2026-04-15 | Corrección typo `Roll`→`Role`, `201 Created` en POSTs, validación `CarreraId`, `EnsureFileExists`, `SemaphoreSlim`, middleware errores, Data Annotations. |
-| 0.1.0 | 2026-03-01 | Backend JSON files (`CrudJsonService<T>`), herencia `Persona`, 4 controladores, frontend Vue 3 + Element Plus básico, inscripción pública, listados. |
+| 1.0.0 | 2026-09-27 | Migración completa a SQL Server + JWT: SqlServerBaseService, 8 controllers, 6 servicios CRUD, AuthService, excepciones tipadas, middleware global, route guards, re-autenticación, CSS modular, documentación completa en Docs/. |
+| 0.1.1 | 2026-04-15 | Corrección typo Roll→Role, 201 Created en POSTs, validación CarreraId, EnsureFileExists, SemaphoreSlim, middleware errores, Data Annotations. |
+| 0.1.0 | 2026-03-01 | Backend JSON files (CrudJsonService), herencia Persona, 4 controladores, frontend Vue 3 + Element Plus básico, inscripción pública, listados. |
 
 ---
 

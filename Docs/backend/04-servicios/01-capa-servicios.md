@@ -1,25 +1,24 @@
-# Capa de Servicios
+# Capa de Servicios (Business Rules Layer - `Instituto.BR`)
 
 ## Arquitectura de Servicios
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      ICrudJsonService<T>                        │
+│                      ICrudService<T>                            │
 │  GetAll() | GetById(id) | Create(e) | Update(id,e) | Delete(id) │
 └────────────────────────────┬────────────────────────────────────┘
                              │
-         ┌───────────────────┼───────────────────┐
-         ▼                   ▼                   ▼
+          ┌──────────────────┼──────────────────┐
+          ▼                  ▼                  ▼
 ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│AlumnoSqlServer  │ │CarreraSqlServer │ │ProfesorSqlServer│
-│    Service      │ │    Service      │ │    Service      │
+│ CarreraService  │ │ AlumnoService   │ │ ProfesorService │
 └────────┬────────┘ └────────┬────────┘ └────────┬────────┘
          │                   │                   │
          └───────────────────┼───────────────────┘
                              ▼
                   ┌─────────────────────┐
-                  │ SqlServerBaseService │
-                  │  (Template Methods)  │
+                  │   Repositories      │
+                  │   (AD Layer)        │
                   └──────────┬──────────┘
                              │
                     ┌────────┴────────┐
@@ -30,143 +29,185 @@
             └─────────────┘   └─────────────┘
 ```
 
-## Registro en DI Container
+## Registro en DI Container (API Layer)
 
-**Archivo**: `Program.cs` (lines 72-75)
+**Archivo**: `Instituto.API/Program.cs`
 
 ```csharp
-builder.Services.AddScoped<ICrudJsonService<Carrera>,       CarreraSqlServerService>();
-builder.Services.AddScoped<ICrudJsonService<Alumno>,        AlumnoSqlServerService>();
-builder.Services.AddScoped<ICrudJsonService<Administrador>, AdministradorSqlServerService>();
-builder.Services.AddScoped<ICrudJsonService<Profesor>,      ProfesorSqlServerService>();
+// Repositories (AD Layer)
+builder.Services.AddScoped<ICarreraRepository, CarreraRepository>();
+builder.Services.AddScoped<IAlumnoRepository, AlumnoRepository>();
+builder.Services.AddScoped<IAdministradorRepository, AdministradorRepository>();
+builder.Services.AddScoped<IProfesorRepository, ProfesorRepository>();
+builder.Services.AddScoped<IFormularioRepository, FormularioRepository>();
+builder.Services.AddScoped<IListadoRepository, ListadoRepository>();
 
-builder.Services.AddScoped<IAdminAuthService, AdminAuthService>();
+// Services (BR Layer)
+builder.Services.AddScoped<ICarreraService, CarreraService>();
+builder.Services.AddScoped<IAlumnoService, AlumnoService>();
+builder.Services.AddScoped<IAdministradorService, AdministradorService>();
+builder.Services.AddScoped<IProfesorService, ProfesorService>();
+builder.Services.AddScoped<IFormularioService, FormularioService>();
+builder.Services.AddScoped<IListadoService, ListadoService>();
 ```
 
 - **Scoped**: Una instancia por request HTTP
-- **Interfaces**: Desacopla controllers de implementación concreta
-- **Genérico**: `ICrudJsonService<T>` reutilizable para cualquier entidad
+- **Interfaces**: Desacopla API de implementación concreta
+- **Capas**: API → BR → AD (unidireccional)
 
 ---
 
-## SqlServerBaseService (Clase Base)
+## AccesoDB (Data Access Layer - `Instituto.AD`)
 
-**Archivo**: `Services/SqlServerBaseService.cs`
+**Archivo**: `Instituto.AD/AccesoDB.cs`
+
+Wrapper ADO.NET genérico que encapsula `Microsoft.Data.SqlClient`.
 
 ### Responsabilidades
-- Gestión de conexiones (`OpenConnection()`)
+- Gestión de conexiones (`AbrirConexion()`)
 - Ejecución de queries parameterizadas
-- Mapeo `SqlDataReader → Entidad` (abstracto)
-- Manejo de excepciones → `PersistenceException`
+- Manejo de parámetros tipados (`DBParameter` / `DBParameters`)
 
-### Métodos Protegidos (Template Methods)
+### Métodos Públicos
 
 | Método | Uso | Retorna |
 |--------|-----|---------|
-| `ExecuteQuery(sql, params?)` | SELECT múltiple | `List<T>` |
-| `ExecuteQuerySingle(entityName, id, sql, params?)` | SELECT único | `T` (lanza `EntityNotFoundException`) |
-| `ExecuteScalar(sql, params)` | INSERT con RETURNING / COUNT | `int` |
-| `ExecuteNonQuery(sql, params)` | UPDATE / DELETE | `int` (rows affected) |
+| `GetData(sql, params?)` | SELECT múltiple | `SqlDataReader` |
+| `Execute(sql, params)` | INSERT/UPDATE/DELETE | `int` (rows affected) |
+| `ExecuteScalar(sql, params)` | INSERT con SCOPE_IDENTITY / COUNT | `object` |
 
-### Método Abstracto (Implementar en Subclase)
+### Manejo de Parámetros
 
 ```csharp
-protected abstract T MapReaderToEntity(SqlDataReader reader);
+var parametros = new DBParameters()
+    .Agregar("@Email", email.Trim().ToLower())
+    .Agregar("@Id", id)
+    .Agregar("@Fecha", fecha ?? (object)DBNull.Value);
 ```
 
-**Ejemplo implementación** (`AdministradorSqlServerService`):
+---
+
+## Repositorios (AD Layer)
+
+Interfaz base genérica:
+
 ```csharp
-protected override Administrador MapReaderToEntity(SqlDataReader reader)
+public interface IRepository<T>
 {
-    return new Administrador
-    {
-        Id = reader.GetInt32(reader.GetOrdinal("Id")),
-        Nombre = reader.GetString(reader.GetOrdinal("Nombre")),
-        Apellido = reader.GetString(reader.GetOrdinal("Apellido")),
-        Email = reader.GetString(reader.GetOrdinal("Email")),
-        Role = reader.GetString(reader.GetOrdinal("Role"))
-    };
+    List<T> GetAll();
+    T? GetById(int id);
+    T Create(T entity);
+    void Update(int id, T entity);
+    void Delete(int id);
+    bool Exists(int id);
 }
 ```
 
-### Manejo de NULLs en Lectura
+### Repositorios Implementados
+
+| Repositorio | Entidad | Métodos Especiales |
+|-------------|---------|-------------------|
+| `CarreraRepository` | Carrera | `Exists(int id)` |
+| `AlumnoRepository` | Alumno | `ExistsByDNI`, `ExistsByEmail`, `ExistsByCarreraId` |
+| `AdministradorRepository` | Administrador | `GetByEmail`, `ExistsByEmail`, `Count`, `UpdatePasswordHash` |
+| `ProfesorRepository` | Profesor | `ExistsByEmail` |
+| `FormularioRepository` | Formulario | `Exists(int id)` |
+| `ListadoRepository` | ListadoItem (DTO) | `GetListado()` (join memoria) |
+
+### Patrones en Repositorios
+
+- **Mapeo manual**: `SqlDataReader` → Entidad (sin reflexión)
+- **Parámetros**: Siempre `@Param`, nunca string interpolation
+- **NULL handling**: `DBNull.Value` para opcionales
+- **SCOPE_IDENTITY()**: Para obtener ID tras INSERT
+
+---
+
+## Servicios CRUD (BR Layer)
+
+Interfaz base genérica:
+
 ```csharp
-Direccion = reader.IsDBNull(reader.GetOrdinal("Direccion")) 
-    ? null 
-    : reader.GetString(reader.GetOrdinal("Direccion")),
+public interface ICrudService<T>
+{
+    List<T> GetAll();
+    T? GetById(int id);
+    ServiceResult<T> Create(T entity);
+    ServiceResult<T> Update(int id, T entity);
+    ServiceResult Delete(int id);
+}
 ```
 
----
+### Result Pattern
 
-## Servicios CRUD Específicos
+```csharp
+public class ServiceResult
+{
+    public bool Success { get; set; }
+    public string? Message { get; set; }
+    
+    public static ServiceResult Ok(string message = "Operación exitosa") => 
+        new() { Success = true, Message = message };
+    public static ServiceResult Fail(string message) => 
+        new() { Success = false, Message = message };
+}
 
-### AdministradorSqlServerService
-**Archivo**: `Services/AdministradorSqlServerService.cs`
+public class ServiceResult<T>
+{
+    public bool Success { get; set; }
+    public string? Message { get; set; }
+    public T? Data { get; set; }
+    
+    public static ServiceResult<T> Ok(T data, string message = "Operación exitosa") => 
+        new() { Success = true, Message = message, Data = data };
+    public static ServiceResult<T> Fail(string message) => 
+        new() { Success = false, Message = message };
+}
+```
 
-| Método | SQL | Notas |
-|--------|-----|-------|
-| `GetAll()` | `SELECT ... WHERE Activo = 1 ORDER BY Id` | Soft delete filter |
-| `GetById(id)` | `SELECT ... WHERE Id = @Id AND Activo = 1` | |
-| `Create(entity)` | `INSERT ... VALUES (@Nombre, @Apellido, @Email, @PasswordHash, @Role, 1)` | Hash BCrypt work factor 12 |
-| `Update(id, entity)` | `UPDATE ... SET Nombre=@Nombre... WHERE Id=@Id AND Activo=1` | |
-| `Delete(id)` | `UPDATE ... SET Activo=0 WHERE Id=@Id AND Activo=1` | **Soft delete** |
+### Servicios Implementados
 
-**PasswordTemp**: Se usa solo en `Create` para hashear. No se persiste.
+| Servicio | Entidad | Validaciones Especiales |
+|----------|---------|------------------------|
+| `CarreraService` | Carrera | Duración 1-10 años, no eliminar si tiene alumnos |
+| `AlumnoService` | Alumno | DNI/Email únicos, CarreraId existe, DNI 7-8 dígitos |
+| `AdministradorService` | Administrador | Email único, password ≥8 chars, BCrypt workFactor 12 |
+| `ProfesorService` | Profesor | Email único |
+| `FormularioService` | Formulario | Fechas válidas, estado válido, FechaCierre > FechaApertura |
+| `ListadoService` | ListadoItem | Join memoria Alumno+Carrera |
 
----
+### Ejemplo: CarreraService.Delete (validación cruzada)
 
-### AlumnoSqlServerService
-**Archivo**: `Services/AlumnoSqlServerService.cs`
+```csharp
+public ServiceResult Delete(int id)
+{
+    if (!_repository.Exists(id))
+        return ServiceResult.Fail($"La carrera con Id {id} no existe.");
 
-| Método | SQL | Notas |
-|--------|-----|-------|
-| `GetAll()` | `SELECT ... ORDER BY Id` | Todos los campos |
-| `GetById(id)` | `SELECT ... WHERE Id = @Id` | |
-| `Create(entity)` | `INSERT 12 columnas + CarreraId` | `FechaInscripcion` default NOW |
-| `Update(id, entity)` | `UPDATE 12 columnas WHERE Id=@Id` | |
-| `Delete(id)` | `DELETE FROM Alumnos WHERE Id=@Id` | **Hard delete** |
+    // Validación cruzada: no eliminar si tiene alumnos
+    if (_alumnoRepository.ExistsByCarreraId(id))
+        return ServiceResult.Fail("No se puede eliminar la carrera porque tiene alumnos inscriptos.");
 
-**NULL handling**: `(object?)prop ?? DBNull.Value` para opcionales.
-
----
-
-### CarreraSqlServerService
-**Archivo**: `Services/CarreraSqlServerService.cs`
-
-| Método | SQL | Notas |
-|--------|-----|-------|
-| `GetAll()` | `SELECT ... ORDER BY Id` | |
-| `GetById(id)` | `SELECT ... WHERE Id = @Id` | |
-| `Create(entity)` | `INSERT 6 columnas` | `Estado` default 'Activa' |
-| `Update(id, entity)` | `UPDATE 6 columnas WHERE Id=@Id` | |
-| `Delete(id)` | `DELETE FROM Carreras WHERE Id=@Id` | **Hard delete** (validado en controller) |
-
----
-
-### ProfesorSqlServerService
-**Archivo**: `Services/ProfesorSqlServerService.cs`
-
-| Método | SQL | Notas |
-|--------|-----|-------|
-| `GetAll()` | `SELECT ... ORDER BY Id` | |
-| `GetById(id)` | `SELECT ... WHERE Id = @Id` | |
-| `Create(entity)` | `INSERT 5 columnas` | |
-| `Update(id, entity)` | `UPDATE 5 columnas WHERE Id=@Id` | |
-| `Delete(id)` | `DELETE FROM Profesores WHERE Id=@Id` | **Hard delete** |
+    _repository.Delete(id);
+    return ServiceResult.Ok("Carrera eliminada correctamente.");
+}
+```
 
 ---
 
 ## AdminAuthService (Autenticación)
 
-**Archivo**: `Services/AdminAuthService.cs`  
-**Interface**: `IAdminAuthService`
+**Archivo**: `Instituto.BR/Services/AdministradorService.cs`  
+**Interface**: `IAdministradorService`
 
 ```csharp
-public interface IAdminAuthService
+public interface IAdministradorService
 {
     Task<AdminResult?> LoginAsync(string email, string password);
     Task<bool> HayAdminsAsync();
-    Task CrearAdminAsync(string nombre, string apellido, string email, string password, string role);
+    Task CrearPrimerAdminAsync(SetupAdminDto dto);
+    ServiceResult ChangePassword(int id, string passwordActual, string nuevaPassword);
+    ServiceResult ChangePasswordByEmail(string email, string passwordActual, string nuevaPassword);
 }
 ```
 
@@ -176,84 +217,73 @@ public interface IAdminAuthService
 ```csharp
 public async Task<AdminResult?> LoginAsync(string email, string password)
 {
-    using var conn = new SqlConnection(_connectionString);
-    await conn.OpenAsync();
-
-    using var cmd = new SqlCommand(
-        @"SELECT Id, Nombre, Apellido, Email, PasswordHash, Role
-          FROM Administradores
-          WHERE Email = @Email AND Activo = 1", conn);
-    cmd.Parameters.AddWithValue("@Email", email.Trim().ToLower());
-
-    using var reader = await cmd.ExecuteReaderAsync();
-    if (!await reader.ReadAsync()) return null;
-
-    var hash = reader.GetString(reader.GetOrdinal("PasswordHash"));
-    if (!BCrypt.Net.BCrypt.Verify(password, hash)) return null;
-
-    return new AdminResult(
-        reader.GetInt32(reader.GetOrdinal("Id")),
-        reader.GetString(reader.GetOrdinal("Nombre")),
-        reader.GetString(reader.GetOrdinal("Apellido")),
-        reader.GetString(reader.GetOrdinal("Email")),
-        reader.GetString(reader.GetOrdinal("Role"))
-    );
+    var admin = _repository.GetByEmail(email);
+    if (admin == null) return null;
+    if (!BCryptNet.Verify(password, admin.PasswordHash)) return null;
+    
+    return new AdminResult(admin.Id, admin.Nombre, admin.Apellido, admin.Email, admin.Role);
 }
 ```
 
-- **Case-insensitive email**: `.Trim().ToLower()`
-- **Solo activos**: `WHERE Activo = 1`
+- **Case-insensitive email**: `Trim().ToLower()`
+- **Solo activos**: Repositorio filtra `Activo = 1`
 - **BCrypt verify**: Compara password plano vs hash almacenado
 
-#### HayAdminsAsync
+#### CrearPrimerAdminAsync
 ```csharp
-public async Task<bool> HayAdminsAsync()
+public async Task<AdminResult?> CrearPrimerAdminAsync(SetupAdminDto dto)
 {
-    using var conn = new SqlConnection(_connectionString);
-    await conn.OpenAsync();
-    using var cmd = new SqlCommand("SELECT COUNT(*) FROM Administradores", conn);
-    var count = (long)(await cmd.ExecuteScalarAsync())!;
-    return count > 0;
+    if (HayAdmins()) return null;
+    
+    var admin = new Administrador { Nombre = dto.Nombre, ... };
+    var result = Create(admin, dto.Password);
+    return result.Success ? new AdminResult(...) : null;
 }
 ```
-- Usado por `SetupController` para permitir/denegar creación inicial
 
-#### CrearAdminAsync
-```csharp
-public async Task CrearAdminAsync(string nombre, string apellido, string email, string password, string role)
-{
-    var hash = BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
-
-    using var conn = new SqlConnection(_connectionString);
-    await conn.OpenAsync();
-
-    using var cmd = new SqlCommand(
-        @"INSERT INTO Administradores (Nombre, Apellido, Email, PasswordHash, Role, Activo)
-          VALUES (@Nombre, @Apellido, @Email, @PasswordHash, @Role, 1)", conn);
-
-    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
-    cmd.Parameters.AddWithValue("@Apellido", apellido.Trim());
-    cmd.Parameters.AddWithValue("@Email", email.Trim().ToLower());
-    cmd.Parameters.AddWithValue("@PasswordHash", hash);
-    cmd.Parameters.AddWithValue("@Role", role);
-
-    await cmd.ExecuteNonQueryAsync();
-}
-```
 - **Work factor 12**: Balance seguridad/performance (2024+)
-- **Activo = 1**: Por defecto activo
+- **BCrypt.HashPassword**: Genera hash seguro
+- **Solo si no hay admins**: `HayAdmins()` check
+
+#### ChangePassword
+```csharp
+public ServiceResult ChangePassword(int id, string passwordActual, string nuevaPassword)
+{
+    var admin = _repository.GetById(id);
+    if (admin == null) return ServiceResult.Fail("Admin no encontrado");
+    
+    if (!BCryptNet.Verify(passwordActual, admin.PasswordHash))
+        return ServiceResult.Fail("Contraseña actual incorrecta");
+    
+    var newHash = BCryptNet.HashPassword(nuevaPassword, workFactor: 12);
+    _repository.UpdatePasswordHash(id, newHash);
+    return ServiceResult.Ok("Contraseña actualizada correctamente.");
+}
+```
 
 ---
 
-## CrudJsonService (Legado - JSON Files)
+## Registro en DI Container (API Layer)
 
-**Archivo**: `Services/CrudJsonService.cs`  
-**Estado**: **NO USADO** (reemplazado por SqlServer services)
+**Archivo**: `Instituto.API/Program.cs`
 
-- Persistencia en archivos `.json` locales
-- `SemaphoreSlim` para concurrencia
-- Útil para desarrollo sin BD / testing
-- Mantenido por compatibilidad / referencia
+```csharp
+// Repositories (AD Layer)
+builder.Services.AddScoped<ICarreraRepository, CarreraRepository>();
+builder.Services.AddScoped<IAlumnoRepository, AlumnoRepository>();
+builder.Services.AddScoped<IAdministradorRepository, AdministradorRepository>();
+builder.Services.AddScoped<IProfesorRepository, ProfesorRepository>();
+builder.Services.AddScoped<IFormularioRepository, FormularioRepository>();
+builder.Services.AddScoped<IListadoRepository, ListadoRepository>();
+
+// Services (BR Layer)
+builder.Services.AddScoped<ICarreraService, CarreraService>();
+builder.Services.AddScoped<IAlumnoService, AlumnoService>();
+builder.Services.AddScoped<IAdministradorService, AdministradorService>();
+builder.Services.AddScoped<IProfesorService, ProfesorService>();
+builder.Services.AddScoped<IFormularioService, FormularioService>();
+builder.Services.AddScoped<IListadoService, ListadoService>();
+```
 
 ---
 
@@ -268,3 +298,17 @@ public async Task CrearAdminAsync(string nombre, string apellido, string email, 
 | **Null handling** | `reader.IsDBNull(...) ? null : reader.GetX(...)` |
 | **DBNull.Value** | Para parámetros opcionales nulos |
 | **SCOPE_IDENTITY()** | Para obtener ID tras INSERT |
+| **Result Pattern** | `ServiceResult<T>` para éxito/fallo tipado |
+| **Validación temprana** | En servicio, antes de tocar BD |
+
+---
+
+## Servicios Adicionales
+
+### FormularioService
+- Validación: `FechaCierre > FechaApertura`
+- Estados válidos: `Borrador`, `Abierto`, `Cerrado`
+
+### ListadoService
+- Join en memoria: Alumnos + Carreras
+- Retorna `List<AlumnoListadoDto>` aplanado

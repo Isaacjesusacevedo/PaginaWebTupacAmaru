@@ -2,19 +2,23 @@
 
 ## Archivo Fuente
 
-**Ubicación**: `backend/Database/CreateDatabase.sql`
+**Ubicación**: `Instituto.API/Database/CreateDatabase.sql`
 
 ## Contenido Completo
 
 ```sql
--- Script para crear la base de datos y tablas en SQL Server (LocalDB)
--- Ejecuta este script en SQL Server Management Studio conectado a (localdb)\MSSQLLocalDB
+-- Script para crear la base de datos y tablas en SQL Server (SQLEXPRESS)
+-- Ejecuta este script en SQL Server Management Studio conectado a DESKTOP-DQ8JUA\G
 
--- 1. Crear la base de datos si no existe
-IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'InstitutoDB')
+-- 1. Crear la base de datos si no existe (limpiar si existe)
+IF EXISTS (SELECT 1 FROM sys.databases WHERE name = 'InstitutoDB')
 BEGIN
-    CREATE DATABASE InstitutoDB;
+    ALTER DATABASE InstitutoDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE InstitutoDB;
 END
+GO
+
+CREATE DATABASE InstitutoDB;
 GO
 
 USE InstitutoDB;
@@ -54,7 +58,7 @@ BEGIN
 END
 GO
 
--- 4. Tabla Alumnos
+-- 5. Tabla Alumnos
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'Alumnos' AND xtype = 'U')
 BEGIN
     CREATE TABLE Alumnos (
@@ -81,7 +85,7 @@ BEGIN
 END
 GO
 
--- 5. Tabla Profesores
+-- 6. Tabla Profesores
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'Profesores' AND xtype = 'U')
 BEGIN
     CREATE TABLE Profesores (
@@ -98,24 +102,39 @@ BEGIN
 END
 GO
 
-PRINT 'Base de datos InstitutoDB y tablas creadas exitosamente.';
+-- 7. Tabla Formularios
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'Formularios' AND xtype = 'U')
+BEGIN
+    CREATE TABLE Formularios (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        Nombre NVARCHAR(200) NOT NULL,
+        Estado NVARCHAR(20) NOT NULL DEFAULT 'Borrador' CHECK (Estado IN ('Borrador','Abierto','Cerrado')),
+        FechaApertura DATETIME2 NOT NULL,
+        FechaCierre DATETIME2 NOT NULL,
+        Descripcion NVARCHAR(1000) NULL,
+        FechaCreacion DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+    );
+END
+GO
+
+PRINT 'Base de datos InstitutoDB y tablas creadas exitosamente en SQLEXPRESS.';
 ```
 
 ## Instrucciones de Ejecución
 
 ### Opción A: SQL Server Management Studio (SSMS)
 1. Abrir SSMS
-2. Conectar a: `(localdb)\MSSQLLocalDB` (Autenticación Windows)
+2. Conectar a: `DESKTOP-DQ8JUA\G` (Autenticación Windows)
 3. Archivo → Abrir → Archivo → Seleccionar `CreateDatabase.sql`
 4. Ejecutar (F5 o botón "Ejecutar")
 
 ### Opción B: sqlcmd (línea de comandos)
 ```bash
-sqlcmd -S "(localdb)\MSSQLLocalDB" -i "backend/Database/CreateDatabase.sql"
+sqlcmd -S "DESKTOP-DQ8JUA\G" -i "Instituto.API/Database/CreateDatabase.sql"
 ```
 
 ### Opción C: Azure Data Studio / VS Code (extensión mssql)
-1. Conectar a `(localdb)\MSSQLLocalDB`
+1. Conectar a `DESKTOP-DQ8JUA\G`
 2. Abrir archivo `.sql`
 3. Click derecho → "Run Query"
 
@@ -134,12 +153,13 @@ SELECT * FROM Administradores;
 SELECT * FROM Carreras;
 SELECT * FROM Alumnos;
 SELECT * FROM Profesores;
+SELECT * FROM Formularios;
 ```
 
 ## Resultado Esperado
 
 ```
-Base de datos InstitutoDB y tablas creadas exitosamente.
+Base de datos InstitutoDB y tablas creadas exitosamente en SQLEXPRESS.
 ```
 
 Tablas creadas:
@@ -147,3 +167,4 @@ Tablas creadas:
 - `Carreras`
 - `Alumnos` (con FK a Carreras, índices en CarreraId y DNI)
 - `Profesores` (con índice en Email)
+- `Formularios` (con CHECK en Estado)

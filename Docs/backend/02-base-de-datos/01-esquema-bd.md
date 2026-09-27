@@ -34,6 +34,18 @@
 │ Turno           │
 │ FK CarreraId ───┘
 └─────────────────┘
+
+┌─────────────────┐
+│  FORMULARIOS    │
+├─────────────────┤
+│ PK Id           │
+│ Nombre          │
+│ Estado          │ (Borrador/Abierto/Cerrado)
+│ FechaApertura   │
+│ FechaCierre     │
+│ Descripcion     │
+│ FechaCreacion   │
+└─────────────────┘
 ```
 
 ## Tablas Detalladas
@@ -66,7 +78,7 @@
 | Turno | NVARCHAR(50) | YES | NULL | | Mañana/Tarde/Noche |
 | Modalidad | NVARCHAR(50) | YES | NULL | | Presencial/Virtual/Híbrida |
 | Horario | NVARCHAR(100) | YES | NULL | | Ej: "Lun-Vie 18-22hs" |
-| Estado | NVARCHAR(50) | NO | 'Activa' | | 'Activa'/'Inactiva'/'Cerrada' |
+| Estado | NVARCHAR(50) | NO | 'Activa' | | 'Activa'/'Inactiva' |
 | FechaCreacion | DATETIME2 | NO | SYSDATETIME() | | Auditoría |
 
 ### 3. Alumnos
@@ -114,14 +126,29 @@
 - UNIQUE NONCLUSTERED: `Email`
 - NONCLUSTERED: `IX_Profesores_Email` (búsqueda)
 
+### 5. Formularios
+
+| Columna | Tipo | Null | Default | Constraints | Descripción |
+|---------|------|------|---------|-------------|-------------|
+| Id | INT | NO | IDENTITY(1,1) | PK | Identificador |
+| Nombre | NVARCHAR(200) | NO | | | Nombre formulario |
+| Estado | NVARCHAR(20) | NO | 'Borrador' | CHECK ('Borrador','Abierto','Cerrado') | Estado flujo |
+| FechaApertura | DATETIME2 | NO | | | Inicio período |
+| FechaCierre | DATETIME2 | NO | | | Fin período |
+| Descripcion | NVARCHAR(1000) | YES | NULL | | Detalle opcional |
+| FechaCreacion | DATETIME2 | NO | SYSDATETIME() | | Auditoría |
+
+**Estados válidos**: `Borrador`, `Abierto`, `Cerrado`
+
 ## Reglas de Negocio a Nivel BD
 
 1. **Soft Delete**: `Administradores.Activo = 0` en lugar de DELETE físico
 2. **Cascada**: NO hay ON DELETE CASCADE (integridad manual en servicios)
 3. **Unicidad**: Email único en Administradores y Profesores; DNI único en Alumnos
-4. **Checks**: `DuracionAnios 1-10`, `DNI 7-8 dígitos`
+4. **Checks**: `DuracionAnios 1-10`, `DNI 7-8 dígitos`, `Estado IN ('Borrador','Abierto','Cerrado')`
 5. **Defaults**: `Estado='Activa'`, `Activo=1`, `FechaCreacion=SYSDATETIME()`
+6. **Foreign Keys**: `Alumnos.CarreraId` → `Carreras.Id` (NO ACTION)
 
 ## Script de Creación Completo
 
-Ver: [`02-script-creacion.md`](./02-script-creacion.md) o archivo `backend/Database/CreateDatabase.sql`
+Ver: [`02-script-creacion.md`](./02-script-creacion.md) o archivo `Instituto.API/Database/CreateDatabase.sql`

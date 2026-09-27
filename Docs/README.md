@@ -13,12 +13,12 @@ Docs/
 
 ## Backend (ASP.NET Core 9)
 
-**Tecnologías**: .NET 9, SQL Server (LocalDB), JWT Bearer, BCrypt, ADO.NET (`Microsoft.Data.SqlClient`)
+**Tecnologías**: .NET 9, SQL Server (Express), JWT Bearer, BCrypt, ADO.NET (`Microsoft.Data.SqlClient`)
 
 ### [Arquitectura](./backend/01-arquitectura/)
 - [Visión General](./backend/01-arquitectura/01-vision-general.md) — Diagramas, principios, stack tecnológico
 - [Patrones de Diseño](./backend/01-arquitectura/02-patrones-diseno.md) — Repository, Template Method, DI, Strategy, DTO
-- [Estructura del Proyecto](./backend/01-arquitectura/03-estructura-proyecto.md) — Árbol de directorios, responsabilidades por capa
+- [Estructura del Proyecto](./backend/01-arquitectura/03-estructura-proyecto.md) — Árbol de directorios, responsabilidades por capa (AD, BR, API)
 
 ### [Base de Datos](./backend/02-base-de-datos/)
 - [Esquema BD](./backend/02-base-de-datos/01-esquema-bd.md) — ER diagram, tablas, columnas, índices, FKs
@@ -26,20 +26,20 @@ Docs/
 - [Migraciones](./backend/02-base-de-datos/03-migraciones.md) — Estrategia manual, patrones ALTER, versionado
 
 ### [Modelos](./backend/03-modelos/)
-- [Entidades de Dominio](./backend/03-modelos/01-entidades-dominio.md) — `Persona`, `Administrador`, `Alumno`, `Carrera`, `Profesor`
-- [DTOs y ViewModels](./backend/03-modelos/02-dtos-viewmodels.md) — `LoginDto`, `SetupAdminDto`, `AdminResult`, `AlumnoListadoDto`
+- [Entidades de Dominio](./backend/03-modelos/01-entidades-dominio.md) — `Persona`, `Administrador`, `Alumno`, `Carrera`, `Profesor`, `Formulario`
+- [DTOs y ViewModels](./backend/03-modelos/02-dtos-viewmodels.md) — `LoginDto`, `SetupAdminDto`, `AdminResult`, `AlumnoListadoDto`, `ListadoItem`
 - [Validaciones](./backend/03-modelos/03-validaciones.md) — DataAnnotations, flujo validación, reglas de negocio
 
 ### [Servicios](./backend/04-servicios/)
-- [Capa de Servicios](./backend/04-servicios/01-capa-servicios.md) — DI, `SqlServerBaseService`, servicios CRUD, `AdminAuthService`
-- [SqlServerBaseService](./backend/04-servicios/02-sqlserverbaseservice.md) — Template methods, `MapReaderToEntity`, manejo excepciones
-- [Servicios CRUD](./backend/04-servicios/03-servicios-crud.md) — Detalle 4 servicios: Admin, Alumno, Carrera, Profesor
-- [Servicio Auth](./backend/04-servicios/04-auth-service.md) — Login, BCrypt work factor 12, setup inicial, JWT claims
+- [Capa de Servicios](./backend/04-servicios/01-capa-servicios.md) — DI, `AccesoDB`, servicios CRUD, `AdminAuthService`
+- [AccesoDB](./backend/04-servicios/02-accsodb.md) — Template methods, `ExecuteReader/NonQuery/Scalar`, manejo parámetros
+- [Servicios CRUD](./backend/04-servicios/03-servicios-crud.md) — Detalle 6 servicios: Admin, Alumno, Carrera, Profesor, Formulario, Listado
+- [Servicio Auth](./backend/04-servicios/04-auth-service.md) — Login, BCrypt work factor 12, setup inicial, JWT claims, change-password
 
 ### [API / Controladores](./backend/05-api-controladores/)
 - [Convenciones API](./backend/05-api-controladores/01-convenciones-api.md) — REST standards, status codes, formatos, versionado
-- [Auth Endpoints](./backend/05-api-controladores/02-auth-endpoints.md) — `POST /api/auth/login`, JWT generation, claims
-- [Administradores](./backend/05-api-controladores/03-admin-endpoints.md) — CRUD completo `/api/administradores` + change-password
+- [Auth Endpoints](./backend/05-api-controladores/02-auth-endpoints.md) — `POST /api/auth/login`, JWT generation, claims, verify-password
+- [Administradores](./backend/05-api-controladores/03-admin-endpoints.md) — CRUD completo `/api/administradores` + change-password + verify-password
 - [Alumnos](./backend/05-api-controladores/04-alumnos-endpoints.md) — CRUD + inscripción pública `/api/alumnos`
 - [Carreras](./backend/05-api-controladores/05-carreras-endpoints.md) — CRUD + catálogo público `/api/carreras`
 - [Profesores](./backend/05-api-controladores/06-profesores-endpoints.md) — CRUD `/api/profesores`
@@ -57,12 +57,12 @@ Docs/
 - [Manejo Global](./backend/07-excepciones/02-manejo-global-errores.md) — Exception handler, formatos, logging, Problem Details
 
 ### [Configuración](./backend/08-configuracion/)
-- [AppSettings](./backend/08-configuracion/01-appsettings.md) — JSON structure, ConnectionStrings, JWT, logging
+- [AppSettings](./backend/08-configuracion/01-appsettings.md) — JSON structure, ConnectionStrings (SQLEXPRESS), JWT, logging
 - [Variables de Entorno](./backend/08-configuracion/02-variables-entorno.md) — Dev/Staging/Prod, Docker, K8s, Azure, AWS
 - [CORS y Middleware](./backend/08-configuracion/03-cors-middleware.md) — Pipeline orden, políticas, producción
 
 ### [Despliegue](./backend/09-despliegue/)
-- [Requisitos Previos](./backend/09-despliegue/01-requisitos-previos.md) — .NET 9, SQL Server, puertos, estructura
+- [Requisitos Previos](./backend/09-despliegue/01-requisitos-previos.md) — .NET 9, SQL Server Express, puertos, estructura
 - [Pasos de Instalación](./backend/09-despliegue/02-pasos-instalacion.md) — BD, config, build, primer admin, publicar
 - [Variables Producción](./backend/09-despliegue/03-variables-produccion.md) — Secrets, connection strings, rotación
 - [Troubleshooting](./backend/09-despliegue/04-troubleshooting.md) — Errores comunes BD, Auth, Build, Runtime, diagnósticos
@@ -77,7 +77,7 @@ Docs/
 - [Visión General](./frontend/10-frontend/01-vision-general.md) — Stack, arquitectura, principios
 - [Estructura del Proyecto](./frontend/10-frontend/02-estructura-proyecto.md) — Directorios, convenciones, módulos
 - [Enrutamiento](./frontend/10-frontend/03-enrutamiento.md) — Vue Router, tabla rutas, guards, lazy loading
-- [Autenticación](./frontend/10-frontend/04-autenticacion.md) — `useAuth` composable, login/logout, headers, guards
+- [Autenticación](./frontend/10-frontend/04-autenticacion.md) — `useAuth` composable, login/logout, headers, guards, re-auth modal
 - [Componentes y Vistas](./frontend/10-frontend/05-componentes-vistas.md) — Componentes reutilizables, vistas por módulo, patrones
 - [Integración API](./frontend/10-frontend/06-integracion-api.md) — Cliente HTTP, endpoints por módulo, tipado, errores
 - [Configuración y Build](./frontend/10-frontend/07-configuracion.md) — Vite, TS, ESLint, Prettier, env vars
@@ -88,29 +88,26 @@ Docs/
 
 ### Backend
 ```bash
-cd instituto/backend
+# 1. Crear BD en SQL Server Express (SSMS / Azure Data Studio / VS Code)
+# Archivo: Instituto.API/Database/CreateDatabase.sql
 
-# 1. Crear BD (LocalDB)
-sqlcmd -S "(localdb)\MSSQLLocalDB" -i Database/CreateDatabase.sql
-
-# 2. Configurar secrets (dev)
-dotnet user-secrets init
-dotnet user-secrets set "ConnectionStrings:SqlServer" "Server=(localdb)\MSSQLLocalDB;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;"
-dotnet user-secrets set "Jwt:Key" "TuClaveDesarrollo32CharsMinimo!!!"
+# 2. Configurar connection string en appsettings.Development.json
+# Ya configurado para SQLEXPRESS: "Server=DESKTOP-DQ8JUA\\G;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;"
 
 # 3. Compilar y ejecutar
-dotnet build
+cd Instituto.API
 dotnet run --environment Development
+# → http://localhost:5127 | https://localhost:7217
 
 # 4. Crear primer admin (una sola vez)
-curl -X POST http://localhost:5089/api/setup/admin -H "Content-Type: application/json" -d '{"nombre":"Admin","apellido":"Sistema","email":"admin@tupac.edu","password":"AdminSeguro2026!","role":"Admin"}'
+curl -X POST http://localhost:5127/api/setup/admin -H "Content-Type: application/json" -d '{"nombre":"Admin","apellido":"Sistema","email":"admin@tupac.edu","password":"AdminSeguro2026!","role":"Admin"}'
 ```
 
 ### Frontend
 ```bash
-cd instituto/Frontend
+cd Frontend
 npm install
-npm run dev  # http://localhost:5173 (proxy a backend:5089)
+npm run dev  # http://localhost:5173 (proxy a backend:5127)
 ```
 
 ---
@@ -119,7 +116,7 @@ npm run dev  # http://localhost:5173 (proxy a backend:5089)
 
 | Aspecto | Backend | Frontend |
 |---------|---------|----------|
-| **Base URL** | `http://localhost:5089` | `VITE_API_URL=http://localhost:5089` |
+| **Base URL** | `http://localhost:5127` | `VITE_API_URL=http://localhost:5127` |
 | **Auth** | JWT Bearer 8hs | `sessionStorage` + `useAuth` |
-| **CORS** | `AllowAnyOrigin()` (dev) | Proxy Vite `/api` → 5089 |
+| **CORS** | `AllowAnyOrigin()` (dev) | Proxy Vite `/api` → 5127 |
 | **Endpoints** | Documentados en [05-api-controladores](./backend/05-api-controladores/) | Consumidos en [06-integracion-api](./frontend/10-frontend/06-integracion-api.md) |

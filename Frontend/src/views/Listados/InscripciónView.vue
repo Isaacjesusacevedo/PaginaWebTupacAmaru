@@ -212,8 +212,8 @@
 </template>
 
 <script setup lang="ts">
-  import { reactive, ref, watch, onMounted } from 'vue'
-  import { computed } from 'vue'
+import { reactive, ref, watch, onMounted } from 'vue'
+import { computed } from 'vue'
 
 const edad = computed(() => {
   if (!alumno.FechaNacimiento) return null
@@ -222,154 +222,155 @@ const edad = computed(() => {
   return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25))
 })
 
-  // ---------------------- Alumno ----------------------
-  interface Alumno {
-    Nombre: string
-    Apellido: string
-    DNI: string
-    Email: string
-    FechaNacimiento: string
-    Direccion: string
-    Nacionalidad: string
-    Telefono: string
-    TituloSecundario: string
-    Turno: string
-    CarreraId: number
-    FechaInscripcion: string
-    FechaEstimadaTitulo: string
-    InstitucionTitulo: string
-  }
+// ---------------------- Alumno ----------------------
+interface Alumno {
+  Nombre: string
+  Apellido: string
+  DNI: string
+  Email: string
+  FechaNacimiento: string
+  Direccion: string
+  Nacionalidad: string
+  Telefono: string
+  TituloSecundario: string
+  Turno: string
+  CarreraId: number
+  FechaInscripcion: string
+  FechaEstimadaTitulo: string
+  InstitucionTitulo: string
+}
 
-  const alumno = reactive<Alumno>({
-    Nombre: "",
-    Apellido: "",
-    DNI: "",
-    Email: "",
-    FechaNacimiento: "",
-    Direccion: "",
-    Nacionalidad: "",
-    Telefono: "",
-    TituloSecundario: "",
-    Turno: "",
-    CarreraId: 0,
-    FechaInscripcion: "",
-    FechaEstimadaTitulo: "",
-    InstitucionTitulo: ""
-  })
+const alumno = reactive<Alumno>({
+  Nombre: "",
+  Apellido: "",
+  DNI: "",
+  Email: "",
+  FechaNacimiento: "",
+  Direccion: "",
+  Nacionalidad: "",
+  Telefono: "",
+  TituloSecundario: "",
+  Turno: "",
+  CarreraId: 0,
+  FechaInscripcion: "",
+  FechaEstimadaTitulo: "",
+  InstitucionTitulo: ""
+})
 
-  // ---------------------- Documentación ----------------------
-  const documentacion = reactive({
-    titulo: false,
-    tituloEnTramite: false,
-    materiasAdeudadas: false,
-    alumnoRegular: false
-  })
+// ---------------------- Documentación ----------------------
+const documentacion = reactive({
+  titulo: false,
+  tituloEnTramite: false,
+  materiasAdeudadas: false,
+  alumnoRegular: false
+})
 
-  watch(() => documentacion.titulo, (v) => { 
-    if (v) {
-      documentacion.tituloEnTramite = false
-    } else {
-      alumno.FechaInscripcion = ""
-      alumno.TituloSecundario = ""
-    }
-  })
-  watch(() => documentacion.tituloEnTramite, (v) => { 
-    if (v) {
-      documentacion.titulo = false
-    } else {
-      alumno.FechaEstimadaTitulo = ""
-      alumno.InstitucionTitulo = ""
-    }
-  })
-
-  // ---------------------- Estados ----------------------
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-
-  // ---------------------- Carreras ----------------------
-  interface Carrera {
-    id: number
-    nombre: string
-    estado?: string
-  }
-  const carreras = ref<Carrera[]>([])
-
-  const cargarCarreras = async () => {
-    try {
-      const res = await fetch("http://localhost:5089/api/carreras")
-      if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-      carreras.value = await res.json()
-    } catch (err) {
-      console.error(err)
-      error.value = "No se pudieron cargar las carreras"
-    }
-  }
-
-  onMounted(cargarCarreras)
-
-  // ---------------------- Funciones ----------------------
-  const resetAlumno = () => {
-    alumno.Nombre = ""
-    alumno.Apellido = ""
-    alumno.DNI = ""
-    alumno.Email = ""
-    alumno.FechaNacimiento = ""
-    alumno.Direccion = ""
-    alumno.Nacionalidad = ""
-    alumno.Telefono = ""
-    alumno.TituloSecundario = ""
-    alumno.Turno = ""
-    alumno.CarreraId = 0
+watch(() => documentacion.titulo, (v) => { 
+  if (v) {
+    documentacion.tituloEnTramite = false
+  } else {
     alumno.FechaInscripcion = ""
+    alumno.TituloSecundario = ""
+  }
+})
+watch(() => documentacion.tituloEnTramite, (v) => { 
+  if (v) {
+    documentacion.titulo = false
+  } else {
     alumno.FechaEstimadaTitulo = ""
     alumno.InstitucionTitulo = ""
-    // Reset documentación checkboxes
-    documentacion.titulo = false
-    documentacion.tituloEnTramite = false
-    documentacion.materiasAdeudadas = false
-    documentacion.alumnoRegular = false
+  }
+})
+
+// ---------------------- Estados ----------------------
+const loading = ref(false)
+const error = ref<string | null>(null)
+
+// ---------------------- Carreras ----------------------
+interface Carrera {
+  id: number
+  nombre: string
+  estado?: string
+}
+const carreras = ref<Carrera[]>([])
+const API = import.meta.env.VITE_API_URL
+
+const cargarCarreras = async () => {
+  try {
+    const res = await fetch(`${API}/api/carreras`)
+    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
+    carreras.value = await res.json()
+  } catch (err) {
+    console.error(err)
+    error.value = "No se pudieron cargar las carreras"
+  }
+}
+
+onMounted(cargarCarreras)
+
+// ---------------------- Funciones ----------------------
+const resetAlumno = () => {
+  alumno.Nombre = ""
+  alumno.Apellido = ""
+  alumno.DNI = ""
+  alumno.Email = ""
+  alumno.FechaNacimiento = ""
+  alumno.Direccion = ""
+  alumno.Nacionalidad = ""
+  alumno.Telefono = ""
+  alumno.TituloSecundario = ""
+  alumno.Turno = ""
+  alumno.CarreraId = 0
+  alumno.FechaInscripcion = ""
+  alumno.FechaEstimadaTitulo = ""
+  alumno.InstitucionTitulo = ""
+  // Reset documentación checkboxes
+  documentacion.titulo = false
+  documentacion.tituloEnTramite = false
+  documentacion.materiasAdeudadas = false
+  documentacion.alumnoRegular = false
+}
+
+const guardarAlumno = async () => {
+  error.value = null
+  loading.value = true
+
+  if (!alumno.Nombre || !alumno.Apellido || !alumno.DNI || !alumno.CarreraId) {
+    error.value = "Nombre, Apellido, DNI y Carrera son obligatorios"
+    loading.value = false
+    return
   }
 
-  const guardarAlumno = async () => {
-    error.value = null
-    loading.value = true
-
-    if (!alumno.Nombre || !alumno.Apellido || !alumno.DNI || !alumno.CarreraId) {
-      error.value = "Nombre, Apellido, DNI y Carrera son obligatorios"
-      loading.value = false
-      return
-    }
-
-    // Validación condicional: si tiene título, requiere fecha egreso y título
-    if (documentacion.titulo && (!alumno.FechaInscripcion || !alumno.TituloSecundario)) {
-      error.value = "Si posee título, debe completar fecha de egreso y título secundario"
-      loading.value = false
-      return
-    }
-
-    // Validación condicional: si tiene título en trámite, requiere fecha estimada e institución
-    if (documentacion.tituloEnTramite && (!alumno.FechaEstimadaTitulo || !alumno.InstitucionTitulo)) {
-      error.value = "Si tiene título en trámite, debe completar fecha estimada e institución"
-      loading.value = false
-      return
-    }
-
-    try {
-      const res = await fetch("http://localhost:5089/api/alumnos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(alumno)
-      })
-      if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-
-      alert("Alumno guardado correctamente")
-      resetAlumno()
-    } catch (err: unknown) {
-      console.error(err)
-      if (err instanceof Error) error.value = err.message
-      else error.value = "Hubo un error al guardar el alumno"
-    } finally {
-      loading.value = false
-    }
+  // Validación condicional: si tiene título, requiere fecha egreso y título
+  if (documentacion.titulo && (!alumno.FechaInscripcion || !alumno.TituloSecundario)) {
+    error.value = "Si posee título, debe completar fecha de egreso y título secundario"
+    loading.value = false
+    return
   }
-  </script>
+
+  // Validación condicional: si tiene título en trámite, requiere fecha estimada e institución
+  if (documentacion.tituloEnTramite && (!alumno.FechaEstimadaTitulo || !alumno.InstitucionTitulo)) {
+    error.value = "Si tiene título en trámite, debe completar fecha estimada e institución"
+    loading.value = false
+    return
+  }
+
+  try {
+    const res = await fetch(`${API}/api/alumnos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(alumno)
+    })
+    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
+
+    alert("Alumno guardado correctamente")
+    resetAlumno()
+  } catch (err: unknown) {
+    console.error(err)
+    if (err instanceof Error) error.value = err.message
+    else error.value = "Hubo un error al guardar el alumno"
+  } finally {
+    loading.value = false
+  }
+}
+</script>

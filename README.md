@@ -1,6 +1,6 @@
 # 🏛️ Sistema de Gestión Institucional — Instituto Superior Docente Túpac Amaru
 
-> Plataforma de gestión académica para la administración de carreras, alumnos, administradores, profesores, formularios e inscripciones. Desarrollada con arquitectura **Frontend (Vue 3) + Backend (ASP.NET Core 9 + SQL Server)**.
+> Plataforma de gestión académica para la administración de carreras, alumnos, administradores, profesores, formularios e inscripciones. Desarrollada con arquitectura **Frontend (Vue 3) + Backend (ASP.NET Core 9 + SQL Server Express)** en arquitectura **N-Tier (AD → BR → API)**.
 
 ---
 
@@ -12,15 +12,15 @@ Sistema web para el **Instituto Superior Docente Túpac Amaru** que centraliza l
 |--------|---------------|----------------|-----------------|
 | **Carreras** | CRUD completo + validación integridad (no eliminar si hay alumnos) | ✅ | ✅ |
 | **Alumnos** | Inscripción pública + listado con join carrera | ✅ | ✅ (inscripción) / ⚠️ (panel admin sin Edit/Delete) |
-| **Administradores** | CRUD autenticado con JWT | ✅ | ✅ |
+| **Administradores** | CRUD autenticado con JWT + change-password + verify-password | ✅ | ✅ |
 | **Profesores** | CRUD completo autenticado | ✅ | ❌ (sin vistas) |
-| **Formularios** | CRUD completo autenticado | ✅ | ✅ (UI completa) |
-| **Listados** | Vista consolidada alumnos + carrera | ✅ | ✅ |
-| **Autenticación** | Login JWT (8h) + Route Guards + Password toggle + Change password | ✅ | ✅ |
+| **Formularios** | CRUD completo autenticado (estados: Borrador/Abierto/Cerrado) | ✅ | ✅ (UI completa) |
+| **Listados** | Vista consolidada alumnos + carrera (join en memoria) | ✅ | ✅ |
+| **Autenticación** | Login JWT (8h) + Route Guards + Password toggle + Verify/Change password | ✅ | ✅ |
 
 ---
 
-## 🏗️ Arquitectura
+## 🏗️ Arquitectura (N-Tier: AD → BR → API)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -30,14 +30,19 @@ Sistema web para el **Instituto Superior Docente Túpac Amaru** que centraliza l
                              │ HTTPS / REST API + JWT
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      SERVIDOR (ASP.NET Core 9)                  │
-│  Controllers → Services (SqlServerBaseService) → SQL Server     │
+│                      ASP.NET CORE 9 API (Presentation)          │
+│  Controllers → BR Services → AD Repositories → SQL Server       │
 │  JWT Auth + BCrypt (workFactor:12) + Global Exception Handling  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+**Capas del Backend:**
+- **API Layer** (`Instituto.API`): Controllers, Middleware, DI, JWT, CORS
+- **BR Layer** (`Instituto.BR`): 6 Servicios con lógica de negocio, validaciones, Result Pattern
+- **AD Layer** (`Instituto.AD`): 6 Repositorios tipados, `AccesoDB` (ADO.NET), Entidades de dominio
+
 **Patrones aplicados:**
-- **Backend**: Repository genérico (`SqlServerBaseService<T>` + `ICrudJsonService<T>`), DTOs, Exception handling tipado, DI, Clean Architecture por capas
+- **Backend**: Repository pattern, Template Method (`AccesoDB`), DI, Result Pattern (`ServiceResult<T>`), Exception handling tipado
 - **Frontend**: Composition API, Componentes por vista, CSS modular (BEM-like), Route Guards, Composable `useAuth`
 
 ---
@@ -61,141 +66,55 @@ Sistema web para el **Instituto Superior Docente Túpac Amaru** que centraliza l
 |------------|---------|-----|
 | ASP.NET Core | 9.0 | Web API Framework |
 | Microsoft.Data.SqlClient | 5.2+ | Driver SQL Server (ADO.NET) |
-| BCrypt.Net-Next | 4.0+ | Hash de contraseñas |
+| BCrypt.Net-Next | 4.0+ | Hash de contraseñas (workFactor: 12) |
 | JWT Bearer | 9.0+ | Autenticación stateless |
 | System.Text.Json | Built-in | Serialización |
+| MSTest + Moq | 3.6+ / 4.20+ | Testing unitario e integración |
 
 ### Base de Datos
-- **SQL Server** (LocalDB para desarrollo)
+- **SQL Server Express** (`DESKTOP-DQ8JUA\G`)
 - Esquema: `Administradores`, `Alumnos`, `Carreras`, `Profesores`, `Formularios`
-- Script: `backend/Database/CreateDatabase.sql`
+- Script: `Instituto.API/Database/CreateDatabase.sql`
 
 ---
 
-## 📁 Estructura del Proyecto
+## 📁 Estructura del Proyecto (Solution)
 
 ```
-instituto/
-├── README.md                    # Este archivo
-├── .gitignore                   # Exclusiones globales
-├── PROYECTO.md                  # Documentación técnica detallada
+Instituto.sln
+├── Instituto.AD/              # Data Access Layer
+│   ├── Interfaces/            # IRepository, ICarreraRepository, etc.
+│   ├── Models/                # Entidades: Persona, Administrador, Alumno, Carrera, Profesor, Formulario, ListadoItem
+│   ├── Repositories/          # 6 Repositorios tipados + AccesoDB (ADO.NET wrapper)
+│   ├── AccesoDB.cs            # Wrapper ADO.NET genérico (ExecuteReader/NonQuery/Scalar)
+│   ├── DBParameter.cs / DBParameters.cs
+│   └── Instituto.AD.csproj
 │
-├── backend/                     # ASP.NET Core 9 API
-│   ├── backend.sln
-│   ├── Backend.csproj
-│   ├── Program.cs               # Entry point, DI, JWT, CORS, Middleware
-│   ├── appsettings.json         # Configuración (conexión, JWT)
-│   ├── appsettings.Development.json
-│   ├── Backend.http             # Tests HTTP (REST Client)
-│   ├── .gitignore
-│   │
-│   ├── Controllers/
-│   │   ├── AuthController.cs        # POST /api/auth/login, /verify-password
-│   │   ├── SetupController.cs       # POST /api/setup/admin (solo Dev, 1 vez)
-│   │   ├── CarreraController.cs     # CRUD Carreras
-│   │   ├── AlumnosController.cs     # CRUD Alumnos + validación CarreraId
-│   │   ├── AdministradorController  # CRUD Admins (JWT)
-│   │   ├── ProfesorController.cs    # CRUD Profesores (JWT)
-│   │   ├── FormularioController.cs  # CRUD Formularios (JWT)
-│   │   └── ListadoController.cs     # Join Alumno + Carrera
-│   │
-│   ├── Models/
-│   │   ├── Persona.cs          # Base abstracta (Id, Nombre, Apellido, Email)
-│   │   ├── Alumno.cs           # Hereda Persona + DNI, FechaNac, CarreraId, Edad
-│   │   ├── Administrador.cs    # Hereda Persona + Role + PasswordHash + Activo
-│   │   ├── Profesor.cs         # Hereda Persona + Telefono, Especialidad
-│   │   ├── Carrera.cs          # Entidad independiente
-│   │   ├── Formulario.cs       # Entidad independiente
-│   │   ├── LoginDto.cs
-│   │   ├── SetupAdminDto.cs
-│   │   ├── AdminResult.cs
-│   │   ├── ChangePasswordDto.cs
-│   │   └── VerifyPasswordDto.cs
-│   │
-│   ├── DTOs/
-│   │   └── AlumnoListadoDTO.cs # Proyección Alumno + Carrera
-│   │
-│   ├── Services/
-│   │   ├── ICrudJsonService.cs         # Interfaz genérica CRUD
-│   │   ├── SqlServerBaseService.cs     # Base ADO.NET + Template Methods
-│   │   ├── IAdminAuthService.cs        # Interfaz auth
-│   │   ├── AdminAuthService.cs         # Login/Registro JWT + BCrypt
-│   │   ├── CarreraSqlServerService
-│   │   ├── AlumnoSqlServerService
-│   │   ├── AdministradorSqlServerService
-│   │   ├── ProfesorSqlServerService
-│   │   └── FormularioSqlServerService
-│   │
-│   ├── Exceptions/
-│   │   ├── EntityNotFoundException.cs  # → 404
-│   │   └── PersistenceException.cs     # → 500
-│   │
-│   ├── Database/
-│   │   └── CreateDatabase.sql    # Script creación BD + tablas
-│   │
-│   └── Properties/launchSettings.json
+├── Instituto.BR/              # Business Rules Layer
+│   ├── DTOs/                  # ServiceResult<T>, AdminResult, LoginDto, SetupAdminDto, etc.
+│   ├── Interfaces/            # ICrudService, ICarreraService, etc.
+│   ├── Services/              # 6 Servicios: Carrera, Alumno, Administrador, Profesor, Formulario, Listado
+│   └── Instituto.BR.csproj
 │
-└── Frontend/                    # Vue 3 + Vite
-    ├── package.json
-    ├── vite.config.ts
-    ├── tsconfig.json / .app / .node
-    ├── eslint.config.ts
-    ├── .env                     # VITE_API_URL=http://localhost:5089
-    ├── .gitignore
-    │
-    ├── index.html
-    │
-    └── src/
-        ├── main.ts              # Bootstrap: Vue, Pinia, Router, Element Plus, Icons
-        ├── App.vue              # Layout raíz + NavBar + RouterView
-        │
-        ├── router/index.ts      # Rutas + Guards (requiereAuth, soloInvitado)
-        │
-        ├── composables/
-        │   └── useAuth.ts       # Token/Admin en sessionStorage + helpers
-        │
-        ├── components/
-        │   ├── NavBar.vue       # Logo + links + logout (oculto en /inscripcion)
-        │   └── ... (TheWelcome, WelcomeItem - legacy)
-        │
-        ├── views/
-        │   ├── public/
-        │   │   ├── HomeView.vue          # Dashboard admin (menu cards)
-        │   │   ├── ContactoView.vue
-        │   │   ├── FormulariosView.vue   # Listado formularios
-        │   │   ├── AgregarFormularioView.vue
-        │   │   ├── EditarFormularioView.vue
-        │   │   └── EliminarFormularioView.vue
-        │   ├── auth/
-        │   │   └── LoginView.vue         # Login JWT + toggle password
-        │   ├── carrera/
-        │   │   ├── CarreraView.vue       # Tabla + CRUD
-        │   │   ├── AgregarCarreraView.vue
-        │   │   ├── EditarCarreraView.vue
-        │   │   └── EliminarCarreraView.vue
-        │   ├── administradores/
-        │   │   ├── AdministradorView.vue # Tabla + empty/error states
-        │   │   ├── AgregarAdministradorView.vue
-        │   │   ├── EditarAdministradorView.vue
-        │   │   └── EliminarAdministradorView.vue
-        │   └── Listados/
-        │       ├── ListadoView.vue       # Join Alumno+Carrera (JWT)
-        │       └── InscripciónView.vue   # Formulario público dinámico
-        │
-        └── assets/css/
-            ├── base/
-            │   ├── main.css        # Entry point
-            │   └── global.css      # Variables CSS, reset, utilidades
-            ├── components/
-            │   ├── buttons.css     # .btn, variants, sizes
-            │   ├── card.css        # .card, .card-center, .card-lg, .card-header, .card-title
-            │   ├── forms.css       # .form, .form-row, .field, .form-actions
-            │   ├── innputs.css     # Inputs, selects, .password-field, .password-toggle
-            │   ├── table.css       # .table, .table-header, .table-row, .table-empty-state, badges
-            │   ├── navbar.css      # .navbar, .menu
-            │   └── admin-menu.css  # Grid botones dashboard
-            └── layout/
-                └── section.css     # .section (centrado + padding)
+├── Instituto.API/             # Presentation Layer (ASP.NET Core 9)
+│   ├── Controllers/           # 8 Controllers: Auth, Setup, Administrador, Alumnos, Carrera, Profesor, Formulario, Listado
+│   ├── Models/                # DTOs API: ApiModels (ApiResponse<T>, LoginRequest, etc.)
+│   ├── Program.cs             # Composition root + pipeline + DI + JWT + CORS
+│   ├── appsettings.Development.json  # ConnectionString SQLEXPRESS + JWT
+│   ├── Instituto.API.csproj
+│   └── Database/CreateDatabase.sql   # Script DDL completo
+│
+├── Instituto.AD.Test/         # 20 tests unitarios (MSTest + Moq)
+├── Instituto.BR.Test/         # 17 tests unitarios (MSTest + Moq)
+├── Instituto.API.Test/        # 7 tests integración (WebApplicationFactory)
+│
+├── Frontend/                  # Vue 3 + Vite
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── .env                   # VITE_API_URL=http://localhost:5127
+│   └── src/                   # 19 vistas, composables, components, router, CSS modular
+│
+└── Docs/                      # Documentación técnica completa
 ```
 
 ---
@@ -205,69 +124,68 @@ instituto/
 ### Prerrequisitos
 - **.NET 9 SDK**
 - **Node.js 20+** y **npm**
-- **SQL Server LocalDB** (incluido en Visual Studio / VS Code)
+- **SQL Server Express** (instancia `DESKTOP-DQ8JUA\G`)
 
-### 1. Base de Datos
+### 1. Base de Datos (SQL Server Express)
 ```bash
 # Ejecutar en SSMS / Azure Data Studio / VS Code (ext SQL Server)
-# Archivo: backend/Database/CreateDatabase.sql
+# Conectar a: DESKTOP-DQ8JUA\G (Autenticación Windows)
+# Archivo: Instituto.API/Database/CreateDatabase.sql
 ```
 
 ### 2. Configuración Backend
 ```json
-// backend/appsettings.Development.json
+// Instituto.API/appsettings.Development.json (ya configurado)
 {
   "ConnectionStrings": {
-    "SqlServer": "Server=(localdb)\\MSSQLLocalDB;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;"
+    "SqlServer": "Server=DESKTOP-DQ8JUA\\G;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;"
   },
   "Jwt": {
-    "Key": "TU_CLAVE_SECRETA_MUY_LARGA_DE_AL_MENOS_32_CARACTERES",
+    "Key": "Tupac@Amaru#Instituto!JWT$2026*Clave&MuySecreta=32chars",
     "Issuer": "InstitutoTupacAmaru",
     "Audience": "InstitutoTupacAmaruAdmin"
   }
 }
 ```
 
-> **Nota**: En desarrollo usar *User Secrets* (`dotnet user-secrets`) para la clave JWT.
-
 ### 3. Ejecutar Backend
 ```bash
-cd backend
-dotnet run
-# → http://localhost:5089 | https://localhost:7217
+cd Instituto.API
+dotnet run --environment Development
+# → http://localhost:5127 | https://localhost:7244
 ```
 
 ### 4. Configuración Frontend
 ```bash
-# Frontend/.env (ya existe)
-VITE_API_URL=http://localhost:5089
+# Frontend/.env (ya configurado)
+VITE_API_URL=http://localhost:5127
 ```
 
 ### 5. Ejecutar Frontend
 ```bash
 cd Frontend
 npm install      # solo primera vez
-npm run dev      # → http://localhost:5173
+npm run dev      # → http://localhost:5176
 ```
 
 ### 6. Crear Primer Admin (solo primera vez)
 ```bash
-# Terminal o REST Client (backend/Backend.http)
-POST http://localhost:5089/api/setup/admin
-Content-Type: application/json
-
-{
-  "nombre": "Tu Nombre",
-  "apellido": "Tu Apellido",
-  "email": "admin@tupac.edu.ar",
-  "password": "Password123",
-  "role": "SuperAdmin"
-}
+# Terminal o REST Client
+curl -X POST http://localhost:5127/api/setup/admin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Super",
+    "apellido": "Admin",
+    "email": "admin@tupac.edu.ar",
+    "password": "Password123",
+    "role": "SuperAdmin"
+  }'
 ```
 
 ### 7. Login
-- Abrir `http://localhost:5173/login`
-- Credenciales del paso 6
+- Abrir `http://localhost:5176/login`
+- **Email**: `admin@tupac.edu.ar`
+- **Password**: `Password123`
 - Redirige a `/` (Dashboard)
 
 ---
@@ -294,21 +212,22 @@ Content-Type: application/json
 |--------|-----------|------|
 | **Auth** | `POST /api/auth/login` | Público |
 | **Auth** | `POST /api/auth/verify-password` | JWT |
-| **Administradores** | `PUT /api/administradores/{id}/password` | JWT |
 | **Setup** | `POST /api/setup/admin` (solo Dev, 1 vez) | Público |
-| **Carreras** | `GET/POST/PUT/DELETE /api/carreras` | JWT |
-| **Alumnos** | `GET/POST/PUT/DELETE /api/alumnos`<br>`POST` público (inscripción) | JWT / Público (POST) |
+| **Carreras** | `GET/POST/PUT/DELETE /api/carreras` | JWT (GET público) |
+| **Alumnos** | `GET/PUT/DELETE /api/alumnos` | JWT |
+| | `POST /api/alumnos` (inscripción) | **Público** |
 | **Administradores** | `GET/POST/PUT/DELETE /api/administradores` | JWT |
+| | `PUT /api/administradores/{id}/password` | JWT |
 | **Profesores** | `GET/POST/PUT/DELETE /api/profesores` | JWT |
 | **Formularios** | `GET/POST/PUT/DELETE /api/formularios` | JWT |
-| **Listado** | `GET /api/listado` (JWT) — Join Alumno+Carrera | JWT |
+| **Listados** | `GET /api/listado` (join Alumno+Carrera) | JWT |
 
 **Códigos HTTP estándar:**
 - `200 OK` — GET, PUT exitosos
 - `201 Created` — POST (con `Location` header)
 - `204 No Content` — DELETE
 - `400 Bad Request` — Validación / FK inexistente
-- `401 Unauthorized` — Token inválido/expirado
+- `401 Unauthorized` — Token inválido/expirado / credenciales incorrectas
 - `403 Forbidden` — Sin permisos
 - `404 Not Found` — Recurso inexistente
 - `500 Internal Server Error` — Error interno (sin stack trace)
@@ -320,39 +239,39 @@ Content-Type: application/json
 ```
 src/assets/css/
 ├── base/
-│   ├── main.css      # @import de todo
-│   └── global.css    # Variables CSS, reset, utilidades
+│   ├── main.css        # @import de todo
+│   └── global.css      # Variables CSS, reset, utilidades
 ├── components/
-│   ├── buttons.css   # .btn, variants, sizes
-│   ├── card.css      # .card, .card-center, .card-lg, .card-header, .card-title
-│   ├── forms.css     # .form, .form-row, .field, .form-actions
-│   ├── innputs.css   # Inputs, selects, .password-field, .password-toggle
-│   ├── table.css     # .table, .table-header, .table-row, .table-empty-state, badges
-│   ├── navbar.css    # .navbar, .menu
-│   └── admin-menu.css # Grid botones dashboard
+│   ├── buttons.css     # .btn, variants, sizes
+│   ├── card.css        # .card, .card-center, .card-lg, .card-header, .card-title
+│   ├── forms.css       # .form, .form-row, .field, .form-actions
+│   ├── innputs.css     # Inputs, selects, .password-field, .password-toggle
+│   ├── table.css       # .table, .table-header, .table-row, .table-empty-state, badges
+│   ├── navbar.css      # .navbar, .menu
+│   └── admin-menu.css  # Grid botones dashboard
 └── layout/
-    └── section.css   # .section (centrado + padding)
+    └── section.css     # .section (centrado + padding)
 ```
 
 **Principio:** Las vistas solo usan clases globales. Variables en `global.css` (single source of truth).
 
 ---
 
-## 🧪 Testing Manual (REST Client)
+## 🧪 Testing
 
-Archivo: `backend/Backend.http` — Incluye requests para:
-- Setup admin
-- Login + copy token
-- CRUD Carreras / Alumnos / Administradores / Profesores / Formularios
-- Listado
-- Headers `Authorization: Bearer {{token}}`
-
----
-
-## 📝 Scripts Disponibles
-
-### Frontend
+### Tests Backend (44 tests - Todos pasando)
 ```bash
+dotnet test Instituto.sln
+# Instituto.AD.Test    → 20 tests (Repositorios)
+# Instituto.BR.Test    → 17 tests (Servicios + Auth)
+# Instituto.API.Test   → 7 tests (Integración API + Auth)
+```
+
+### Scripts Disponibles
+
+**Frontend:**
+```bash
+cd Frontend
 npm run dev        # Servidor desarrollo (Vite)
 npm run build      # Build producción (type-check + vite build)
 npm run preview    # Preview build
@@ -361,11 +280,11 @@ npm run format     # Prettier
 npm run type-check # vue-tsc --build
 ```
 
-### Backend
+**Backend:**
 ```bash
-dotnet run         # Dev (watch habilitado en launchSettings)
-dotnet build       # Compilar
-dotnet test        # (pendiente: agregar xUnit)
+dotnet run --environment Development    # Dev server
+dotnet build                             # Compilar
+dotnet test                              # Tests (44 passing)
 ```
 
 ---
@@ -375,10 +294,9 @@ dotnet test        # (pendiente: agregar xUnit)
 | Prioridad | Item |
 |-----------|------|
 | **Crítica** | `InscripciónView.vue` tipa `CarreraId: string` vs `number` (backend) |
-| **Crítica** | **6 archivos** aún usan `localhost:5089` hardcoded (no `VITE_API_URL`) |
 | **Alta** | Sin capa de servicios API centralizada (`src/services/`) |
-| **Alta** | `HomeView.vue` health check hardcoded `http://localhost:5089/weatherforecast` |
-| **Media** | `ex.Message.Contains("Carrera")` frágil en `AlumnosController.cs:112` |
+| **Alta** | `HomeView.vue` health check hardcoded `http://localhost:5127/` |
+| **Media** | `ex.Message.Contains("Carrera")` frágil en `AlumnosController.cs` |
 | **Media** | Nombre archivo `InscripciónView.vue` con `ó` (riesgo Linux/CI) |
 | **Media** | **Profesores**: Backend CRUD completo ✅ pero **Frontend sin vistas** |
 | **Baja** | Typo `innputs.css` → `inputs.css` |
@@ -392,7 +310,7 @@ dotnet test        # (pendiente: agregar xUnit)
 | Archivo | Estado |
 |---------|--------|
 | **README.md** | ✅ Actualizado (este archivo) |
-| **PROYECTO.md** | ✅ Actualizado (arquitectura SQL Server, JWT, flujo de datos) |
+| **PROYECTO.md** | ✅ Actualizado (arquitectura N-Tier, SQL Express, JWT, flujo de datos) |
 | **Docs/** | ✅ Documentación modular actualizada (backend + frontend) |
 
 ---

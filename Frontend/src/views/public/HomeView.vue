@@ -61,6 +61,10 @@
         </ul>
       </nav>
 
+      <p v-if="mensaje" class="text-center mt-3" style="color: var(--color-success);">
+        {{ mensaje }}
+      </p>
+
     </div>
   </main>
 </template>
@@ -72,7 +76,8 @@ import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
-const { cerrarSesion } = useAuth()
+const { cerrarSesion, authHeaders } = useAuth()
+const API = import.meta.env.VITE_API_URL
 
 const mensaje = ref('')
 
@@ -81,13 +86,14 @@ const logout = () => {
   router.push('/login')
 }
 
-onMounted(() => {
-  fetch('http://localhost:5089/weatherforecast')
-    .then(res => res.json())
-    .then(data => {
+onMounted(async () => {
+  try {
+    const res = await fetch(`${API}/`, { headers: authHeaders() })
+    if (res.ok) {
       mensaje.value = 'Backend conectado'
-      console.log(data)
-    })
-    .catch(err => console.error(err))
+    }
+  } catch (err) {
+    console.error(err)
+  }
 })
 </script>

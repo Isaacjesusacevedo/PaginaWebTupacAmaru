@@ -34,7 +34,7 @@
           <span>{{ admin.nombre }}</span>
           <span>{{ admin.apellido }}</span>
           <span>{{ admin.email }}</span>
-          <span>{{ admin.roll }}</span>
+          <span>{{ admin.role }}</span>
 
           <div class="table-actions center">
             <button
@@ -63,74 +63,78 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted } from 'vue'
-  import { useRouter, useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
 
-  interface Administrador {
-    id: number
-    nombre: string
-    apellido: string
-    email: string
-    roll: string
+const router = useRouter()
+const route = useRoute()
+const { authHeaders } = useAuth()
+const API = import.meta.env.VITE_API_URL
+
+interface Administrador {
+  id: number
+  nombre: string
+  apellido: string
+  email: string
+  role: string
+}
+
+const loading = ref(false)
+const error = ref<string | null>(null)
+const admin = ref<Administrador | null>(null)
+const adminId = ref<number>(0)
+
+// Obtener ID
+onMounted(() => {
+  if (route.params.id) {
+    adminId.value = Number(route.params.id)
+    cargarAdministrador()
   }
+})
 
-  const router = useRouter()
-  const route = useRoute()
+// Cargar administrador
+const cargarAdministrador = async () => {
+  try {
+    const res = await fetch(
+      `${API}/api/administradores/${adminId.value}`,
+      { headers: authHeaders() }
+    )
 
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-  const admin = ref<Administrador | null>(null)
-  const adminId = ref<number>(0)
-
-  // Obtener ID
-  onMounted(() => {
-    if (route.params.id) {
-      adminId.value = Number(route.params.id)
-      cargarAdministrador()
-    }
-  })
-
-  // Cargar administrador
-  const cargarAdministrador = async () => {
-    try {
-      const res = await fetch(
-        `http://localhost:5089/api/administradores/${adminId.value}`
-      )
-
-      if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-      admin.value = await res.json()
-    } catch (err) {
-      error.value = err instanceof Error
-        ? err.message
-        : 'No se pudo cargar el administrador'
-    }
+    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
+    admin.value = await res.json()
+  } catch (err) {
+    error.value = err instanceof Error
+      ? err.message
+      : 'No se pudo cargar el administrador'
   }
+}
 
-  // Eliminar administrador
-  const eliminarAdministrador = async () => {
-    if (!adminId.value) return
+// Eliminar administrador
+const eliminarAdministrador = async () => {
+  if (!adminId.value) return
 
-    loading.value = true
-    error.value = null
+  loading.value = true
+  error.value = null
 
-    try {
-      const res = await fetch(
-        `http://localhost:5089/api/administradores/${adminId.value}`,
-        { method: 'DELETE' }
-      )
+  try {
+    const res = await fetch(
+      `${API}/api/administradores/${adminId.value}`,
+      { method: 'DELETE', headers: authHeaders() }
+    )
 
-      if (!res.ok) {
-        const msg = await res.text()
-        throw new Error(msg)
-      }
-
-      router.push('/administracion')
-    } catch (err) {
-      error.value = err instanceof Error
-        ? err.message
-        : 'Error al eliminar el administrador'
-    } finally {
-      loading.value = false
+    if (!res.ok) {
+      const msg = await res.text()
+      throw new Error(msg)
     }
+
+    router.push('/administracion')
+  } catch (err) {
+    error.value = err instanceof Error
+      ? err.message
+      : 'Error al eliminar el administrador'
+  } finally {
+    loading.value = false
   }
-  </script>
+}
+</script>

@@ -11,6 +11,7 @@
 | **Auth** | JWT Bearer Token en header `Authorization: Bearer <token>` |
 | **CORS** | Permitido todo origen/método/headers (desarrollo) |
 | **Error Format** | `{ "error": "mensaje descriptivo" }` |
+| **Base URL (Dev)** | `http://localhost:5127` |
 
 ---
 
@@ -119,6 +120,24 @@ GET /api/alumnos?page=1&pageSize=20&search=perez&carreraId=3
 - `POST /api/auth/login`: 5 req/min/IP
 - `POST /api/setup/admin`: 1 req/hora/IP
 - CRUD autenticados: 100 req/min/user
+
+---
+
+## Endpoints por Módulo (Actualizados)
+
+| Módulo | Endpoints | Auth |
+|--------|-----------|------|
+| **Auth** | `POST /api/auth/login` | Público |
+| | `POST /api/auth/verify-password` | JWT |
+| **Setup** | `POST /api/setup/admin` (solo Dev) | Público |
+| **Carreras** | `GET/POST/PUT/DELETE /api/carreras` | JWT (GET público) |
+| **Alumnos** | `GET/PUT/DELETE /api/alumnos` | JWT |
+| | `POST /api/alumnos` | **Público** (inscripción) |
+| **Administradores** | `GET/POST/PUT/DELETE /api/administradores` | JWT |
+| | `PUT /api/administradores/{id}/password` | JWT |
+| **Profesores** | `GET/POST/PUT/DELETE /api/profesores` | JWT |
+| **Formularios** | `GET/POST/PUT/DELETE /api/formularios` | JWT |
+| **Listados** | `GET /api/listado` | JWT |
 
 ---
 
