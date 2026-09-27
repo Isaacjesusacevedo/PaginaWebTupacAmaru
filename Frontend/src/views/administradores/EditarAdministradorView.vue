@@ -43,7 +43,7 @@
           </div>
         </div>
 
-        <div class="form-row">
+<div class="form-row">
           <div class="field">
             <label for="email">Email</label>
             <input
@@ -55,59 +55,51 @@
           </div>
         </div>
 
-        <!-- SECCIÓN: Cambiar Contraseña -->
-        <div class="form-section">
-          <h3 class="form-section-title">Cambiar Contraseña</h3>
-          <p class="form-section-description">
-            Para cambiar la contraseña, completá la nueva y confirmá. Requiere tu contraseña actual.
-          </p>
-
-          <div class="form-row">
-            <div class="field password-field">
-              <label for="nuevaPassword">Nueva Contraseña</label>
-              <input
-                id="nuevaPassword"
-                v-model="nuevaPassword"
-                :type="showNuevaPassword ? 'text' : 'password'"
-                autocomplete="new-password"
-                placeholder="Mínimo 8 caracteres (dejar vacío para no cambiar)"
-                :disabled="loading"
-              />
-              <button
-                type="button"
-                class="password-toggle"
-                @click="showNuevaPassword = !showNuevaPassword"
-                :aria-label="showNuevaPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-              >
-                <el-icon v-if="showNuevaPassword"><Hide /></el-icon>
-                <el-icon v-else><View /></el-icon>
-              </button>
-            </div>
-
-            <div class="field password-field">
-              <label for="confirmarPassword">Confirmar Nueva Contraseña</label>
-              <input
-                id="confirmarPassword"
-                v-model="confirmarPassword"
-                :type="showConfirmarPassword ? 'text' : 'password'"
-                autocomplete="new-password"
-                placeholder="Repetir nueva contraseña"
-                :disabled="loading"
-              />
-              <button
-                type="button"
-                class="password-toggle"
-                @click="showConfirmarPassword = !showConfirmarPassword"
-                :aria-label="showConfirmarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-              >
-                <el-icon v-if="showConfirmarPassword"><Hide /></el-icon>
-                <el-icon v-else><View /></el-icon>
-              </button>
-            </div>
+        <div class="form-row">
+          <div class="field password-field">
+            <label for="nuevaPassword">Nueva Contraseña</label>
+            <input
+              id="nuevaPassword"
+              v-model="nuevaPassword"
+              :type="showNuevaPassword ? 'text' : 'password'"
+              autocomplete="new-password"
+              placeholder="Mínimo 8 caracteres (dejar vacío para no cambiar)"
+              :disabled="loading"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              @click="showNuevaPassword = !showNuevaPassword"
+              :aria-label="showNuevaPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            >
+              <el-icon v-if="showNuevaPassword"><Hide /></el-icon>
+              <el-icon v-else><View /></el-icon>
+            </button>
           </div>
 
-          <p v-if="errorPassword" class="form-error text-center">{{ errorPassword }}</p>
+          <div class="field password-field">
+            <label for="confirmarPassword">Confirmar Nueva Contraseña</label>
+            <input
+              id="confirmarPassword"
+              v-model="confirmarPassword"
+              :type="showConfirmarPassword ? 'text' : 'password'"
+              autocomplete="new-password"
+              placeholder="Repetir nueva contraseña (dejar vacío para no cambiar)"
+              :disabled="loading"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              @click="showConfirmarPassword = !showConfirmarPassword"
+              :aria-label="showConfirmarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            >
+              <el-icon v-if="showConfirmarPassword"><Hide /></el-icon>
+              <el-icon v-else><View /></el-icon>
+            </button>
+          </div>
         </div>
+
+        <p v-if="errorPassword" class="form-error text-center">{{ errorPassword }}</p>
 
         <!-- ACTIONS -->
         <div class="form-actions">
