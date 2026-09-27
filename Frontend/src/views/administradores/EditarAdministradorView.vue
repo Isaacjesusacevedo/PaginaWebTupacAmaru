@@ -43,7 +43,7 @@
           </div>
         </div>
 
-<div class="form-row">
+        <div class="form-row">
           <div class="field">
             <label for="email">Email</label>
             <input
@@ -53,9 +53,7 @@
               required
             />
           </div>
-        </div>
 
-        <div class="form-row">
           <div class="field password-field">
             <label for="nuevaPassword">Nueva Contraseña</label>
             <input
@@ -77,6 +75,10 @@
             </button>
           </div>
         </div>
+
+        <p v-if="errorPassword" class="form-error text-center">{{ errorPassword }}</p>
+
+        <!-- ACTIONS -->
 
         <p v-if="errorPassword" class="form-error text-center">{{ errorPassword }}</p>
 
