@@ -30,11 +30,11 @@
 /* Password field with toggle */
 .password-field {
   position: relative;
-  display: flex;
-  align-items: center;
+  /* NO sobrescribe display/flex-direction de .field */
 }
 .password-field input {
   padding-right: 44px; /* espacio para el botón */
+  width: 100%;
 }
 .password-toggle {
   position: absolute;
@@ -50,6 +50,7 @@
   align-items: center;
   justify-content: center;
   transition: color 0.2s ease;
+  z-index: 1;
 }
 .password-toggle:hover {
   color: var(--color-primary);
