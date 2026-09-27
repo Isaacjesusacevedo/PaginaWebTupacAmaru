@@ -18,9 +18,6 @@
       <!-- FORM -->
       <form class="form" @submit.prevent="guardarAdministrador">
 
-        <!-- ID oculto para el PUT -->
-        <input type="hidden" :value="admin.id" />
-
         <div class="form-row">
           <div class="field">
             <label for="nombre">Nombre</label>
@@ -79,10 +76,6 @@
         <p v-if="errorPassword" class="form-error text-center">{{ errorPassword }}</p>
 
         <!-- ACTIONS -->
-
-        <p v-if="errorPassword" class="form-error text-center">{{ errorPassword }}</p>
-
-        <!-- ACTIONS -->
         <div class="form-actions">
           <button
             class="btn btn-success"
@@ -109,6 +102,7 @@
   <!-- RE-AUTENTICACIÓN MODAL (para entrar a editar) -->
   <el-dialog
     v-model="showReauthDialog"
+    class="reauth-dialog"
     title="Verificación de Seguridad"
     :modal="true"
     :close-on-click-modal="false"
@@ -142,6 +136,7 @@
             :disabled="loadingReauth"
             @keyup.enter="confirmReauth"
             class="reauth-input"
+            autofocus
           />
         </div>
       </div>
@@ -171,9 +166,9 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted, computed } from 'vue'
+import { reactive, ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox, ElDialog, ElInput, ElButton } from 'element-plus'
+import { ElMessage, ElDialog } from 'element-plus'
 import { Lock } from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'
 
@@ -187,11 +182,9 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 
 // Estados específicos para cambio de contraseña
-const loadingPassword = ref(false)
 const errorPassword = ref<string | null>(null)
 const nuevaPassword = ref('')
 const showNuevaPassword = ref(false)
-const showReauthPassword = ref(false)
 
 // Validación reactiva de contraseña (mínimo 8 caracteres)
 const passwordValida = computed(() => {
@@ -204,6 +197,9 @@ const loadingReauth = ref(false)
 const reauthPassword = ref('')
 const reauthError = ref<string | null>(null)
 const reauthVerified = ref(false)
+
+// 🔐 Contraseña verificada (solo en memoria, se limpia al desmontar)
+const passwordVerificada = ref('')
 
 /**
  * Interfaz completa que devuelve la API (incluye campos sensibles).
@@ -292,6 +288,9 @@ const confirmReauth = async () => {
       throw new Error(data.error || 'Contraseña incorrecta')
     }
 
+    // 🔐 Guardar contraseña verificada en memoria (solo para esta sesión)
+    passwordVerificada.value = reauthPassword.value
+
     reauthVerified.value = true
     showReauthDialog.value = false
     reauthPassword.value = ''
@@ -322,6 +321,11 @@ const handleReauthClose = (done: () => void) => {
     cancelReauth()
   }
 }
+
+// Limpiar contraseña verificada al desmontar
+onUnmounted(() => {
+  passwordVerificada.value = ''
+})
 
 // 🔹 Guardar cambios (datos generales: nombre, apellido, email + opcional contraseña)
 const guardarAdministrador = async () => {
@@ -361,7 +365,7 @@ const guardarAdministrador = async () => {
 
     ElMessage.success('Datos actualizados correctamente')
 
-    // 2. Si se quiere cambiar la contraseña, pedir re-autenticación y cambiarla
+    // 2. Si se quiere cambiar la contraseña, usar la contraseña ya verificada
     if (nuevaPassword.value.trim() !== '') {
       // Validar longitud mínima
       if (!passwordValida.value) {
@@ -370,26 +374,17 @@ const guardarAdministrador = async () => {
         return
       }
 
-      // 🔐 RE-AUTENTICACIÓN: Pedir contraseña actual via ElMessageBox
-      let passwordActual: string
-      try {
-        const { value: passwordActual } = await ElMessageBox.prompt(
-          'Por seguridad, ingresá tu contraseña actual para confirmar el cambio de contraseña:',
-          'Confirmar identidad',
-          {
-            confirmButtonText: 'Confirmar',
-            cancelButtonText: 'Cancelar',
-            inputType: 'password',
-            inputPlaceholder: 'Contraseña actual',
-            inputPattern: /^.{1,}$/,
-            inputValidator: (val) => val.length > 0 || 'La contraseña es obligatoria',
-            distinguishCancelAndClose: true
-          }
-        )
+      // Usar la contraseña ya verificada (sin pedirla de nuevo)
+      if (!passwordVerificada.value) {
+        errorPassword.value = 'Sesión de verificación expirada. Recargá la página e intentá de nuevo.'
+        loading.value = false
+        return
+      }
 
-        // Enviar cambio de contraseña al backend
+      try {
+        // Enviar cambio de contraseña al backend usando la contraseña ya verificada
         const payload = {
-          passwordActual,
+          passwordActual: passwordVerificada.value,
           nuevaPassword: nuevaPassword.value
         }
 
@@ -404,20 +399,19 @@ const guardarAdministrador = async () => {
 
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
-          const msg = data.error || (res.status === 401 ? 'Contraseña actual incorrecta' : 'Error al cambiar la contraseña')
+          const msg = data.error || (res.status === 401 ? 'La contraseña verificada ya no es válida. Recargá la página e intentá de nuevo.' : 'Error al cambiar la contraseña')
           throw new Error(msg)
         }
 
         ElMessage.success('Contraseña actualizada correctamente')
         nuevaPassword.value = ''
       } catch (err: unknown) {
-        // Si el usuario canceló el prompt, ElMessageBox lanza un error específico
-        if (err && typeof err === 'object' && 'type' in err && err.type === 'cancel') {
-          // Usuario canceló el cambio de contraseña, pero los datos generales ya se guardaron
-          ElMessage.warning('Cambio de contraseña cancelado, pero los datos se guardaron')
-        } else {
-          throw err
-        }
+        // Si falla el cambio de contraseña, NO perdemos los datos guardados
+        errorPassword.value = err instanceof Error ? err.message : 'Error al cambiar la contraseña'
+        // NO hacemos router.push aquí para que el usuario vea el error
+        // y pueda reintentar sin perder los datos
+        loading.value = false
+        return
       }
     }
 

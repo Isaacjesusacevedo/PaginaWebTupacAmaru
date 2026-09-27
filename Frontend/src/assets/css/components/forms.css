@@ -103,49 +103,53 @@
 }
 
 /* ================================
-   DIALOG / MODAL STYLES
+   DIALOG / MODAL STYLES (scoped to .reauth-dialog)
 =============================== */
-.dialog-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
+.reauth-dialog {
+  /* Header styles */
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
 
-.dialog-icon {
-  font-size: 1.5rem;
-  color: var(--color-primary);
-}
+  .dialog-icon {
+    font-size: 1.5rem;
+    color: var(--color-primary);
+  }
 
-.dialog-content {
-  padding: 8px 0 4px;
-}
+  /* Body content */
+  .dialog-content {
+    padding: 8px 0 4px;
+  }
 
-.dialog-message {
-  font-size: 0.95rem;
-  color: var(--color-muted);
-  margin-bottom: 16px;
-  line-height: 1.5;
-}
+  .dialog-message {
+    font-size: 0.95rem;
+    color: var(--color-muted);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
 
-.dialog-hint {
-  font-size: 0.85rem;
-  margin-top: 16px;
-  text-align: center;
-}
+  .dialog-hint {
+    font-size: 0.85rem;
+    margin-top: 16px;
+    text-align: center;
+  }
 
-.reauth-input {
-  width: 100%;
-}
+  .reauth-input {
+    width: 100%;
+  }
 
-/* Override ElDialog footer spacing */
-.el-dialog__footer {
-  padding: 16px 0 0 !important;
-  border-top: 1px solid var(--color-border);
-  margin-top: 16px;
-}
+  /* Footer styles scoped to reauth dialog */
+  :deep(.el-dialog__footer) {
+    padding: 16px 0 0 !important;
+    border-top: 1px solid var(--color-border);
+    margin-top: 16px;
+  }
 
-/* Ensure ElDialog content doesn't have excessive padding */
-.el-dialog__body {
-  padding: 20px 24px 8px !important;
+  /* Body padding adjustment */
+  :deep(.el-dialog__body) {
+    padding: 20px 24px 8px !important;
+  }
 }
