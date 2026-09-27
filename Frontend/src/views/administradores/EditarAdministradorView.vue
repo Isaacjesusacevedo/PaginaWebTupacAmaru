@@ -109,7 +109,7 @@
   <!-- RE-AUTENTICACIÓN MODAL (para entrar a editar) -->
   <el-dialog
     v-model="showReauthDialog"
-    title="Confirmar identidad"
+    title="Verificación de Seguridad"
     :modal="true"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
@@ -117,35 +117,52 @@
     width="420"
     :before-close="handleReauthClose"
   >
-    <p class="text-center mb-4">
-      Para editar los datos de un administrador, por favor ingrese su contraseña actual.
-    </p>
-    <div class="form-row">
-      <div class="field password-field">
-        <label for="reauthPassword">Contraseña actual</label>
-        <input
-          id="reauthPassword"
-          v-model="reauthPassword"
-          :type="showReauthPassword ? 'text' : 'password'"
-          autocomplete="current-password"
-          placeholder="Ingresá tu contraseña actual"
-          @keyup.enter="confirmReauth"
-        />
-        <button
-          type="button"
-          class="password-toggle"
-          @click="showReauthPassword = !showReauthPassword"
-          :aria-label="showReauthPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-        >
-          <el-icon v-if="showReauthPassword"><Hide /></el-icon>
-          <el-icon v-else><View /></el-icon>
-        </button>
+    <template #header>
+      <div class="dialog-header">
+        <el-icon class="dialog-icon"><Lock /></el-icon>
+        <span>Verificación de Seguridad</span>
       </div>
+    </template>
+
+    <div class="dialog-content">
+      <p class="dialog-message">
+        Para editar los datos de un administrador, por favor ingrese su contraseña actual.
+      </p>
+
+      <div class="form-row">
+        <div class="field password-field">
+          <label for="reauthPassword">Contraseña actual</label>
+          <el-input
+            id="reauthPassword"
+            v-model="reauthPassword"
+            :show-password="true"
+            type="password"
+            autocomplete="current-password"
+            placeholder="Ingresa tu contraseña actual"
+            :disabled="loadingReauth"
+            @keyup.enter="confirmReauth"
+            class="reauth-input"
+          />
+        </div>
+      </div>
+
+      <p v-if="reauthError" class="form-error text-center">{{ reauthError }}</p>
+
+      <p class="dialog-hint text-muted">
+        Por seguridad, debes confirmar tu identidad para realizar cambios.
+      </p>
     </div>
+
     <template #footer>
       <div class="form-actions" style="justify-content: flex-end; gap: 12px;">
-        <el-button @click="cancelReauth">Cancelar</el-button>
-        <el-button type="primary" @click="confirmReauth" :loading="loadingReauth" :disabled="!reauthPassword.trim()">
+        <el-button @click="cancelReauth" :disabled="loadingReauth">Cancelar</el-button>
+        <el-button
+          type="primary"
+          @click="confirmReauth"
+          :loading="loadingReauth"
+          :disabled="!reauthPassword.trim()"
+          native-type="submit"
+        >
           Confirmar
         </el-button>
       </div>
@@ -156,7 +173,8 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox, ElDialog } from 'element-plus'
+import { ElMessage, ElMessageBox, ElDialog, ElInput, ElButton } from 'element-plus'
+import { Lock } from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'
 
 const route = useRoute()
