@@ -24,7 +24,7 @@ Authorization: Bearer <token>
     "id": 1,
     "nombre": "Admin",
     "apellido": "Principal",
-    "email": "admin@tupac.edu",
+    "email": "admin@tupac.edu.ar",
     "role": "Admin"
   },
   {
@@ -63,7 +63,7 @@ Authorization: Bearer <token>
   "id": 1,
   "nombre": "Admin",
   "apellido": "Principal",
-  "email": "admin@tupac.edu",
+  "email": "admin@tupac.edu.ar",
   "role": "Admin"
 }
 ```
@@ -135,7 +135,7 @@ Content-Type: application/json
 {
   "nombre": "Admin",
   "apellido": "Actualizado",
-  "email": "admin@tupac.edu",
+  "email": "admin@tupac.edu.ar",
   "role": "SuperAdmin"
 }
 ```
@@ -147,7 +147,7 @@ Content-Type: application/json
   "id": 1,
   "nombre": "Admin",
   "apellido": "Actualizado",
-  "email": "admin@tupac.edu",
+  "email": "admin@tupac.edu.ar",
   "role": "SuperAdmin"
 }
 ```

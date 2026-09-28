@@ -90,7 +90,7 @@ curl -X POST http://localhost:5127/api/setup/admin \
     "nombre": "Super",
     "apellido": "Admin",
     "email": "admin@tupac.edu.ar",
-    "password": "Password123",
+    "password": "Tupac123",
     "role": "SuperAdmin"
   }'
 
@@ -103,7 +103,7 @@ curl -X POST http://localhost:5127/api/setup/admin \
 ```bash
 curl -X POST http://localhost:5127/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@tupac.edu.ar","password":"Password123"}'
+  -d '{"email":"admin@tupac.edu.ar","password":"Tupac123"}'
 
 # Respuesta (ApiResponse<LoginResponse>):
 # {"isSuccess":true,"message":"Operación exitosa","data":{"token":"...","expiraEn":"...","admin":{"id":1,"nombre":"Super","apellido":"Admin","email":"admin@tupac.edu.ar","role":"SuperAdmin"}}}

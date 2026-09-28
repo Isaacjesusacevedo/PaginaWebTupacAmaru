@@ -193,17 +193,17 @@ app.MapHealthChecks("/health");
 
 ```bash
 # Forzar 500 (si endpoint tiene bug)
-curl -X POST http://localhost:5089/api/alumnos \
+curl -X POST http://localhost:5127/api/alumnos \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{"nombre":"Test"}'  # Faltan campos requeridos → 400
 
 # Verificar formato JSON en errores
-curl -i http://localhost:5089/api/alumnos/99999 \
+curl -i http://localhost:5127/api/alumnos/99999 \
   -H "Authorization: Bearer <token>"
 # Debe retornar 404 con { "error": "..." }
 
 # Verificar 401 sin token
-curl -i http://localhost:5089/api/administradores
+curl -i http://localhost:5127/api/administradores
 # Debe retornar 401 con { "error": "No autenticado. Iniciá sesión." }
 ```

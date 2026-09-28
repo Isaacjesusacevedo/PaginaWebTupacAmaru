@@ -28,7 +28,7 @@
 ```bash
 # .env (no commitear) o launchSettings.json
 ASPNETCORE_ENVIRONMENT=Development
-ASPNETCORE_URLS=http://localhost:5089
+ASPNETCORE_URLS=http://localhost:5127
 ConnectionStrings__SqlServer=Server=(localdb)\MSSQLLocalDB;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;
 Jwt__Key=Tupac@Amaru#Instituto!JWT$2026*Clave&MuySecreta=32chars
 Jwt__Issuer=InstitutoTupacAmaru

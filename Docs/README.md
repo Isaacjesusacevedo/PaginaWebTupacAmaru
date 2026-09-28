@@ -32,10 +32,10 @@ Docs/
 - [Validaciones](./backend/03-modelos/03-validaciones.md) — DataAnnotations, flujo validación, reglas de negocio
 
 ### [Servicios](./backend/04-servicios/)
-- [Capa de Servicios](./backend/04-servicios/01-capa-servicios.md) — DI, `AccesoDB`, servicios CRUD, `AdminAuthService`
-- [AccesoDB](./backend/04-servicios/02-sqlserverbaseservice.md) — Template methods, `ExecuteReader/NonQuery/Scalar`, manejo parámetros
+- [Capa de Servicios](./backend/04-servicios/01-capa-servicios.md) — DI, `AccesoDB`, servicios CRUD, `AdministradorService`
+- [AccesoDB](./backend/04-servicios/01-capa-servicios.md#accesodb-data-access-layer---institutoad) — Template methods, `ExecuteReader/NonQuery/Scalar`, manejo parámetros
 - [Servicios CRUD](./backend/04-servicios/03-servicios-crud.md) — Detalle 6 servicios: Admin, Alumno, Carrera, Profesor, Formulario, Listado
-- [Servicio Auth](./backend/04-servicios/04-auth-service.md) — Login, BCrypt work factor 12, setup inicial, JWT claims, change-password
+- [Servicio Auth](./backend/04-servicios/04-auth-service.md) — Login, BCrypt work factor 12, setup inicial, JWT claims, change-password (en `AdministradorService`)
 
 ### [API / Controladores](./backend/05-api-controladores/)
 - [Convenciones API](./backend/05-api-controladores/01-convenciones-api.md) — REST standards, status codes, formatos, versionado
@@ -108,7 +108,7 @@ dotnet run --environment Development
 # 4. Crear primer admin (una sola vez, solo en Development)
 curl -X POST http://localhost:5127/api/setup/admin \
   -H "Content-Type: application/json" \
-  -d '{"nombre":"Super","apellido":"Admin","email":"admin@tupac.edu.ar","password":"Password123","role":"SuperAdmin"}'
+  -d '{"nombre":"Super","apellido":"Admin","email":"admin@tupac.edu.ar","password":"Tupac123","role":"SuperAdmin"}'
 ```
 
 ### Frontend
@@ -126,7 +126,7 @@ npm run dev  # → http://localhost:5176
 |---------|---------|----------|
 | **Base URL** | `http://localhost:5127` | `VITE_API_URL=http://localhost:5127` |
 | **Auth** | JWT Bearer 8h | `sessionStorage` + `useAuth` |
-| **CORS** | `AllowAnyOrigin()` (dev) | Proxy Vite `/api` → 5127 |
+| **CORS** | `AllowAnyOrigin()` (dev) | Fetch directo a `VITE_API_URL` (sin proxy Vite) |
 | **Endpoints** | Documentados en [05-api-controladores](./backend/05-api-controladores/) | Consumidos en [06-integracion-api](./frontend/10-frontend/06-integracion-api.md) |
 | **Response Wrapper** | `ApiResponse<T>` | Se desempaqueta en composables |
 

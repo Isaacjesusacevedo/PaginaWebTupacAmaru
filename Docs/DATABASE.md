@@ -1,6 +1,6 @@
 # Base de Datos — InstitutoDB
 
-> Última actualización: 2026-09-27
+> Última actualización: 2026-09-28
 > Motor: SQL Server 2022
 > Instancia: `localhost` (default)
 > Usuario: `instituto_user` / `Instituto2026`
@@ -28,11 +28,24 @@
 **Diagrama de relaciones:**
 
 ```
-         
-   Carreras      Alumnos    
-  (Id) [PK]     1  N    (CarreraId)  
-             [FK]      
-                         
+┌─────────────────┐       ┌─────────────────┐
+│    CARRERAS     │       │     ALUMNOS     │
+├─────────────────┤       ├─────────────────┤
+│ PK Id           │       │ PK Id           │
+│ Nombre          │       │ Nombre          │
+│ DuracionAnios   │       │ Apellido        │
+│ Turno           │       │ Email           │
+│ Modalidad       │       │ DNI             │
+│ Horario         │       │ FechaNacimiento │
+│ Estado          │       │ Direccion       │
+│ FechaCreacion   │       │ Nacionalidad    │
+└────────┬────────┘       │ FechaInscripcion│
+         │ 1:N            │ Telefono        │
+         ▼                │ TituloSecundario│
+┌─────────────────┐       │ Turno           │
+│    (ninguna)    │       │ FK CarreraId ───┘
+└─────────────────┘       │ FechaCreacion   │
+                          └─────────────────┘
 ```
 
 ---
@@ -324,6 +337,7 @@ WHERE i.object_id = OBJECT_ID('dbo.Administradores') AND i.is_unique = 1;
 | 2026-09-27 | Implementado **soft delete** en Administradores | Equipo |
 | 2026-09-27 | Reemplazado UNIQUE total por **UNIQUE parcial** (`WHERE Activo = 1`) | Equipo |
 | 2026-09-27 | Datos de prueba insertados (4 carreras, 4 alumnos, 3 profesores, 2 formularios) | Equipo |
+| 2026-09-28 | Documentación actualizada (diagrama ASCII, contraseñas, estructura interfaces) | Equipo |
 
 ---
 

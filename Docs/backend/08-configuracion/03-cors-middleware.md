@@ -92,7 +92,7 @@ MapControllers
 Frontend (Vue)                    Backend (ASP.NET Core)
      │                                   │
      ├──── OPTIONS /api/alumnos ───────▶│
-     │  Origin: http://localhost:5173   │
+     │  Origin: http://localhost:5176   │
      │  Access-Control-Request-Method: POST
      │                                   │
      │◀─── 204 No Content ──────────────┤
@@ -207,8 +207,8 @@ app.UseResponseCompression();
 
 ```bash
 # Preflight manual
-curl -i -X OPTIONS http://localhost:5089/api/alumnos \
-  -H "Origin: http://localhost:5173" \
+curl -i -X OPTIONS http://localhost:5127/api/alumnos \
+  -H "Origin: http://localhost:5176" \
   -H "Access-Control-Request-Method: POST" \
   -H "Access-Control-Request-Headers: Content-Type,Authorization"
 

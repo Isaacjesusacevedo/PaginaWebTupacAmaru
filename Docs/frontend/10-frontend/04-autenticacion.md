@@ -165,7 +165,7 @@ router.beforeEach((to) => {
 
 | Variable | Uso |
 |----------|-----|
-| `VITE_API_URL` | Base URL para llamadas al backend (ej: `http://localhost:5089`) |
+| `VITE_API_URL` | Base URL para llamadas al backend (ej: `http://localhost:5127`) |
 
 Se accede via `import.meta.env.VITE_API_URL` en componentes.
 

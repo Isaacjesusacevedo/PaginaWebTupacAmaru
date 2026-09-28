@@ -68,7 +68,7 @@
       "id": 1,
       "nombre": "Admin",
       "apellido": "Principal",
-      "email": "admin@tupac.edu",
+      "email": "admin@tupac.edu.ar",
       "role": "Admin"
     }
   }

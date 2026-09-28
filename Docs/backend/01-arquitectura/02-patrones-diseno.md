@@ -1,45 +1,49 @@
 # Patrones de Diseño Utilizados
 
-## 1. Repository Pattern (Variación)
+## 1. Repository Pattern
 
-**Ubicación**: `Services/ICrudJsonService.cs` + implementaciones `*SqlServerService.cs`
+**Ubicación**: `Instituto.AD/Interfaces/IRepository.cs` + implementaciones `Instituto.AD/Repositories/*Repository.cs`
 
 ```csharp
-public interface ICrudJsonService<T> where T : class
+public interface IRepository<T>
 {
     List<T> GetAll();
-    T GetById(int id);
+    T? GetById(int id);
     T Create(T entity);
     void Update(int id, T entity);
     void Delete(int id);
+    bool Exists(int id);
 }
 ```
 
 - Abstrae el acceso a datos detrás de una interfaz genérica
-- Permite testing con mocks y cambio de implementación (ej. JSON files → SQL Server)
-- Cada entidad tiene su implementación concreta
+- Permite testing con mocks y desacopla servicios de BD
+- Cada entidad tiene su repositorio tipado (`CarreraRepository`, `AlumnoRepository`, etc.)
 
-## 2. Template Method Pattern
+## 2. Template Method Pattern (AccesoDB)
 
-**Ubicación**: `Services/SqlServerBaseService.cs`
+**Ubicación**: `Instituto.AD/AccesoDB.cs`
 
 ```csharp
-public abstract class SqlServerBaseService<T> where T : class
+public class AccesoDB
 {
-    // Métodos template (concretos en base)
-    protected List<T> ExecuteQuery(string sql, Action<SqlCommand>? addParams = null) { ... }
-    protected T ExecuteQuerySingle(string entityName, int id, string sql, ...) { ... }
-    protected int ExecuteScalar(string sql, Action<SqlCommand> addParams) { ... }
-    protected int ExecuteNonQuery(string sql, Action<SqlCommand> addParams) { ... }
+    private readonly string _connectionString;
 
-    // Método abstracto (debe implementar subclase)
-    protected abstract T MapReaderToEntity(SqlDataReader reader);
+    // Métodos template (concretos en base)
+    public SqlDataReader GetData(string sql, DBParameters? parametros = null) { ... }
+    public int Execute(string sql, DBParameters? parametros = null) { ... }
+    public object ExecuteScalar(string sql, DBParameters? parametros = null) { ... }
+
+    // Gestión de conexión encapsulada
+    private void AbrirConexion() { ... }
+    private void CerrarConexion() { ... }
 }
 ```
 
-- Define el esqueleto de operaciones de BD en la clase base
-- Subclases solo implementan el mapeo `reader → entidad`
-- Elimina duplicación de código de conexión/comando/lectura
+- Define el esqueleto de operaciones ADO.NET en una clase wrapper
+- Repositorios usan `AccesoDB` vía composición (no herencia)
+- Elimina duplicación de código de conexión/comando/lectura/parámetros
+- Manejo seguro de `SqlConnection`, `SqlCommand`, `SqlDataReader` con `using`
 
 ## 3. Dependency Injection (Constructor Injection)
 

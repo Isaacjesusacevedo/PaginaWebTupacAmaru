@@ -16,11 +16,11 @@ POST /api/setup/admin
 Content-Type: application/json
 
 {
-  "nombre": "Admin",
-  "apellido": "Principal",
-  "email": "admin@tupac.edu",
-  "password": "MiPassSeguro123",
-  "role": "Admin"
+  "nombre": "Super",
+  "apellido": "Admin",
+  "email": "admin@tupac.edu.ar",
+  "password": "Tupac123",
+  "role": "SuperAdmin"
 }
 ```
 
@@ -35,7 +35,9 @@ Content-Type: application/json
 ### Response 201 Created
 ```json
 {
-  "mensaje": "Administrador 'admin@tupac.edu' creado correctamente. Este endpoint ya no puede volver a usarse."
+  "isSuccess": true,
+  "message": "Operación exitosa",
+  "data": "Administrador 'admin@tupac.edu.ar' creado correctamente. Este endpoint ya no puede volver a usarse."
 }
 ```
 
@@ -93,20 +95,20 @@ if (!ModelState.IsValid)
 dotnet run --environment Development
 
 # 2. Crear primer admin (una sola vez)
-curl -X POST http://localhost:5089/api/setup/admin \
+curl -X POST http://localhost:5127/api/setup/admin \
   -H "Content-Type: application/json" \
   -d '{
-    "nombre": "Admin",
-    "apellido": "Sistema",
-    "email": "admin@instituto.edu",
-    "password": "AdminSeguro2026!",
-    "role": "Admin"
+    "nombre": "Super",
+    "apellido": "Admin",
+    "email": "admin@tupac.edu.ar",
+    "password": "Tupac123",
+    "role": "SuperAdmin"
   }'
 
 # 3. Verificar login
-curl -X POST http://localhost:5089/api/auth/login \
+curl -X POST http://localhost:5127/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email": "admin@instituto.edu", "password": "AdminSeguro2026!"}'
+  -d '{"email": "admin@tupac.edu.ar", "password": "Tupac123"}'
 ```
 
 ---

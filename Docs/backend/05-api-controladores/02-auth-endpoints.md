@@ -16,7 +16,7 @@ POST /api/auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@tupac.edu",
+  "email": "admin@tupac.edu.ar",
   "password": "MiPass123"
 }
 ```
@@ -35,7 +35,7 @@ Content-Type: application/json
     "id": 1,
     "nombre": "Admin",
     "apellido": "Principal",
-    "email": "admin@tupac.edu",
+    "email": "admin@tupac.edu.ar",
     "role": "Admin"
   }
 }
@@ -134,7 +134,7 @@ Content-Type: application/json
 ```json
 {
   "sub": "1",                              // NameIdentifier (Id)
-  "email": "admin@tupac.edu",              // Email
+  "email": "admin@tupac.edu.ar",              // Email
   "name": "Admin Principal",               // Name (Nombre + Apellido)
   "role": "Admin",                         // Role
   "jti": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",  // JWT ID único

@@ -153,16 +153,16 @@ public IActionResult Update(int id, [FromBody] Alumno alumno)
 
 ```bash
 # Sin token → 401
-curl -i http://localhost:5089/api/administradores
+curl -i http://localhost:5127/api/administradores
 
 # Token inválido → 401
-curl -i -H "Authorization: Bearer token.invalido.xxx" http://localhost:5089/api/administradores
+curl -i -H "Authorization: Bearer token.invalido.xxx" http://localhost:5127/api/administradores
 
 # Token válido → 200
-curl -i -H "Authorization: Bearer <token_valido>" http://localhost:5089/api/administradores
+curl -i -H "Authorization: Bearer <token_valido>" http://localhost:5127/api/administradores
 
 # POST público (alumnos) → 201
-curl -i -X POST http://localhost:5089/api/alumnos \
+curl -i -X POST http://localhost:5127/api/alumnos \
   -H "Content-Type: application/json" \
   -d '{...}'
 ```

@@ -203,13 +203,13 @@ interface Formulario {
 
 Archivo `.env.example`:
 ```env
-VITE_API_URL=http://localhost:5089
+VITE_API_URL=http://localhost:5127
 ```
 
 ## CORS
 
 El backend debe permitir:
-- Origin: `http://localhost:5173` (Vite dev server por defecto)
+- Origin: `http://localhost:5176` (Vite dev server)
 - Headers: `Content-Type`, `Authorization`
 - Methods: `GET, POST, PUT, DELETE, OPTIONS`
 

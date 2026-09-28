@@ -56,7 +56,7 @@ Sistema web para el **Instituto Superior Docente Túpac Amaru** que centraliza l
 | TypeScript | 5.8.0 | Tipado estricto |
 | Vite | 7.0.6 | Bundler & Dev Server |
 | Vue Router | 4.5.1 | SPA Routing + Guards |
-| Pinia | 3.0.3 | Estado global (auth store) |
+| Pinia | 3.0.3 | Estado global (configurado; auth vía `useAuth` composable + sessionStorage) |
 | Element Plus | 2.11.1 | Componentes UI |
 | @element-plus/icons-vue | 1.1.4 | Iconografía |
 | ESLint + Prettier | 9.31 / 3.6.2 | Linting & Formato |
@@ -84,7 +84,7 @@ Sistema web para el **Instituto Superior Docente Túpac Amaru** que centraliza l
 ```
 Instituto.sln
 ├── Instituto.AD/              # Data Access Layer
-│   ├── Interfaces/            # IRepository, ICarreraRepository, etc.
+│   ├── Interfaces/            # ICarreraRepository, IAlumnoRepository, etc.
 │   ├── Models/                # Entidades: Persona, Administrador, Alumno, Carrera, Profesor, Formulario, ListadoItem
 │   ├── Repositories/          # 6 Repositorios tipados + AccesoDB (ADO.NET wrapper)
 │   ├── AccesoDB.cs            # Wrapper ADO.NET genérico (ExecuteReader/NonQuery/Scalar)
@@ -93,7 +93,7 @@ Instituto.sln
 │
 ├── Instituto.BR/              # Business Rules Layer
 │   ├── DTOs/                  # ServiceResult<T>, AdminResult, LoginDto, SetupAdminDto, etc.
-│   ├── Interfaces/            # ICrudService, ICarreraService, etc.
+│   ├── Interfaces/            # ICarreraService, IAlumnoService, IAdministradorService, etc.
 │   ├── Services/              # 6 Servicios: Carrera, Alumno, Administrador, Profesor, Formulario, Listado
 │   └── Instituto.BR.csproj
 │
@@ -196,7 +196,7 @@ curl -X POST http://localhost:5127/api/setup/admin \
     "nombre": "Super",
     "apellido": "Admin",
     "email": "admin@tupac.edu.ar",
-    "password": "Password123",
+    "password": "Tupac123",
     "role": "SuperAdmin"
   }'
 ```
@@ -204,7 +204,7 @@ curl -X POST http://localhost:5127/api/setup/admin \
 ### 7. Login
 - Abrir `http://localhost:5176/login`
 - **Email**: `admin@tupac.edu.ar`
-- **Password**: `Password123`
+- **Password**: `Tupac123`
 - Redirige a `/` (Dashboard / Panel de Administración)
 
 ---

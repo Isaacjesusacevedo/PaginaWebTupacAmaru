@@ -416,9 +416,9 @@ builder.Services.AddScoped<IListadoRepository>(_ => new ListadoRepository(connec
 builder.Services.AddScoped<ICarreraService, CarreraService>();
 builder.Services.AddScoped<IAlumnoService, AlumnoService>();
 builder.Services.AddScoped<IAdministradorService, AdministradorService>();
-builder.Services.AddScoped<IProfesorService, ProfesorService());
-builder.Services.AddScoped<IFormularioService, FormularioService());
-builder.Services.AddScoped<IListadoService, ListadoService());
+builder.Services.AddScoped<IProfesorService, ProfesorService>();
+builder.Services.AddScoped<IFormularioService, FormularioService>();
+builder.Services.AddScoped<IListadoService, ListadoService>();
 
 - Scoped: Una instancia por request HTTP
 - Interfaces: Desacopla API de implementación concreta
@@ -449,16 +449,32 @@ var parametros = new DBParameters()
 
 #### Repositorios (AD Layer)
 
-Interfaz base genérica:
-public interface IRepository
-{
-    List GetAll();
-    T GetById(int id);
-    T Create(T entity);
-    void Update(int id, T entity);
+Interfaces específicas por entidad (no genérica):
+
+```csharp
+public interface ICarreraRepository {
+    List<Carrera> GetAll();
+    Carrera? GetById(int id);
+    Carrera Create(Carrera entity);
+    void Update(int id, Carrera entity);
     void Delete(int id);
     bool Exists(int id);
 }
+
+public interface IAlumnoRepository {
+    List<Alumno> GetAll();
+    Alumno? GetById(int id);
+    Alumno Create(Alumno entity);
+    void Update(int id, Alumno entity);
+    void Delete(int id);
+    bool Exists(int id);
+    bool ExistsByDNI(int dni);
+    bool ExistsByEmail(string email);
+    bool ExistsByCarreraId(int carreraId);
+}
+
+// ... similar para IAdministradorRepository, IProfesorRepository, IFormularioRepository, IListadoRepository
+```
 
 Repositorios Implementados:
 
@@ -660,7 +676,7 @@ ListadoController -- /api/listado
 
 ---
 
-### 4.9 Base de Datos
+### 4.10 Base de Datos
 
 SQL Server (Express / LocalDB / Docker)
 Script DDL: `docs/backend/02-base-de-datos/02-script-creacion.md` o `docs/DATABASE.md`
@@ -682,7 +698,7 @@ Script DDL: `docs/backend/02-base-de-datos/02-script-creacion.md` o `docs/DATABA
 
 ---
 
-### 4.10 Configuración
+### 4.11 Configuración
 
 **appsettings.json (base - LocalDB / Windows Auth):**
 ```json
@@ -979,38 +995,24 @@ npm run format     # Prettier
 npm run type-check # vue-tsc --build
 ```
 
----
 
-### 5.10 Configuración y Build
-
-vite.config.ts: alias @ -> ./src, plugin Vue, devTools.
-
-tsconfig.app.json: strict mode, alias @/*, DOM lib.
-
-Scripts disponibles:
-npm run dev        # Servidor desarrollo (Vite)
-npm run build      # Build producción (type-check + vite build)
-npm run preview    # Preview build
-npm run lint       # ESLint + fix
-npm run format     # Prettier
-npm run type-check # vue-tsc --build
 
 ## 6. Paradigma y Metodología de Desarrollo
 
 ### 6.1 Paradigma: Programación Orientada a Objetos (POO)
 
 #### Encapsulamiento
-- `SqlServerBaseService<T>` encapsula ADO.NET, conexión, semáforos, mapeo.
-- Helpers `MapReaderToEntity`, `SetParameters` protegidos/abstractos.
+- `AccesoDB` encapsula ADO.NET, conexión, parámetros, mapeo `SqlDataReader → Entidad`.
+- Repositorios usan `AccesoDB` vía composición.
 
 #### Herencia
 - `Persona` abstracta concentra propiedades comunes + validaciones.
 - `Alumno`, `Administrador`, `Profesor` heredan y añaden campos específicos.
-- Servicios heredan de `SqlServerBaseService<T>` implementando template methods.
+- Repositorios implementan interfaces específicas (`ICarreraRepository`, `IAlumnoRepository`, etc.), no herencia de clase base.
 
 #### Polimorfismo
-- `ICrudJsonService<T>` permite DI genérica.
-- Controladores dependen de abstracción, no implementación concreta.
+- Interfaces específicas (`ICarreraRepository`, `IAlumnoRepository`, etc.) permiten DI tipada por entidad.
+- Controladores dependen de abstracción (`IServicio`), no implementación concreta.
 
 ---
 
@@ -1018,8 +1020,8 @@ npm run type-check # vue-tsc --build
 
 | Patrón | Aplicación |
 |--------|------------|
-| **Repository genérico** | `SqlServerBaseService<T>` + `ICrudJsonService<T>` para cualquier entidad |
-| **Template Method** | `SqlServerBaseService` define esqueleto CRUD, subclases implementan SQL/mapeo |
+| **Repository** | Interfaces específicas por entidad (`ICarreraRepository`, `IAlumnoRepository`, etc.) + implementaciones tipadas |
+| **Template Method** | `AccesoDB` define esqueleto ADO.NET (`GetData`, `Execute`, `ExecuteScalar`), repositorios lo usan vía composición |
 | **DTO** | `AdminResult`, `AlumnoListadoDto` desacoplan representación de dominio |
 | **Scoped DI** | Servicios por request (thread-safe, conexión por request) |
 | **Separación de capas** | Controllers / Services / Models / DTOs / Exceptions |
@@ -1030,14 +1032,14 @@ npm run type-check # vue-tsc --build
 ### 6.3 Manejo de Errores — Estrategia por Capas
 
 ```
-SqlServerBaseService              Controlador                   Cliente HTTP
-─────────────────────────────     ─────────────────────────      ───────────────
-SqlException       → PersistenceEx → catch(PersistenceEx)      →   500 + { error }
-Id no encontrado   → EntityNotFound → catch(EntityNotFound)     →   404 + { error }
-UnauthorizedAccess                   catch(UnauthorizedAccess) →   401 + { error }
-Exception          → PersistenceEx → catch(Exception)           →   500 + { error }
-                                       ↓ si escapa todo
-                                    UseExceptionHandler global   →   500 + { error }
+Repositorio (AD)                Servicio (BR)                 Controlador                   Cliente HTTP
+─────────────────────           ──────────────────             ─────────────────────────      ───────────────
+SqlException       → PersistenceEx → catch(PersistenceEx)      → catch(PersistenceEx)       →   500 + { error }
+Id no encontrado   → EntityNotFound → catch(EntityNotFound)     → catch(EntityNotFound)      →   404 + { error }
+UnauthorizedAccess                   catch(UnauthorizedAccess) → catch(UnauthorizedAccess)  →   401 + { error }
+Exception          → PersistenceEx → catch(Exception)           → catch(Exception)           →   500 + { error }
+                                        ↓ si escapa todo
+                                     UseExceptionHandler global   →   500 + { error }
 ```
 
 **Principios:**
@@ -1058,7 +1060,7 @@ Exception          → PersistenceEx → catch(Exception)           →   500 + 
 | **No exposición de internos** | `catch (Exception)` → mensaje controlado, nunca stack trace |
 | **Null safety** | Propiedades requeridas `= string.Empty`; `?` solo donde opcional |
 | **Consistencia Id en PUT** | `id` de ruta usado, no del body |
-| **Work factor BCrypt** | 12 (configurado en `AdminAuthService` y `AdministradorSqlServerService`) |
+| **Work factor BCrypt** | 12 (configurado en `AdministradorService`) |
 
 ---
 
@@ -1097,7 +1099,7 @@ Exception          → PersistenceEx → catch(Exception)           →   500 + 
    ↓
 2. POST ${API}/api/auth/login
    ↓
-3. AuthController → AdminAuthService.LoginAsync(email, password)
+3. AuthController → AdministradorService.Login(email, password)  [SÍNCRONO]
    - Busca admin (Email + Activo=1)
    - BCrypt.Verify(password, hash)
    - Retorna AdminResult o null
@@ -1190,10 +1192,10 @@ npm run dev
 # 4. Crear primer admin (una sola vez, solo Development)
 curl -X POST http://localhost:5127/api/setup/admin \
   -H "Content-Type: application/json" \
-  -d '{"nombre":"Super","apellido":"Admin","email":"admin@tupac.edu.ar","password":"Password123","role":"SuperAdmin"}'
+  -d '{"nombre":"Super","apellido":"Admin","email":"admin@tupac.edu.ar","password":"Tupac123","role":"SuperAdmin"}'
 
 # 5. Login
-# Abrir http://localhost:5176/login con credenciales del paso 4
+# Abrir http://localhost:5176/login con credenciales del paso 4 (Email: admin@tupac.edu.ar, Password: Tupac123)
 ```
 
 ---
@@ -1282,7 +1284,7 @@ curl -X POST http://localhost:5127/api/setup/admin \
 | Versión | Fecha | Cambios Principales |
 |---------|-------|---------------------|
 | **1.1.0** | 2026-09-28 | **Actualización docs completa**: DDL real en docs, SQL Auth + LocalDB, soft delete con UNIQUE parcial, `Login` sync, `ApiResponse<T>` wrapper, camelCase JSON, 44 tests, `DATABASE.md` snapshot, puertos 5127/5176, sin proxy Vite, `CreateDatabase.sql` no en repo. |
-| 1.0.0 | 2026-09-27 | Migración completa a SQL Server + JWT: SqlServerBaseService, 8 controllers, 6 servicios CRUD, AuthService, excepciones tipadas, middleware global, route guards, re-autenticación, CSS modular, documentación completa en Docs/. |
+| 1.0.0 | 2026-09-27 | Migración completa a SQL Server + JWT: arquitectura N-Tier (AD/BR/API), 8 controllers, 6 servicios CRUD, AuthService, excepciones tipadas, middleware global, route guards, re-autenticación, CSS modular, documentación completa en Docs/. |
 | 0.1.1 | 2026-04-15 | Corrección typo Roll→Role, 201 Created en POSTs, validación CarreraId, EnsureFileExists, SemaphoreSlim, middleware errores, Data Annotations. |
 | 0.1.0 | 2026-03-01 | Backend JSON files (CrudJsonService), herencia Persona, 4 controladores, frontend Vue 3 + Element Plus básico, inscripción pública, listados. |
 

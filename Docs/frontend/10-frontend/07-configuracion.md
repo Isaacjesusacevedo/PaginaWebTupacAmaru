@@ -110,7 +110,7 @@ VITE_API_URL=http://localhost:5127
 
 | Comando | Descripción |
 |---------|-------------|
-| `npm run dev` | Inicia servidor desarrollo (Vite) en `http://localhost:5173` |
+| `npm run dev` | Inicia servidor desarrollo (Vite) en `http://localhost:5176` |
 | `npm run build` | Type-check + build producción en `dist/` |
 | `npm run build-only` | Solo build (sin type-check) |
 | `npm run preview` | Sirve build producción localmente para test |
