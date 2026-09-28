@@ -1,65 +1,52 @@
-# Servicio de Autenticación (AdminAuthService)
+# Servicio de Autenticación (AdministradorService)
 
 ## Visión General
 
-**Archivo**: `Services/AdminAuthService.cs`  
-**Interface**: `IAdminAuthService`  
-**Responsabilidad**: Autenticación y gestión de administradores (login, registro inicial, verificación existencia).
+**Archivo**: `Instituto.BR/Services/AdministradorService.cs`  
+**Interface**: `IAdministradorService`  
+**Responsabilidad**: Gestión completa de administradores (CRUD + Auth + Password management).
+
+> **Nota**: El servicio anterior `AdminAuthService` (con `IAdminAuthService`) fue refactorizado. Ahora toda la lógica está en `AdministradorService`.
 
 ---
 
-## Interface
+## Interface (`IAdministradorService`)
 
 ```csharp
-public interface IAdminAuthService
+public interface IAdministradorService
 {
-    Task<AdminResult?> LoginAsync(string email, string password);
-    Task<bool> HayAdminsAsync();
-    Task CrearAdminAsync(string nombre, string apellido, string email, string password, string role);
-    Task ChangePasswordAsync(string email, string passwordActual, string nuevaPassword);
+    List<Administrador> GetAll();
+    Administrador? GetById(int id);
+    ServiceResult<Administrador> Create(Administrador admin, string password);
+    ServiceResult<Administrador> Update(int id, Administrador admin);
+    ServiceResult ChangePassword(int id, string passwordActual, string nuevaPassword);
+    ServiceResult Delete(int id);
+    AdminResult? Login(string email, string password);
+    bool HayAdmins();
+    Task<AdminResult?> CrearPrimerAdminAsync(SetupAdminDto dto);
+    ServiceResult ChangePasswordByEmail(string email, string passwordActual, string nuevaPassword);
 }
 ```
 
-> **Nota**: No hay método `VerifyPasswordAsync` separado. El endpoint `POST /api/auth/verify-password` reutiliza `LoginAsync` internamente en el controller.
-
 ---
 
-## Métodos
+## Métodos Principales
 
-### 1. LoginAsync(email, password)
-
-**Propósito**: Validar credenciales y retornar datos del admin (sin password hash).
+### 1. Login (Síncrono)
 
 ```csharp
-public async Task<AdminResult?> LoginAsync(string email, string password)
+public AdminResult? Login(string email, string password)
 {
-    using var conn = new SqlConnection(_connectionString);
-    await conn.OpenAsync();
-
-    using var cmd = new SqlCommand(
-        @"SELECT Id, Nombre, Apellido, Email, PasswordHash, Role
-          FROM Administradores
-          WHERE Email = @Email AND Activo = 1", conn);
-    cmd.Parameters.AddWithValue("@Email", email.Trim().ToLower());
-
-    using var reader = await cmd.ExecuteReaderAsync();
-    if (!await reader.ReadAsync()) return null;  // No encontrado o inactivo
-
-    var hash = reader.GetString(reader.GetOrdinal("PasswordHash"));
-    if (!BCrypt.Net.BCrypt.Verify(password, hash)) return null;  // Password incorrecto
-
-    return new AdminResult(
-        reader.GetInt32(reader.GetOrdinal("Id")),
-        reader.GetString(reader.GetOrdinal("Nombre")),
-        reader.GetString(reader.GetOrdinal("Apellido")),
-        reader.GetString(reader.GetOrdinal("Email")),
-        reader.GetString(reader.GetOrdinal("Role"))
-    );
+    var admin = _repository.GetByEmail(email);
+    if (admin == null) return null;
+    if (!BCryptNet.Verify(password, admin.PasswordHash)) return null;
+    
+    return new AdminResult(admin.Id, admin.Nombre, admin.Apellido, admin.Email, admin.Role);
 }
 ```
 
 **Flujo**:
-1. Buscar admin por email (case-insensitive, solo activos)
+1. Buscar admin por email (case-insensitive, solo activos - repositorio filtra `Activo = 1`)
 2. Si no existe → `null`
 3. Verificar password con `BCrypt.Verify(plain, hash)`
 4. Si inválido → `null`
@@ -67,115 +54,214 @@ public async Task<AdminResult?> LoginAsync(string email, string password)
 
 **Seguridad**:
 - **Timing attack**: BCrypt tiene tiempo constante
-- **Email normalization**: `.Trim().ToLower()` antes de query
+- **Email normalization**: `.Trim().ToLower()` en repositorio antes de query
 - **Soft delete**: `AND Activo = 1` evita login de admins "borrados"
+- **Síncrono**: Repositorio ADO.NET es sync, no usa `async/await`
 
 ---
 
-### 2. HayAdminsAsync()
-
-**Propósito**: Verificar si existe al menos un admin (para setup inicial).
+### 2. Create (con Password)
 
 ```csharp
-public async Task<bool> HayAdminsAsync()
+public ServiceResult<Administrador> Create(Administrador admin, string password)
 {
-    using var conn = new SqlConnection(_connectionString);
-    await conn.OpenAsync();
+    // Validaciones
+    if (string.IsNullOrWhiteSpace(admin.Nombre))
+        return ServiceResult<Administrador>.Fail("El nombre es obligatorio.");
+    if (string.IsNullOrWhiteSpace(admin.Apellido))
+        return ServiceResult<Administrador>.Fail("El apellido es obligatorio.");
+    if (string.IsNullOrWhiteSpace(admin.Email))
+        return ServiceResult<Administrador>.Fail("El email es obligatorio.");
+    if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
+        return ServiceResult<Administrador>.Fail("La contraseña debe tener al menos 8 caracteres.");
 
-    using var cmd = new SqlCommand("SELECT COUNT(*) FROM Administradores", conn);
-    var count = (long)(await cmd.ExecuteScalarAsync())!;
-    return count > 0;
-}
-```
+    // Normalizar ANTES de chequear duplicados
+    admin.Email = admin.Email.ToLower().Trim();
 
-**Uso**: `SetupController.CrearPrimerAdmin()` llama a esto. Si `true` → 409 Conflict.
+    if (_repository.ExistsByEmail(admin.Email))
+        return ServiceResult<Administrador>.Fail("Ya existe un administrador con ese email.");
 
----
+    admin.PasswordHash = BCryptNet.HashPassword(password, workFactor: 12);
+    admin.Activo = true;
+    admin.FechaCreacion = DateTime.Now;
 
-### 3. CrearAdminAsync(nombre, apellido, email, password, role)
-
-**Propósito**: Crear nuevo administrador con password hasheado.
-
-```csharp
-public async Task CrearAdminAsync(string nombre, string apellido, string email, string password, string role)
-{
-    var hash = BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
-
-    using var conn = new SqlConnection(_connectionString);
-    await conn.OpenAsync();
-
-    using var cmd = new SqlCommand(
-        @"INSERT INTO Administradores (Nombre, Apellido, Email, PasswordHash, Role, Activo)
-          VALUES (@Nombre, @Apellido, @Email, @PasswordHash, @Role, 1)", conn);
-
-    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
-    cmd.Parameters.AddWithValue("@Apellido", apellido.Trim());
-    cmd.Parameters.AddWithValue("@Email", email.Trim().ToLower());
-    cmd.Parameters.AddWithValue("@PasswordHash", hash);
-    cmd.Parameters.AddWithValue("@Role", role);
-
-    await cmd.ExecuteNonQueryAsync();
+    try
+    {
+        var created = _repository.Create(admin);
+        return ServiceResult<Administrador>.Ok(created, "Administrador creado correctamente.");
+    }
+    catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
+    {
+        return ServiceResult<Administrador>.Fail("Ya existe un administrador con ese email.");
+    }
 }
 ```
 
 **Detalles**:
-- **Work factor 12**: ~250ms en CPU moderno (2024), seguro contra GPU cracking
-- **Activo = 1**: Por defecto activo
-- **Email normalizado**: Lowercase + trim
-- **Sin validación de unicidad en código**: Confía en constraint UNIQUE de BD (lanza SqlException → PersistenceException → 500)
+- **Work factor 12**: ~250ms en CPU moderno (2024+), seguro contra GPU cracking
+- **Validación password**: Mínimo 8 caracteres
+- **Email normalizado**: Lowercase + trim antes de guardar y chequear
+- **Manejo race condition**: Try/catch + UNIQUE constraint BD (2627/2601)
 
 ---
 
-### 4. ChangePasswordAsync(email, passwordActual, nuevaPassword)
-
-**Propósito**: Cambiar contraseña de admin verificando la actual.  
-Usado por `AdministradorController.ChangePassword()` → `PUT /api/administradores/{id}/password`.
+### 3. Update (Datos, Sin Password)
 
 ```csharp
-public async Task ChangePasswordAsync(string email, string passwordActual, string nuevaPassword)
+public ServiceResult<Administrador> Update(int id, Administrador admin)
 {
-    await using var conn = new SqlConnection(_connectionString);
-    await conn.OpenAsync();
+    if (!_repository.Exists(id))
+        return ServiceResult<Administrador>.Fail($"El administrador con Id {id} no existe.");
 
-    // Verificar contraseña actual
-    await using var cmd = new SqlCommand(
-        @"SELECT PasswordHash FROM Administradores WHERE Email = @Email AND Activo = 1",
-        conn);
-    cmd.Parameters.AddWithValue("@Email", email.Trim().ToLower());
+    if (string.IsNullOrWhiteSpace(admin.Nombre))
+        return ServiceResult<Administrador>.Fail("El nombre es obligatorio.");
+    if (string.IsNullOrWhiteSpace(admin.Apellido))
+        return ServiceResult<Administrador>.Fail("El apellido es obligatorio.");
+    if (string.IsNullOrWhiteSpace(admin.Email))
+        return ServiceResult<Administrador>.Fail("El email es obligatorio.");
 
-    await using var reader = await cmd.ExecuteReaderAsync();
-    if (!await reader.ReadAsync())
-        throw new UnauthorizedAccessException("Usuario no encontrado");
+    var existing = _repository.GetById(id);
+    if (existing == null)
+        return ServiceResult<Administrador>.Fail($"El administrador con Id {id} no existe.");
 
-    var hash = reader.GetString(reader.GetOrdinal("PasswordHash"));
-    if (!BCrypt.Net.BCrypt.Verify(passwordActual, hash))
-        throw new UnauthorizedAccessException("Contraseña actual incorrecta");
+    // Normalizar ANTES de comparar
+    admin.Email = admin.Email.ToLower().Trim();
 
-    // Actualizar contraseña
-    var newHash = BCrypt.Net.BCrypt.HashPassword(nuevaPassword, workFactor: 12);
-    await reader.CloseAsync();
+    if (!existing.Email.Equals(admin.Email, StringComparison.OrdinalIgnoreCase))
+    {
+        if (_repository.ExistsByEmail(admin.Email))
+            return ServiceResult<Administrador>.Fail("Ya existe un administrador con ese email.");
+    }
 
-    await using var updateCmd = new SqlCommand(
-        @"UPDATE Administradores SET PasswordHash = @PasswordHash WHERE Email = @Email",
-        conn);
-    updateCmd.Parameters.AddWithValue("@PasswordHash", newHash);
-    updateCmd.Parameters.AddWithValue("@Email", email.Trim().ToLower());
+    try
+    {
+        _repository.Update(id, admin);
+        var updated = _repository.GetById(id);
+        return ServiceResult<Administrador>.Ok(updated!, "Administrador actualizado correctamente.");
+    }
+    catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
+    {
+        return ServiceResult<Administrador>.Fail("Ya existe un administrador con ese email.");
+    }
+}
+```
 
-    await updateCmd.ExecuteNonQueryAsync();
+**Nota**: No permite cambiar password ni Role aquí. Solo `Nombre`, `Apellido`, `Email`.
+
+---
+
+### 4. ChangePassword (Por ID)
+
+```csharp
+public ServiceResult ChangePassword(int id, string passwordActual, string nuevaPassword)
+{
+    if (!_repository.Exists(id))
+        return ServiceResult.Fail($"El administrador con Id {id} no existe.");
+
+    if (string.IsNullOrWhiteSpace(passwordActual))
+        return ServiceResult.Fail("La contraseña actual es obligatoria.");
+    if (string.IsNullOrWhiteSpace(nuevaPassword) || nuevaPassword.Length < 8)
+        return ServiceResult.Fail("La nueva contraseña debe tener al menos 8 caracteres.");
+
+    var admin = _repository.GetById(id);
+    if (admin == null)
+        return ServiceResult.Fail($"El administrador con Id {id} no existe.");
+
+    if (!BCryptNet.Verify(passwordActual, admin.PasswordHash))
+        return ServiceResult.Fail("La contraseña actual es incorrecta.");
+
+    var newHash = BCryptNet.HashPassword(nuevaPassword, workFactor: 12);
+    _repository.UpdatePasswordHash(id, newHash);
+
+    return ServiceResult.Ok("Contraseña actualizada correctamente.");
 }
 ```
 
 **Flujo**:
-1. Buscar admin por email (solo activos)
-2. Si no existe → `UnauthorizedAccessException("Usuario no encontrado")`
+1. Verificar admin existe
+2. Validar passwords (actual requerida, nueva ≥8 chars)
 3. Verificar `passwordActual` con `BCrypt.Verify`
-4. Si inválido → `UnauthorizedAccessException("Contraseña actual incorrecta")`
-5. Hash nueva contraseña con workFactor 12
-6. UPDATE PasswordHash en BD
+4. Hash `nuevaPassword` con workFactor 12
+5. UPDATE `PasswordHash` en BD
 
-**Excepciones**:
-- `UnauthorizedAccessException` → 401 en controller
-- `Exception` genérico → 500 en controller
+---
+
+### 5. ChangePasswordByEmail (Por Email)
+
+```csharp
+public ServiceResult ChangePasswordByEmail(string email, string passwordActual, string nuevaPassword)
+{
+    var admin = _repository.GetByEmail(email);
+    if (admin == null)
+        return ServiceResult.Fail("Usuario no encontrado.");
+
+    if (!BCryptNet.Verify(passwordActual, admin.PasswordHash))
+        return ServiceResult.Fail("Contraseña actual incorrecta.");
+
+    if (string.IsNullOrWhiteSpace(nuevaPassword) || nuevaPassword.Length < 8)
+        return ServiceResult.Fail("La nueva contraseña debe tener al menos 8 caracteres.");
+
+    var newHash = BCryptNet.HashPassword(nuevaPassword, workFactor: 12);
+    _repository.UpdatePasswordHash(admin.Id, newHash);
+
+    return ServiceResult.Ok("Contraseña actualizada correctamente.");
+}
+```
+
+- Usado por `AuthController.VerifyPassword` + `AdministradorController.ChangePassword`
+- Busca por email (normalizado), no por ID
+
+---
+
+### 6. HayAdmins / CrearPrimerAdminAsync
+
+```csharp
+public bool HayAdmins() => _repository.Count() > 0;
+
+public async Task<AdminResult?> CrearPrimerAdminAsync(SetupAdminDto dto)
+{
+    if (HayAdmins())
+        return null;
+
+    var admin = new Administrador
+    {
+        Nombre = dto.Nombre,
+        Apellido = dto.Apellido,
+        Email = dto.Email,
+        Role = dto.Role
+    };
+
+    var result = Create(admin, dto.Password);
+    if (!result.Success)
+        return null;
+
+    return new AdminResult(result.Data!.Id, result.Data.Nombre, result.Data.Apellido, result.Data.Email, result.Data.Role);
+}
+```
+
+- `HayAdmins()`: `COUNT(*)` en BD
+- `CrearPrimerAdminAsync`: Solo si `HayAdmins() == false`
+- **Async por convención** (setup inicial), pero `Create` es sync
+
+---
+
+### 7. Delete (Soft Delete)
+
+```csharp
+public ServiceResult Delete(int id)
+{
+    if (!_repository.Exists(id))
+        return ServiceResult.Fail($"El administrador con Id {id} no existe.");
+
+    _repository.Delete(id);
+    return ServiceResult.Ok("Administrador eliminado correctamente.");
+}
+```
+
+**Repositorio hace soft delete**:
+```sql
+UPDATE Administradores SET Activo = 0 WHERE Id = @Id AND Activo = 1
+```
 
 ---
 
@@ -183,8 +269,8 @@ public async Task ChangePasswordAsync(string email, string passwordActual, strin
 
 ```csharp
 // Work factor 12 = 2^12 = 4096 iteraciones
-BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
-BCrypt.Net.BCrypt.Verify(password, hash);
+BCryptNet.HashPassword(password, workFactor: 12);
+BCryptNet.Verify(password, hash);
 ```
 
 | Work Factor | Tiempo aprox (CPU 2024) | Seguridad |
@@ -219,10 +305,10 @@ public record AdminResult(
 
 ```csharp
 // AuthController.Login()
-var admin = await _authService.LoginAsync(dto.Email, dto.Password);
+var admin = _authService.Login(dto.Email, dto.Password);
 
 if (admin is null)
-    return Unauthorized(new { error = "Email o contraseña incorrectos." });
+    return Unauthorized(ApiResponse<string>.Error("Email o contraseña incorrectos."));
 
 var token = GenerarToken(admin);  // JWT con claims: sub, email, name, role, jti
 ```
@@ -246,10 +332,10 @@ var token = GenerarToken(admin);  // JWT con claims: sub, email, name, role, jti
 ```csharp
 if (!_env.IsDevelopment()) return NotFound();  // Solo Dev
 
-if (await _authService.HayAdminsAsync())
-    return Conflict(new { error = "Ya existe al menos un administrador..." });
+if (_authService.HayAdmins())
+    return Conflict(ApiResponse<string>.Error("Ya existe al menos un administrador..."));
 
-await _authService.CrearAdminAsync(dto.Nombre, dto.Apellido, dto.Email, dto.Password, dto.Role);
+var admin = await _authService.CrearPrimerAdminAsync(dto);
 ```
 
 - **Solo Development**: `_env.IsDevelopment()` gate
@@ -274,9 +360,9 @@ await _authService.CrearAdminAsync(dto.Nombre, dto.Apellido, dto.Email, dto.Pass
 ## Testing
 
 ```csharp
-// Mock IAdminAuthService
-var mockAuth = new Mock<IAdminAuthService>();
-mockAuth.Setup(x => x.LoginAsync("admin@test.com", "password123"))
-        .ReturnsAsync(new AdminResult(1, "Admin", "User", "admin@test.com", "Admin"));
-mockAuth.Setup(x => x.HayAdminsAsync()).ReturnsAsync(false);
+// Mock IAdministradorService
+var mockAuth = new Mock<IAdministradorService>();
+mockAuth.Setup(x => x.Login("admin@test.com", "password123"))
+        .Returns(new AdminResult(1, "Admin", "User", "admin@test.com", "Admin"));
+mockAuth.Setup(x => x.HayAdmins()).Returns(false);
 ```

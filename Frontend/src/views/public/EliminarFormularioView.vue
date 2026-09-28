@@ -68,8 +68,16 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
+import { useRouter } from 'vue-router'
+import { apiGet, apiDelete } from '@/composables/useApiFetch'
+import { ElMessage } from 'element-plus'
+
+const router = useRouter()
+
+// Props desde la ruta (props: true en router)
+const props = defineProps<{
+  id: string
+}>()
 
 interface Formulario {
   id: number
@@ -80,62 +88,31 @@ interface Formulario {
   descripcion: string
 }
 
-const router = useRouter()
-const route  = useRoute()
-const { authHeaders } = useAuth()
-const API = import.meta.env.VITE_API_URL
-
 const loading = ref(false)
 const error = ref<string | null>(null)
 const formulario = ref<Formulario | null>(null)
-const formularioId = ref<number>(0)
 
-onMounted(() => {
-  if (route.params.id) {
-    formularioId.value = Number(route.params.id)
-    cargarFormulario()
+onMounted(async () => {
+  try {
+    const data = await apiGet<Formulario>(`/api/formularios/${Number(props.id)}`)
+    formulario.value = data
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'No se pudo cargar el formulario'
   }
 })
 
-// Cargar el formulario
-const cargarFormulario = async () => {
-  try {
-    const res = await fetch(`${API}/api/formularios/${formularioId.value}`)
-    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-    formulario.value = await res.json()
-  } catch (err: unknown) {
-    console.error(err)
-    if (err instanceof Error) {
-      error.value = err.message
-    } else {
-      error.value = 'No se pudo cargar el formulario'
-    }
-  }
-}
-
 // Eliminar el formulario
 const eliminarFormulario = async () => {
-  if (!formularioId.value) return
-
   loading.value = true
   error.value = null
 
   try {
-    const res = await fetch(`${API}/api/formularios/${formularioId.value}`, {
-      method:  'DELETE',
-      headers: authHeaders()
-    })
+    await apiDelete(`/api/formularios/${Number(props.id)}`)
 
-    if (!res.ok) {
-      const msg = await res.text()
-      throw new Error(msg)
-    }
-
+    ElMessage.success('Formulario eliminado correctamente')
     router.push('/formularios')
   } catch (err) {
-    error.value = err instanceof Error
-      ? err.message
-      : 'Error al eliminar el formulario'
+    error.value = err instanceof Error ? err.message : 'Error al eliminar el formulario'
   } finally {
     loading.value = false
   }

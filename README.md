@@ -1,6 +1,6 @@
 # 🏛️ Sistema de Gestión Institucional — Instituto Superior Docente Túpac Amaru
 
-> Plataforma de gestión académica para la administración de carreras, alumnos, administradores, profesores, formularios e inscripciones. Desarrollada con arquitectura **Frontend (Vue 3) + Backend (ASP.NET Core 9 + SQL Server Express)** en arquitectura **N-Tier (AD → BR → API)**.
+> Plataforma de gestión académica para la administración de carreras, alumnos, administradores, profesores, formularios e inscripciones. Desarrollada con arquitectura **Frontend (Vue 3) + Backend (ASP.NET Core 9 + SQL Server)** en arquitectura **N-Tier (AD → BR → API)**.
 
 ---
 
@@ -37,9 +37,9 @@ Sistema web para el **Instituto Superior Docente Túpac Amaru** que centraliza l
 ```
 
 **Capas del Backend:**
-- **API Layer** (`Instituto.API`): Controllers, Middleware, DI, JWT, CORS
-- **BR Layer** (`Instituto.BR`): 6 Servicios con lógica de negocio, validaciones, Result Pattern
-- **AD Layer** (`Instituto.AD`): 6 Repositorios tipados, `AccesoDB` (ADO.NET), Entidades de dominio
+- **API Layer** (`Instituto.API`): 8 Controllers, Middleware, DI, JWT, CORS, Global Exception Handler
+- **BR Layer** (`Instituto.BR`): 6 Servicios con lógica de negocio, validaciones, Result Pattern (`ServiceResult<T>`)
+- **AD Layer** (`Instituto.AD`): 6 Repositorios tipados, `AccesoDB` (ADO.NET wrapper), Entidades de dominio
 
 **Patrones aplicados:**
 - **Backend**: Repository pattern, Template Method (`AccesoDB`), DI, Result Pattern (`ServiceResult<T>`), Exception handling tipado
@@ -52,29 +52,30 @@ Sistema web para el **Instituto Superior Docente Túpac Amaru** que centraliza l
 ### Frontend
 | Tecnología | Versión | Uso |
 |------------|---------|-----|
-| Vue 3 | 3.5+ | Framework reactivo (Composition API) |
-| TypeScript | 5.8+ | Tipado estricto |
-| Vite | 7+ | Bundler & Dev Server |
-| Vue Router | 4.5+ | SPA Routing + Guards |
-| Pinia | 3+ | Estado global (auth store) |
-| Element Plus | 2.11+ | Componentes UI |
-| @element-plus/icons-vue | 1.1+ | Iconografía |
-| ESLint + Prettier | 9+ / 3.6+ | Linting & Formato |
+| Vue 3 | 3.5.18 | Framework reactivo (Composition API) |
+| TypeScript | 5.8.0 | Tipado estricto |
+| Vite | 7.0.6 | Bundler & Dev Server |
+| Vue Router | 4.5.1 | SPA Routing + Guards |
+| Pinia | 3.0.3 | Estado global (auth store) |
+| Element Plus | 2.11.1 | Componentes UI |
+| @element-plus/icons-vue | 1.1.4 | Iconografía |
+| ESLint + Prettier | 9.31 / 3.6.2 | Linting & Formato |
 
 ### Backend
 | Tecnología | Versión | Uso |
 |------------|---------|-----|
 | ASP.NET Core | 9.0 | Web API Framework |
 | Microsoft.Data.SqlClient | 5.2+ | Driver SQL Server (ADO.NET) |
-| BCrypt.Net-Next | 4.0+ | Hash de contraseñas (workFactor: 12) |
-| JWT Bearer | 9.0+ | Autenticación stateless |
+| BCrypt.Net-Next | 4.0.3 | Hash de contraseñas (workFactor: 12) |
+| JWT Bearer | 9.0.5 | Autenticación stateless |
 | System.Text.Json | Built-in | Serialización |
 | MSTest + Moq | 3.6+ / 4.20+ | Testing unitario e integración |
 
 ### Base de Datos
-- **SQL Server Express** (`DESKTOP-DQ8JUA\G`)
+- **SQL Server** (Express / LocalDB / SQL Auth)
 - Esquema: `Administradores`, `Alumnos`, `Carreras`, `Profesores`, `Formularios`
-- Script: `Instituto.API/Database/CreateDatabase.sql`
+- Connection Strings configurables en `appsettings.json` / `appsettings.Development.json`
+- *Nota: El script DDL `CreateDatabase.sql` no está incluido en el repo; crear tablas manualmente o vía migraciones*
 
 ---
 
@@ -99,10 +100,10 @@ Instituto.sln
 ├── Instituto.API/             # Presentation Layer (ASP.NET Core 9)
 │   ├── Controllers/           # 8 Controllers: Auth, Setup, Administrador, Alumnos, Carrera, Profesor, Formulario, Listado
 │   ├── Models/                # DTOs API: ApiModels (ApiResponse<T>, LoginRequest, etc.)
-│   ├── Program.cs             # Composition root + pipeline + DI + JWT + CORS
-│   ├── appsettings.Development.json  # ConnectionString SQLEXPRESS + JWT
-│   ├── Instituto.API.csproj
-│   └── Database/CreateDatabase.sql   # Script DDL completo
+│   ├── Program.cs             # Composition root + pipeline + DI + JWT + CORS + Global Exception Handler
+│   ├── appsettings.Development.json  # ConnectionString (SQL Auth) + JWT
+│   ├── appsettings.json       # ConnectionString (LocalDB) + JWT
+│   └── Instituto.API.csproj
 │
 ├── Instituto.AD.Test/         # 20 tests unitarios (MSTest + Moq)
 ├── Instituto.BR.Test/         # 17 tests unitarios (MSTest + Moq)
@@ -124,21 +125,39 @@ Instituto.sln
 ### Prerrequisitos
 - **.NET 9 SDK**
 - **Node.js 20+** y **npm**
-- **SQL Server Express** (instancia `DESKTOP-DQ8JUA\G`)
+- **SQL Server** (Express, LocalDB, o contenedor Docker)
 
-### 1. Base de Datos (SQL Server Express)
+### 1. Base de Datos (SQL Server)
 ```bash
-# Ejecutar en SSMS / Azure Data Studio / VS Code (ext SQL Server)
-# Conectar a: DESKTOP-DQ8JUA\G (Autenticación Windows)
-# Archivo: Instituto.API/Database/CreateDatabase.sql
+# Opción A: SQL Server Express / Developer Edition
+# Conectar con SSMS / Azure Data Studio / VS Code
+# Crear base de datos 'InstitutoDB' y ejecutar script DDL manualmente
+# Tablas: Administradores, Alumnos, Carreras, Profesores, Formularios
+
+# Opción B: LocalDB (desarrollo)
+# Se crea automáticamente al ejecutar la API con appsettings.json
 ```
 
 ### 2. Configuración Backend
 ```json
-// Instituto.API/appsettings.Development.json (ya configurado)
+// Instituto.API/appsettings.Development.json (desarrollo con SQL Auth)
 {
   "ConnectionStrings": {
-    "SqlServer": "Server=DESKTOP-DQ8JUA\\G;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;"
+    "SqlServer": "Server=localhost;Database=InstitutoDB;User Id=instituto_user;Password=Instituto2026;TrustServerCertificate=True;"
+  },
+  "Jwt": {
+    "Key": "Tupac@Amaru#Instituto!JWT$2026*Clave&MuySecreta=32chars",
+    "Issuer": "InstitutoTupacAmaru",
+    "Audience": "InstitutoTupacAmaruAdmin"
+  }
+}
+```
+
+```json
+// Instituto.API/appsettings.json (producción / LocalDB)
+{
+  "ConnectionStrings": {
+    "SqlServer": "Server=(localdb)\\MSSQLLocalDB;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;"
   },
   "Jwt": {
     "Key": "Tupac@Amaru#Instituto!JWT$2026*Clave&MuySecreta=32chars",
@@ -168,7 +187,7 @@ npm install      # solo primera vez
 npm run dev      # → http://localhost:5176
 ```
 
-### 6. Crear Primer Admin (solo primera vez)
+### 6. Crear Primer Admin (solo primera vez, solo en Development)
 ```bash
 # Terminal o REST Client
 curl -X POST http://localhost:5127/api/setup/admin \
@@ -186,7 +205,7 @@ curl -X POST http://localhost:5127/api/setup/admin \
 - Abrir `http://localhost:5176/login`
 - **Email**: `admin@tupac.edu.ar`
 - **Password**: `Password123`
-- Redirige a `/` (Dashboard)
+- Redirige a `/` (Dashboard / Panel de Administración)
 
 ---
 
@@ -245,7 +264,7 @@ src/assets/css/
 │   ├── buttons.css     # .btn, variants, sizes
 │   ├── card.css        # .card, .card-center, .card-lg, .card-header, .card-title
 │   ├── forms.css       # .form, .form-row, .field, .form-actions
-│   ├── innputs.css     # Inputs, selects, .password-field, .password-toggle
+│   ├── inputs.css      # Inputs, selects, .password-field, .password-toggle
 │   ├── table.css       # .table, .table-header, .table-row, .table-empty-state, badges
 │   ├── navbar.css      # .navbar, .menu
 │   └── admin-menu.css  # Grid botones dashboard
@@ -254,6 +273,7 @@ src/assets/css/
 ```
 
 **Principio:** Las vistas solo usan clases globales. Variables en `global.css` (single source of truth).
+*Nota: El archivo actual se llama `innputs.css` (typo conocido, ver deuda técnica)*
 
 ---
 
@@ -295,13 +315,11 @@ dotnet test                              # Tests (44 passing)
 |-----------|------|
 | **Crítica** | `InscripciónView.vue` tipa `CarreraId: string` vs `number` (backend) |
 | **Alta** | Sin capa de servicios API centralizada (`src/services/`) |
-| **Alta** | `HomeView.vue` health check hardcoded `http://localhost:5127/` |
 | **Media** | `ex.Message.Contains("Carrera")` frágil en `AlumnosController.cs` |
 | **Media** | Nombre archivo `InscripciónView.vue` con `ó` (riesgo Linux/CI) |
 | **Media** | **Profesores**: Backend CRUD completo ✅ pero **Frontend sin vistas** |
-| **Baja** | Typo `innputs.css` → `inputs.css` |
-| **Baja** | Carpeta `Frondend` → `Frontend` (en docs antiguas) |
-| **Baja** | Backend devuelve `PasswordHash` y `Role` en GET administradores (debería usar DTO) |
+| **Baja** | Typo `innputs.css` → `inputs.css` (archivo real: `innputs.css`) |
+| **Baja** | Backend devuelve `PasswordHash` y `Role` en GET administradores (debería usar DTO sin datos sensibles) |
 
 ---
 

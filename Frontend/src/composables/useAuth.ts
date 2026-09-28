@@ -10,17 +10,36 @@ export interface AdminSession {
 }
 
 export function useAuth() {
-  const getToken = (): string | null =>
-    sessionStorage.getItem(TOKEN_KEY)
+  /**
+   * Obtiene el token de sessionStorage.
+   * Filtra tokens inválidos ("undefined", "null", vacíos o demasiado cortos).
+   */
+  const getToken = (): string | null => {
+    const token = sessionStorage.getItem(TOKEN_KEY)
+    if (!token || token === 'undefined' || token === 'null' || token.length < 20) {
+      return null
+    }
+    return token
+  }
 
   const getAdmin = (): AdminSession | null => {
     const raw = sessionStorage.getItem(ADMIN_KEY)
-    return raw ? (JSON.parse(raw) as AdminSession) : null
+    if (!raw || raw === 'undefined' || raw === 'null') return null
+    try {
+      return JSON.parse(raw) as AdminSession
+    } catch {
+      return null
+    }
   }
 
   const isAuthenticated = (): boolean => !!getToken()
 
   const guardarSesion = (token: string, admin: AdminSession): void => {
+    // Validación defensiva: no guardar si el token es inválido
+    if (!token || token === 'undefined' || token === 'null' || token.length < 20) {
+      console.warn('[useAuth] Intentando guardar un token inválido:', token)
+      return
+    }
     sessionStorage.setItem(TOKEN_KEY, token)
     sessionStorage.setItem(ADMIN_KEY, JSON.stringify(admin))
   }

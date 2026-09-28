@@ -83,7 +83,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useAuth } from '@/composables/useAuth'
+import { apiGet } from '@/composables/useApiFetch'
 
 /**
  * Interfaz completa que devuelve la API (incluye campos sensibles).
@@ -111,19 +111,14 @@ interface AdministradorView {
   email: string
 }
 
-const { authHeaders } = useAuth()
-const API = import.meta.env.VITE_API_URL
-
 const administradores = ref<AdministradorView[]>([])
 const loading = ref(true)
-const error   = ref<string | null>(null)
+const error = ref<string | null>(null)
 
 const cargarAdministradores = async () => {
   try {
-    const res = await fetch(`${API}/api/administradores`, { headers: authHeaders() })
-    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
+    const data = await apiGet<AdministradorApi[]>(`/api/administradores`)
     // Mapeamos solo los campos que necesitamos en la vista
-    const data: AdministradorApi[] = await res.json()
     administradores.value = data.map(a => ({
       id: a.id,
       nombre: a.nombre,
@@ -132,7 +127,7 @@ const cargarAdministradores = async () => {
     }))
   } catch (err) {
     console.error(err)
-    error.value = 'No se pudieron cargar los administradores'
+    error.value = err instanceof Error ? err.message : 'No se pudieron cargar los administradores'
   } finally {
     loading.value = false
   }

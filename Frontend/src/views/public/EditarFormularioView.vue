@@ -99,13 +99,16 @@
 
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
+import { useRouter } from 'vue-router'
+import { apiGet, apiPut } from '@/composables/useApiFetch'
+import { ElMessage } from 'element-plus'
 
-const route  = useRoute()
 const router = useRouter()
-const { authHeaders } = useAuth()
-const API = import.meta.env.VITE_API_URL
+
+// Props desde la ruta (props: true en router)
+const props = defineProps<{
+  id: string
+}>()
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -130,21 +133,11 @@ const formulario = reactive<Formulario>({
 
 // Cargar datos del formulario
 onMounted(async () => {
-  const id = Number(route.params.id)
-
-  if (!id || isNaN(id)) {
-    error.value = 'ID inválido'
-    return
-  }
-
   try {
-    const res = await fetch(`${API}/api/formularios/${id}`)
-    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-
-    const data = await res.json()
+    const data = await apiGet<Formulario>(`/api/formularios/${Number(props.id)}`)
     Object.assign(formulario, data)
-  } catch {
-    error.value = 'No se pudieron cargar los datos del formulario'
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'No se pudieron cargar los datos del formulario'
   }
 })
 
@@ -152,26 +145,35 @@ const guardarFormulario = async () => {
   loading.value = true
   error.value = null
 
-  const id = Number(route.params.id)
+  // Validación simple
+  if (!formulario.nombre.trim()) {
+    error.value = 'El nombre no puede estar vacío'
+    loading.value = false
+    return
+  }
+  if (!formulario.fechaApertura) {
+    error.value = 'La fecha de apertura es obligatoria'
+    loading.value = false
+    return
+  }
+  if (!formulario.fechaCierre) {
+    error.value = 'La fecha de cierre es obligatoria'
+    loading.value = false
+    return
+  }
+  if (formulario.fechaCierre <= formulario.fechaApertura) {
+    error.value = 'La fecha de cierre debe ser posterior a la de apertura'
+    loading.value = false
+    return
+  }
 
   try {
-    const res = await fetch(`${API}/api/formularios/${id}`, {
-      method:  'PUT',
-      headers: authHeaders(),
-      body:    JSON.stringify({ ...formulario, id })
-    })
+    await apiPut(`/api/formularios/${Number(props.id)}`, formulario)
 
-    if (!res.ok) {
-      const msg = await res.text()
-      throw new Error(msg || `Error HTTP ${res.status}`)
-    }
-
+    ElMessage.success('Formulario actualizado correctamente')
     router.push('/formularios')
   } catch (err) {
-    error.value =
-      err instanceof Error
-        ? err.message
-        : 'Error al actualizar el formulario'
+    error.value = err instanceof Error ? err.message : 'Error al actualizar el formulario'
   } finally {
     loading.value = false
   }

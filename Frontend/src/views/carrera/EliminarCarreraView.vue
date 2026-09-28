@@ -68,8 +68,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
+import { useRoute, useRouter } from 'vue-router'
+import { apiGet, apiDelete } from '@/composables/useApiFetch'
+import { ElMessage } from 'element-plus'
+
+const route = useRoute()
+const router = useRouter()
 
 interface Carrera {
   id: number
@@ -81,65 +85,41 @@ interface Carrera {
   estado: string
 }
 
-const router = useRouter()
-const route  = useRoute()
-const { authHeaders } = useAuth()
-const API = import.meta.env.VITE_API_URL
-
 const loading = ref(false)
 const error = ref<string | null>(null)
 const carrera = ref<Carrera | null>(null)
-const carreraId = ref<number>(0)
 
-onMounted(() => {
-  if (route.params.id) {
-    carreraId.value = Number(route.params.id)
-    cargarCarrera()
+const id = Number(route.params.id)
+
+if (isNaN(id) || id <= 0) {
+  ElMessage.error('ID de carrera inválido')
+  router.push('/carreras')
+}
+
+onMounted(async () => {
+  if (isNaN(id) || id <= 0) return
+
+  try {
+    carrera.value = await apiGet<Carrera>(`/api/carreras/${id}`)
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'No se pudo cargar la carrera'
   }
 })
 
-// Cargar la carrera
-const cargarCarrera = async () => {
-  try {
-    const res = await fetch(`${API}/api/carreras/${carreraId.value}`)
-    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-    carrera.value = await res.json()
-  } catch (err: unknown) {
-    console.error(err)
-    if (err instanceof Error) {
-      error.value = err.message
-    } else {
-      error.value = 'No se pudo cargar la carrera'
-    }
-  }
-}
-
-// Eliminar la carrera
 const eliminarCarrera = async () => {
-  if (!carreraId.value) return
+  if (isNaN(id) || id <= 0) return
 
   loading.value = true
   error.value = null
 
   try {
-    const res = await fetch(`${API}/api/carreras/${carreraId.value}`, {
-      method:  'DELETE',
-      headers: authHeaders()
-    })
-
-    if (!res.ok) {
-      const msg = await res.text()
-      throw new Error(msg)
-    }
-
+    await apiDelete(`/api/carreras/${id}`)
+    ElMessage.success('Carrera eliminada correctamente')
     router.push('/carreras')
   } catch (err) {
-    error.value = err instanceof Error
-      ? err.message
-      : 'Error al eliminar la carrera'
+    error.value = err instanceof Error ? err.message : 'Error al eliminar la carrera'
   } finally {
     loading.value = false
   }
 }
-
 </script>

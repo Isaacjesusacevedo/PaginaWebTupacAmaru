@@ -85,7 +85,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useAuth } from '@/composables/useAuth'
+import { apiGet, apiDelete } from '@/composables/useApiFetch'
+import { ElMessage } from 'element-plus'
 
 interface Formulario {
   id: number
@@ -95,18 +96,14 @@ interface Formulario {
   fechaCierre: string
 }
 
-const { authHeaders } = useAuth()
-const API = import.meta.env.VITE_API_URL
-
 const formularios = ref<Formulario[]>([])
 const error = ref<string | null>(null)
 
 const cargarFormularios = async () => {
   try {
-    const res = await fetch(`${API}/api/formularios`, { headers: authHeaders() })
-    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-    formularios.value = await res.json()
-  } catch (err: unknown) {
+    const data = await apiGet<Formulario[]>('/api/formularios')
+    formularios.value = data
+  } catch (err) {
     console.error('Error al cargar formularios:', err)
     if (err instanceof Error) {
       error.value = `No se pudieron cargar los formularios: ${err.message}`
@@ -125,9 +122,14 @@ const getEstadoClass = (estado: string): string => {
   }
 }
 
-const eliminar = (id: number) => {
-  if (confirm('¿Eliminar este formulario?')) {
-    alert(`Eliminar formulario ${id} - pendiente`)
+const eliminar = async (id: number) => {
+  try {
+    await apiDelete(`/api/formularios/${id}`)
+    ElMessage.success('Formulario eliminado correctamente')
+    // Recargar la lista
+    await cargarFormularios()
+  } catch (err) {
+    ElMessage.error(err instanceof Error ? err.message : 'Error al eliminar el formulario')
   }
 }
 

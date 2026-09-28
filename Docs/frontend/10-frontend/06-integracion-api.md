@@ -8,12 +8,12 @@ El frontend usa **`fetch` nativo** (sin Axios ni librería adicional) para todas
 
 ```typescript
 const API = import.meta.env.VITE_API_URL
-// Ejemplo: http://localhost:5089
+// Ejemplo: http://localhost:5127
 ```
 
 Se define en `.env`:
 ```env
-VITE_API_URL=http://localhost:5089
+VITE_API_URL=http://localhost:5127
 ```
 
 ## Headers Estándar

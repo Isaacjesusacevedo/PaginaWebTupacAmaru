@@ -64,13 +64,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
+import { useRouter } from 'vue-router'
+import { apiGet, apiDelete } from '@/composables/useApiFetch'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
-const route = useRoute()
-const { authHeaders } = useAuth()
-const API = import.meta.env.VITE_API_URL
+
+// ✅ Usamos props (porque el router tiene props: true)
+const props = defineProps<{ id: string }>()
 
 interface Administrador {
   id: number
@@ -83,56 +84,26 @@ interface Administrador {
 const loading = ref(false)
 const error = ref<string | null>(null)
 const admin = ref<Administrador | null>(null)
-const adminId = ref<number>(0)
 
-// Obtener ID
-onMounted(() => {
-  if (route.params.id) {
-    adminId.value = Number(route.params.id)
-    cargarAdministrador()
+onMounted(async () => {
+  try {
+    const data = await apiGet<Administrador>(`/api/administradores/${Number(props.id)}`)
+    admin.value = data
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'No se pudo cargar el administrador'
   }
 })
 
-// Cargar administrador
-const cargarAdministrador = async () => {
-  try {
-    const res = await fetch(
-      `${API}/api/administradores/${adminId.value}`,
-      { headers: authHeaders() }
-    )
-
-    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-    admin.value = await res.json()
-  } catch (err) {
-    error.value = err instanceof Error
-      ? err.message
-      : 'No se pudo cargar el administrador'
-  }
-}
-
-// Eliminar administrador
 const eliminarAdministrador = async () => {
-  if (!adminId.value) return
-
   loading.value = true
   error.value = null
 
   try {
-    const res = await fetch(
-      `${API}/api/administradores/${adminId.value}`,
-      { method: 'DELETE', headers: authHeaders() }
-    )
-
-    if (!res.ok) {
-      const msg = await res.text()
-      throw new Error(msg)
-    }
-
+    await apiDelete(`/api/administradores/${Number(props.id)}`)
+    ElMessage.success('Administrador eliminado correctamente')
     router.push('/administracion')
   } catch (err) {
-    error.value = err instanceof Error
-      ? err.message
-      : 'Error al eliminar el administrador'
+    error.value = err instanceof Error ? err.message : 'Error al eliminar el administrador'
   } finally {
     loading.value = false
   }

@@ -1,7 +1,7 @@
 # Sistema de Gestión Institucional — Instituto Superior Docente Túpac Amaru
 
 > Documento de referencia técnica para desarrollo y evolución del proyecto.
-> Última actualización: 2026-09-27 | Versión: 1.0.0
+> Última actualización: 2026-09-28 | Versión: 1.1.0
 
 ---
 
@@ -41,29 +41,29 @@ El sistema expone un **panel interno** accesible por personal administrativo (JW
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                        CLIENTE (Navegador)                      │
-│  Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router │
-└─────────────────────────────────────────────────────────────────────────┘
-                             │ HTTPS / REST API + JWT
-                             ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                      ASP.NET CORE 9 API (Presentation)          │
-│  Controllers → BR Services → AD Repositories → SQL Server       │
-│  JWT Auth + BCrypt (workFactor:12) + Global Exception Handling  │
-└─────────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                    SQL SERVER EXPRESS (DESKTOP-DQ8JUA\G)        │
-│         Tablas: Administradores, Alumnos, Carreras,             │
-│                 Profesores, Formularios                         │
-└──────────────────────────────────────────────────────────────┘
+│                        CLIENTE (Navegador)                                 │
+│  Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router           │
+└────────────────────────────────────────────────────────────────────────────┘
+                                 │ HTTPS / REST API + JWT
+                                 ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│                      ASP.NET CORE 9 API (Presentation)                     │
+│  Controllers → BR Services → AD Repositories → SQL Server                  │
+│  JWT Auth + BCrypt (workFactor:12) + Global Exception Handling             │
+└────────────────────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│                    SQL SERVER (Express / LocalDB / Docker)                 │
+│         Tablas: Administradores, Alumnos, Carreras,                        │
+│                 Profesores, Formularios                                    │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Capas del Backend (N-Tier):**
-- **API Layer** (`Instituto.API`): Controllers, Middleware, DI, JWT, CORS
-- **BR Layer** (`Instituto.BR`): 6 Servicios con lógica de negocio, validaciones, Result Pattern
-- **AD Layer** (`Instituto.AD`): 6 Repositorios tipados, `AccesoDB` (ADO.NET), Entidades de dominio
+- **API Layer** (`Instituto.API`): 8 Controllers, Middleware, DI, JWT, CORS, Global Exception Handler
+- **BR Layer** (`Instituto.BR`): 6 Servicios con lógica de negocio, validaciones, Result Pattern (`ServiceResult<T>`)
+- **AD Layer** (`Instituto.AD`): 6 Repositorios tipados, `AccesoDB` (ADO.NET wrapper), Entidades de dominio
 
 **Patrones aplicados:**
 - **Backend**: Repository pattern, Template Method (`AccesoDB`), DI, Result Pattern (`ServiceResult<T>`), Exception handling tipado
@@ -75,14 +75,20 @@ El sistema expone un **panel interno** accesible por personal administrativo (JW
 Instituto.sln
 ├── Instituto.AD/              # Data Access Layer
 ├── Instituto.BR/              # Business Rules Layer
-├── Instituto.API/             # Presentation Layer (ASP.NET Core)
-├── Instituto.AD.Test/         # Unit tests AD (MSTest + Moq)
-├── Instituto.BR.Test/         # Unit tests BR (MSTest + Moq)
-├── Instituto.API.Test/        # Integration tests API (MSTest + WebApplicationFactory)
-├── Database/                  # Scripts SQL compartidos
-├── Docs/                      # Documentación
-└── Frontend/                  # Vue 3 + Vite
+├── Instituto.API/             # Presentation Layer (ASP.NET Core 9)
+├── Instituto.AD.Test/         # Unit tests AD (MSTest + Moq) — 20 tests
+├── Instituto.BR.Test/         # Unit tests BR (MSTest + Moq) — 17 tests
+├── Instituto.API.Test/        # Integration tests API (MSTest + WebApplicationFactory) — 7 tests
+├── Frontend/                  # Vue 3 + Vite + TypeScript
+├── Docs/                      # Documentación técnica
+│   ├── backend/               # Docs backend (arquitectura, BD, servicios, API, etc.)
+│   ├── frontend/              # Docs frontend (router, auth, componentes, build)
+│   ├── DATABASE.md            # Documentación completa BD (snapshot, DDL, datos)
+│   └── README.md              # Índice de documentación
+└── brana.sln                  # Solution file legacy
 ```
+
+> **Nota**: El script `CreateDatabase.sql` **no existe en el repositorio**. El DDL completo está documentado en `docs/backend/02-base-de-datos/02-script-creacion.md` y `docs/DATABASE.md`.
 
 ## Responsabilidades por Capa
 
@@ -206,16 +212,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         // Respuestas 401/403 en JSON (no HTML)
         options.Events = new JwtBearerEvents
         {
-            OnChallenge = ctx => { ... },  // 401 JSON
-            OnForbidden = ctx => { ... }   // 403 JSON
+            OnChallenge = ctx => {
+                ctx.HandleResponse();
+                ctx.Response.StatusCode = 401;
+                ctx.Response.ContentType = "application/json";
+                return ctx.Response.WriteAsync(JsonSerializer.Serialize(new { error = "No autenticado. Iniciá sesión." }));
+            },
+            OnForbidden = ctx => {
+                ctx.Response.StatusCode = 403;
+                ctx.Response.ContentType = "application/json";
+                return ctx.Response.WriteAsync(JsonSerializer.Serialize(new { error = "No tenés permiso para realizar esta acción." }));
+            }
         };
     });
 
 builder.Services.AddAuthorization();
 
-// Controllers + JSON options
+// Controllers + JSON options (camelCase)
 builder.Services.AddControllers()
-    .AddJsonOptions(o => { o.JsonSerializerOptions.PropertyNameCaseInsensitive = true; });
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+        options.JsonSerializerOptions.WriteIndented = false;
+    });
 
 // Repositories (AD Layer)
 var connectionString = builder.Configuration.GetConnectionString("SqlServer")
@@ -237,7 +258,16 @@ builder.Services.AddScoped<IFormularioService, FormularioService>();
 builder.Services.AddScoped<IListadoService, ListadoService>();
 
 // Middleware global de errores
-app.UseExceptionHandler(errorApp => { ... });
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+        var body = JsonSerializer.Serialize(new { error = "Ocurrió un error interno del servidor." });
+        await context.Response.WriteAsync(body);
+    });
+});
 
 // Pipeline
 app.UseRouting();
@@ -496,61 +526,71 @@ public ServiceResult Delete(int id)
 
 ---
 
-### 4.8 AdminAuthService (Autenticación)
+### 4.8 AdministradorService (Autenticación + CRUD Completo)
 
-Archivo: Instituto.BR/Services/AdministradorService.cs
-Interface: IAdministradorService
+**Archivo:** `Instituto.BR/Services/AdministradorService.cs`  
+**Interface:** `IAdministradorService`
 
+```csharp
 public interface IAdministradorService
 {
-    Task<AdminResult?> LoginAsync(string email, string password);
-    Task<bool> HayAdminsAsync();
-    Task CrearPrimerAdminAsync(SetupAdminDto dto);
+    List<Administrador> GetAll();
+    Administrador? GetById(int id);
+    ServiceResult<Administrador> Create(Administrador admin, string password);
+    ServiceResult<Administrador> Update(int id, Administrador admin);
     ServiceResult ChangePassword(int id, string passwordActual, string nuevaPassword);
+    ServiceResult Delete(int id);
+    AdminResult? Login(string email, string password);      // SÍNCRONO
+    bool HayAdmins();
+    Task<AdminResult?> CrearPrimerAdminAsync(SetupAdminDto dto);
     ServiceResult ChangePasswordByEmail(string email, string passwordActual, string nuevaPassword);
-)
+}
+```
 
-LoginAsync
-public async Task<AdminResult?> LoginAsync(string email, string password)
+> **Nota**: `Login` es **síncrono** (no `async`). Solo `CrearPrimerAdminAsync` es `async` por convención de setup inicial.
+
+#### Login (Síncrono)
+
+```csharp
+public AdminResult? Login(string email, string password)
 {
-    var admin = repository.GetByEmail(email);
+    var admin = _repository.GetByEmail(email);
     if (admin == null) return null;
     if (!BCryptNet.Verify(password, admin.PasswordHash)) return null;
     
     return new AdminResult(admin.Id, admin.Nombre, admin.Apellido, admin.Email, admin.Role);
-)
+}
+```
 
-- Case-insensitive email: Trim().ToLower()
-- Solo activos: Repositorio filtra Activo = 1
-- BCrypt verify: Compara password plano vs hash almacenado
+- **Case-insensitive email**: `Trim().ToLower()` (normalizado en repositorio)
+- **Solo activos**: Repositorio filtra `Activo = 1` en `GetByEmail`
+- **BCrypt verify**: Compara password plano vs hash almacenado
+- **Síncrono**: Repositorio ADO.NET es sync, no usa `async/await`
 
-CrearPrimerAdminAsync
-public async Task<AdminResult?> CrearPrimerAdminAsync(SetupAdminDto dto)
+#### Create (con Password)
+
+```csharp
+public ServiceResult<Administrador> Create(Administrador admin, string password)
 {
-    if (HayAdmins()) return null;
+    // Validaciones: Nombre, Apellido, Email obligatorios, password >= 8 chars
+    admin.Email = admin.Email.ToLower().Trim();  // Normalizar ANTES de chequear duplicados
     
-    var admin = new Administrador { Nombre = dto.Nombre, ... };
-    var result = Create(admin, dto.Password);
-    return result.Success ? new AdminResult(...) : null;
-)
+    if (_repository.ExistsByEmail(admin.Email))
+        return ServiceResult<Administrador>.Fail("Ya existe un administrador con ese email.");
 
-- Work factor 12: Balance seguridad/performance (2024+)
-- BCrypt.HashPassword: Genera hash seguro
-- Solo si no hay admins: HayAdmins() check
+    admin.PasswordHash = BCryptNet.HashPassword(password, workFactor: 12);
+    admin.Activo = true;
+    admin.FechaCreacion = DateTime.Now;
 
-ChangePassword
-public ServiceResult ChangePassword(int id, string passwordActual, string nuevaPassword)
-{
-    var admin = repository.GetById(id);
-    if (admin == null) return ServiceResult.Fail("Admin no encontrado");
-    
-    if (!BCryptNet.Verify(passwordActual, admin.PasswordHash))
-        return ServiceResult.Fail("Contraseña actual incorrecta");
-    
-    var newHash = BCryptNet.HashPassword(nuevaPassword, workFactor: 12);
-    repository.UpdatePasswordHash(id, newHash);
-    return ServiceResult.Ok("Contraseña actualizada correctamente.");
-)
+    try { return ServiceResult<Administrador>.Ok(_repository.Create(admin), "..."); }
+    catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
+        { return ServiceResult<Administrador>.Fail("Ya existe un administrador con ese email."); }
+}
+```
+
+#### ChangePassword / ChangePasswordByEmail
+
+Verifican `passwordActual` con `BCrypt.Verify`, hashean `nuevaPassword` (workFactor 12), actualizan via `UpdatePasswordHash`.
 
 ---
 
@@ -599,10 +639,13 @@ AdministradorController -- /api/administradores
 |--------|------|------|-------------|
 | GET | /api/administradores | JWT | Listado (solo Activo=1) |
 | GET | /api/administradores/{id} | JWT | Detalle |
-| POST | /api/administradores | JWT | Crear (hash password) |
-| PUT | /api/administradores/{id} | JWT | Actualizar (no password) |
+| POST | /api/administradores/with-password | JWT | **Crear con password** (endpoint recomendado) |
+| POST | /api/administradores | JWT | Crear (retorna 400 indicando usar with-password) |
+| PUT | /api/administradores/{id} | JWT | Actualizar (no password, no role) |
 | PUT | /api/administradores/{id}/password | JWT | Cambiar password (verifica actual) |
 | DELETE | /api/administradores/{id} | JWT | Soft delete (Activo=0) |
+
+**Nota**: El POST normal retorna 400 dirigiendo al endpoint `with-password` para crear admin con password.
 
 ProfesorController -- /api/profesores
 CRUD completo idéntico a Administrador (sin soft delete, sin password change). [Authorize] en clase.
@@ -619,63 +662,84 @@ ListadoController -- /api/listado
 
 ### 4.9 Base de Datos
 
-SQL Server Express (DESKTOP-DQ8JUA\G)
-Script: Instituto.API/Database/CreateDatabase.sql
+SQL Server (Express / LocalDB / Docker)
+Script DDL: `docs/backend/02-base-de-datos/02-script-creacion.md` o `docs/DATABASE.md`
+*(No hay archivo `CreateDatabase.sql` físico en el repo)*
 
 | Tabla | Columnas clave | Índices / Constraints |
 |-------|----------------|----------------------|
-| Administradores | Id, Nombre, Apellido, Email, PasswordHash, Role, Activo, FechaCreacion | PK Id, UNIQUE Email, IX_Email |
-| Carreras | Id, Nombre, DuracionAnios, Turno, Modalidad, Horario, Estado, FechaCreacion | PK Id, CHECK DuracionAnios 1-10 |
-| Alumnos | Id, Nombre, Apellido, Email, DNI, FechaNacimiento, Direccion, Nacionalidad, FechaInscripcion, Telefono, TituloSecundario, Turno, CarreraId, FechaCreacion | PK Id, UNIQUE DNI, FK CarreraId->Carreras, IX_CarreraId, IX_DNI |
-| Profesores | Id, Nombre, Apellido, Email, Telefono, Especialidad, FechaCreacion | PK Id, UNIQUE Email, IX_Email |
-| Formularios | Id, Nombre, Estado, FechaApertura, FechaCierre, Descripcion, FechaCreacion | PK Id |
+| Administradores | Id, Nombre, Apellido, Email, PasswordHash, **PasswordTemp**, Role, Activo, FechaCreacion | PK Id, **UNIQUE parcial** Email (WHERE Activo=1), IX_Activo |
+| Carreras | Id, Nombre, DuracionAnios, Turno, Modalidad, Horario, Estado, FechaCreacion | PK Id, CHECK DuracionAnios 1-10 (en servicio), CHECK Estado |
+| Alumnos | Id, Nombre, Apellido, Email, DNI, FechaNacimiento, Direccion, Nacionalidad, FechaInscripcion, Telefono, TituloSecundario, Turno, CarreraId, FechaCreacion | PK Id, UNIQUE DNI, UNIQUE Email, FK CarreraId->Carreras, IX_CarreraId, IX_FechaInscripcion |
+| Profesores | Id, Nombre, Apellido, Email, Telefono, Especialidad, FechaCreacion | PK Id, UNIQUE Email |
+| Formularios | Id, Nombre, Estado, FechaApertura, FechaCierre, Descripcion, FechaCreacion | PK Id (estados validados en servicio) |
+
+**Notas clave:**
+- **Soft delete** en Administradores: `Activo=0` en lugar de DELETE físico
+- **Índice UNIQUE parcial** permite reutilizar emails de admins inactivos
+- Validaciones de CHECK (DuracionAnios, Estado formulario) están en **servicios BR**, no en BD
+- `PasswordTemp` existe en modelo/tabla pero no se usa actualmente
 
 ---
 
 ### 4.10 Configuración
 
-Instituto.API/appsettings.Development.json:
+**appsettings.json (base - LocalDB / Windows Auth):**
+```json
 {
-  ConnectionStrings: {
-    SqlServer: Server=DESKTOP-DQ8JUA\\G;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;
+  "ConnectionStrings": {
+    "SqlServer": "Server=(localdb)\\MSSQLLocalDB;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;"
   },
-  Jwt: {
-    Key: Tupac@Amaru#Instituto!JWT$2026*Clave&MuySecreta=32chars,
-    Issuer: InstitutoTupacAmaru,
-    Audience: InstitutoTupacAmaruAdmin
+  "Jwt": {
+    "Key": "REEMPLAZAR_CON_CLAVE_SECRETA_DE_AL_MENOS_32_CARACTERES",
+    "Issuer": "InstitutoTupacAmaru",
+    "Audience": "InstitutoTupacAmaruAdmin"
   },
-  Logging: {
-    LogLevel: {
-      Default: Information,
-      Microsoft.AspNetCore: Warning
-    }
-  },
-  AllowedHosts: *
+  "Logging": { "LogLevel": { "Default": "Information", "Microsoft.AspNetCore": "Warning" } },
+  "AllowedHosts": "*"
 }
+```
 
-Nota: En desarrollo usar User Secrets (dotnet user-secrets) para la clave JWT.
+**appsettings.Development.json (SQL Auth - usado actualmente):**
+```json
+{
+  "ConnectionStrings": {
+    "SqlServer": "Server=localhost;Database=InstitutoDB;User Id=instituto_user;Password=Instituto2026;TrustServerCertificate=True;"
+  },
+  "Jwt": {
+    "Key": "Tupac@Amaru#Instituto!JWT$2026*Clave&MuySecreta=32chars",
+    "Issuer": "InstitutoTupacAmaru",
+    "Audience": "InstitutoTupacAmaruAdmin"
+  },
+  "Logging": { "LogLevel": { "Default": "Information", "Microsoft.AspNetCore": "Warning" } }
+}
+```
+
+> **Nota**: `appsettings.Development.json` está en el repo con credenciales de desarrollo. En producción usar variables de entorno / Key Vault.
 
 ## 5. Front-end — Vue 3 + TypeScript + Vite
 
-### 5.1 Stack y Dependencias
+### 5.1 Stack y Dependencias (Versiones Exactas)
 
 #### Producción
 | Paquete | Versión | Propósito |
 |---------|---------|-----------|
-| vue | 3.5+ | Framework reactivo (Composition API) |
-| typescript | 5.8+ | Tipado estricto |
-| vite | 7+ | Bundler & Dev Server |
-| vue-router | 4.5+ | SPA Routing + Guards |
-| pinia | 3+ | Estado global (auth store) |
-| element-plus | 2.11+ | Componentes UI |
-| @element-plus/icons-vue | 1.1+ | Iconografía |
+| vue | **3.5.18** | Framework reactivo (Composition API) |
+| typescript | **5.8.0** | Tipado estricto |
+| vite | **7.0.6** | Bundler & Dev Server |
+| vue-router | **4.5.1** | SPA Routing + Guards |
+| pinia | **3.0.3** | Estado global (auth store) |
+| element-plus | **2.11.1** | Componentes UI |
+| @element-plus/icons-vue | **1.1.4** | Iconografía |
 
 #### Desarrollo
 | Paquete | Versión | Propósito |
 |---------|---------|-----------|
-| eslint | 9+ | Linting |
-| prettier | 3.6+ | Formato |
-| vue-tsc | 3+ | Type-check |
+| eslint | **9.31.0** | Linting |
+| prettier | **3.6.2** | Formato |
+| vue-tsc | **3.0.4** | Type-check |
+| @vitejs/plugin-vue | **6.0.1** | Plugin Vue para Vite |
+| vite-plugin-vue-devtools | **8.0.0** | DevTools en desarrollo |
 
 ---
 
@@ -686,9 +750,9 @@ Nota: En desarrollo usar User Secrets (dotnet user-secrets) para la clave JWT.
 VITE_API_URL=http://localhost:5127
 ```
 
-**vite.config.ts**: alias @ -> ./src, plugin Vue, devTools.
+**vite.config.ts**: alias `@` -> `./src`, plugin Vue, devTools. **No hay proxy Vite configurado** - el frontend usa `fetch` directo a `VITE_API_URL`.
 
-**tsconfig.app.json**: strict mode, alias @/*, DOM lib.
+**tsconfig.app.json**: strict mode, alias `@/*`, DOM lib.
 
 ---
 
@@ -840,29 +904,36 @@ export function useAuth() {
 #### Módulo Listados
 | Vista | Ruta | Descripción |
 |-------|------|-------------|
-| ListadoView | /listados | Tabla Alumno+Carrera (join) |
-| InscripciónView | /inscripcion | Público -- Formulario extenso, carga carreras dinámicas, POST /api/alumnos |
+| ListadoView | /listados | Tabla Alumno+Carrera (join en memoria) |
+| InscripciónView | /inscripcion | Público — Formulario extenso, carga carreras dinámicas, POST /api/alumnos |
+
+> **Total: 19 vistas** (1 Auth + 1 Dashboard + 4 Administradores + 4 Carreras + 4 Formularios + 1 Listado + 1 Inscripción + 1 Contacto + 1 404)
+
+> **Nota**: Profesores tiene backend CRUD completo ✅ pero **Frontend sin vistas** ❌
 
 ---
 
-### 5.7 Estilos CSS (Modular, sin style en .vue)
+### 5.7 Estilos CSS (Modular, sin `<style>` en .vue)
 
+```
 src/assets/css/
 ├── base/
-│   ├── main.css      # @import de todo
-│   └── global.css    # Variables CSS, reset, utilidades
+│   ├── main.css        # @import de todo
+│   └── global.css      # Variables CSS, reset, utilidades
 ├── components/
-│   ├── buttons.css   # .btn, variants, sizes
-│   ├── card.css      # .card, .card-center, .card-lg, .card-header, .card-title
-│   ├── forms.css     # .form, .form-row, .field, .form-actions
-│   ├── innputs.css   # Inputs, selects, .password-field, .password-toggle
-│   ├── table.css     # .table, .table-header, .table-row, .table-empty-state, badges
-│   ├── navbar.css    # .navbar, .menu
-│   └── admin-menu.css # Grid botones dashboard
+│   ├── buttons.css     # .btn, variants, sizes
+│   ├── card.css        # .card, .card-center, .card-lg, .card-header, .card-title
+│   ├── forms.css       # .form, .form-row, .field, .form-actions
+│   ├── inputs.css      # Inputs, selects, .password-field, .password-toggle
+│   ├── table.css       # .table, .table-header, .table-row, .table-empty-state, badges
+│   ├── navbar.css      # .navbar, .menu
+│   └── admin-menu.css  # Grid botones dashboard
 └── layout/
-    └── section.css   # .section (centrado + padding)
+    └── section.css     # .section (centrado + padding)
+```
 
-Principio: Las vistas solo usan clases globales. Variables en global.css (single source of truth).
+**Principio:** Las vistas solo usan clases globales. Variables en `global.css` (single source of truth).
+*Nota: El archivo actual se llama `innputs.css` (typo conocido, ver deuda técnica)*
 
 ---
 
@@ -1083,13 +1154,13 @@ Exception          → PersistenceEx → catch(Exception)           →   500 + 
 
 ### 8.2 Requisitos Técnicos — Back-end
 - .NET 9 SDK
-- SQL Server Express (DESKTOP-DQ8JUA\G)
-- Instituto.AD/Data/ no requerido (usa BD real)
-- User Secrets para Jwt:Key en dev
+- SQL Server (Express / LocalDB / Docker)
+- User Secrets para Jwt:Key en dev (opcional, appsettings.Development.json está en repo)
 - CORS AllowAnyOrigin (solo dev)
 
 ### 8.3 Requisitos Técnicos — Front-end
-- Node.js ≥ 20, npm
+- Node.js 20.19.0+ / 22.12.0+ (según `package.json` engines)
+- npm 10+ (incluido en Node)
 - npm install en Frontend/
 - npm run dev → http://localhost:5176
 - Backend en http://localhost:5127
@@ -1097,8 +1168,13 @@ Exception          → PersistenceEx → catch(Exception)           →   500 + 
 ### 8.4 Comandos de Inicio
 
 ```bash
-# 1. Base de Datos (ejecutar en SSMS / Azure Data Studio / VS Code)
-# Archivo: Instituto.API/Database/CreateDatabase.sql
+# 1. Base de Datos (SQL Server)
+# Opción A: SQL Server Express / Developer Edition
+#   Conectar con SSMS / Azure Data Studio / VS Code
+#   Crear BD 'InstitutoDB' y ejecutar DDL (ver docs/backend/02-base-de-datos/02-script-creacion.md)
+#
+# Opción B: LocalDB (desarrollo)
+#   Se crea automáticamente al ejecutar la API con appsettings.json
 
 # 2. Back-end
 cd Instituto.API
@@ -1111,8 +1187,10 @@ npm install    # solo primera vez
 npm run dev
 # → http://localhost:5176
 
-# 4. Crear primer admin (una sola vez)
-curl -X POST http://localhost:5127/api/setup/admin   -H "Content-Type: application/json"   -d '{"nombre":"Super","apellido":"Admin","email":"admin@tupac.edu.ar","password":"Password123","role":"SuperAdmin"}'
+# 4. Crear primer admin (una sola vez, solo Development)
+curl -X POST http://localhost:5127/api/setup/admin \
+  -H "Content-Type: application/json" \
+  -d '{"nombre":"Super","apellido":"Admin","email":"admin@tupac.edu.ar","password":"Password123","role":"SuperAdmin"}'
 
 # 5. Login
 # Abrir http://localhost:5176/login con credenciales del paso 4
@@ -1125,71 +1203,71 @@ curl -X POST http://localhost:5127/api/setup/admin   -H "Content-Type: applicati
 ### Bugs Críticos Activos
 | Ubicación | Problema | Severidad |
 |-----------|----------|-----------|
-| InscripciónView.vue | CarreraId: string vs number (backend) -> 400 potencial | Crítica |
-| 6 archivos Vue | localhost:5089 hardcoded (no VITE_API_URL) | Crítica |
+| `InscripciónView.vue` | `CarreraId: string` vs `number` (backend) → 400 potencial | Crítica |
 
 ### Deuda Técnica — Back-end
 | Item | Prioridad | Estado |
 |------|-----------|--------|
-| Sin capa DTO para GET administradores (expone PasswordHash, Role) | Alta | ❌ |
-| ex.Message.Contains("Carrera") frágil en AlumnosController.cs | Media | ❌ |
+| Sin capa DTO para GET administradores (expone `PasswordHash`, `Role`) | Alta | ❌ |
+| `ex.Message.Contains("Carrera")` frágil en `AlumnosController.cs` | Media | ❌ |
 | Sin rate limiting | Alta | ❌ |
 | Sin paginación en GET All | Media | ❌ |
 | Sin Swagger/OpenAPI | Media | ❌ |
-| Sin tests (xUnit) | Alta | ❌ |
 | Profesores: Backend completo pero Frontend sin vistas | Media | ❌ |
 
 ### Deuda Técnica — Front-end
 | Item | Prioridad | Estado |
 |------|-----------|--------|
-| Sin capa de servicios API centralizada (src/services/) | Alta | ❌ |
-| HomeView.vue health check hardcoded http://localhost:5127/ | Alta | ❌ |
-| Nombre archivo InscripciónView.vue con ó (riesgo Linux/CI) | Media | ❌ |
-| Typo innputs.css → inputs.css | Baja | ❌ |
-| Carpeta Frondend en docs antiguas → Frontend | Baja | ❌ |
+| Sin capa de servicios API centralizada (`src/services/`) | Alta | ❌ |
+| Nombre archivo `InscripciónView.vue` con `ó` (riesgo Linux/CI) | Media | ❌ |
+| Typo `innputs.css` → `inputs.css` (archivo real: `innputs.css`) | Baja | ❌ |
+| Backend devuelve `PasswordHash` y `Role` en GET administradores (debería usar DTO) | Alta | ❌ |
 
 ### Fortalezas del Diseño Actual
-- Herencia Persona elimina duplicación en 3 entidades.
-- AccesoDB genérico, template methods, ADO.NET robusto.
+- Herencia `Persona` elimina duplicación en 3 entidades.
+- `AccesoDB` genérico, template methods, ADO.NET robusto.
 - Separación clara: Controllers / Services / Models / DTOs / Exceptions.
 - Data Annotations centralizan validaciones en modelo (single source of truth).
 - Excepciones tipadas → mapeo HTTP limpio sin acoplamiento.
 - JWT stateless + BCrypt 12 + claims estándar.
-- Frontend: Composition API, CSS modular, Route Guards, useAuth composable.
-- EditarAdministradorView: re-autenticación segura + password en memoria (limpieza onUnmounted).
+- Frontend: Composition API, CSS modular, Route Guards, `useAuth` composable.
+- `EditarAdministradorView`: re-autenticación segura + password en memoria (limpieza `onUnmounted`).
+- Tests: 44 tests passing (20 AD + 17 BR + 7 API).
 
 ---
 
 ## 10. Hoja de Ruta — Próximos Pasos
 
-### Completado (v1.0.0)
-- [x] Arquitectura N-Tier (AD → BR → API) con SQL Server Express
+### Completado (v1.1.0)
+- [x] Arquitectura N-Tier (AD → BR → API) con SQL Server (Express / LocalDB)
 - [x] JWT Authentication + BCrypt workFactor 12
 - [x] 8 Controladores con CRUD completo
-- [x] 6 Servicios CRUD + AuthService
+- [x] 6 Servicios CRUD + Auth integrada en `AdministradorService`
 - [x] Excepciones tipadas + middleware global errores
 - [x] Route Guards + sessionStorage + re-auth modal
 - [x] CSS modular sin style en componentes
-- [x] Documentación modular en Docs/
+- [x] Documentación modular en Docs/ + `DATABASE.md`
+- [x] 44 tests passing (MSTest + Moq)
+- [x] Soft delete en Administradores con índice UNIQUE parcial
+- [x] Response wrapper `ApiResponse<T>` + camelCase JSON
 
 ### Prioridad Crítica
-- [ ] Corregir CarreraId: string → number en InscripciónView.vue
-- [ ] Migrar 6 archivos a VITE_API_URL (eliminar localhost hardcoded)
+- [ ] Corregir `CarreraId: string` → `number` en `InscripciónView.vue`
 - [ ] Crear vistas de Profesores (Frontend)
 
 ### Prioridad Alta
-- [ ] Capa de servicios API centralizada (src/services/)
-- [ ] DTO para administradores (no exponer PasswordHash/Role en GET)
+- [ ] Capa de servicios API centralizada (`src/services/`)
+- [ ] DTO para administradores (no exponer `PasswordHash`/`Role` en GET)
 - [ ] Rate limiting (ASP.NET Core built-in)
 - [ ] Paginación en listados
 - [ ] Tests xUnit + integración
 - [ ] Swagger/OpenAPI
 
 ### Prioridad Media
-- [ ] Renombrar InscripciónView.vue → InscripcionView.vue
-- [ ] Fix ex.Message.Contains("Carrera") -> tipar excepción FK
-- [ ] Renombrar innputs.css -> inputs.css
-- [ ] Validación FechaCierre > FechaApertura en backend (Formularios)
+- [ ] Renombrar `InscripciónView.vue` → `InscripcionView.vue`
+- [ ] Fix `ex.Message.Contains("Carrera")` → tipar excepción FK
+- [ ] Renombrar `innputs.css` → `inputs.css`
+- [ ] Validación `FechaCierre > FechaApertura` en backend (Formularios)
 
 ### Prioridad Baja
 - [ ] Auditoria login (IP, user-agent, timestamp)
@@ -1203,6 +1281,7 @@ curl -X POST http://localhost:5127/api/setup/admin   -H "Content-Type: applicati
 
 | Versión | Fecha | Cambios Principales |
 |---------|-------|---------------------|
+| **1.1.0** | 2026-09-28 | **Actualización docs completa**: DDL real en docs, SQL Auth + LocalDB, soft delete con UNIQUE parcial, `Login` sync, `ApiResponse<T>` wrapper, camelCase JSON, 44 tests, `DATABASE.md` snapshot, puertos 5127/5176, sin proxy Vite, `CreateDatabase.sql` no en repo. |
 | 1.0.0 | 2026-09-27 | Migración completa a SQL Server + JWT: SqlServerBaseService, 8 controllers, 6 servicios CRUD, AuthService, excepciones tipadas, middleware global, route guards, re-autenticación, CSS modular, documentación completa en Docs/. |
 | 0.1.1 | 2026-04-15 | Corrección typo Roll→Role, 201 Created en POSTs, validación CarreraId, EnsureFileExists, SemaphoreSlim, middleware errores, Data Annotations. |
 | 0.1.0 | 2026-03-01 | Backend JSON files (CrudJsonService), herencia Persona, 4 controladores, frontend Vue 3 + Element Plus básico, inscripción pública, listados. |

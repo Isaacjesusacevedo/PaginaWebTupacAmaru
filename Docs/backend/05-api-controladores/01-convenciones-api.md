@@ -9,8 +9,8 @@
 | **Status Codes** | 200, 201, 204, 400, 401, 403, 404, 409, 500 |
 | **Content-Type** | `application/json` (request & response) |
 | **Auth** | JWT Bearer Token en header `Authorization: Bearer <token>` |
-| **CORS** | Permitido todo origen/método/headers (desarrollo) |
-| **Error Format** | `{ "error": "mensaje descriptivo" }` |
+| **CORS** | `AllowAnyOrigin()` (dev) - policy "VueCors" |
+| **Response Wrapper** | `ApiResponse<T>` en todos los endpoints |
 | **Base URL (Dev)** | `http://localhost:5127` |
 
 ---
@@ -31,60 +31,84 @@
 
 ---
 
-## Estructura de Respuestas
+## Estructura de Respuestas (ApiResponse<T> Wrapper)
+
+**Todos los endpoints retornan `ApiResponse<T>`** (definido en `Instituto.API.Models.ApiModels`):
 
 ### Éxito - Colección (GET All)
 ```json
-[
-  { "id": 1, "nombre": "Juan", "apellido": "Pérez", ... },
-  { "id": 2, "nombre": "María", "apellido": "Gómez", ... }
-]
+{
+  "isSuccess": true,
+  "message": "Operación exitosa",
+  "data": [
+    { "id": 1, "nombre": "Juan", "apellido": "Pérez", ... },
+    { "id": 2, "nombre": "María", "apellido": "Gómez", ... }
+  ]
+}
 ```
 
 ### Éxito - Elemento Único (GET ById, POST, PUT)
 ```json
-{ "id": 1, "nombre": "Juan", "apellido": "Pérez", "email": "juan@test.com", ... }
+{
+  "isSuccess": true,
+  "message": "Operación exitosa",
+  "data": { "id": 1, "nombre": "Juan", "apellido": "Pérez", "email": "juan@test.com", ... }
+}
 ```
 
 ### Éxito - Login (POST /api/auth/login)
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiraEn": "2026-09-25T20:30:00Z",
-  "admin": {
-    "id": 1,
-    "nombre": "Admin",
-    "apellido": "Principal",
-    "email": "admin@tupac.edu",
-    "role": "Admin"
+  "isSuccess": true,
+  "message": "Operación exitosa",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiraEn": "2026-09-25T20:30:00Z",
+    "admin": {
+      "id": 1,
+      "nombre": "Admin",
+      "apellido": "Principal",
+      "email": "admin@tupac.edu",
+      "role": "Admin"
+    }
   }
 }
 ```
 
 ### Error (4xx, 5xx)
 ```json
-{ "error": "Email o contraseña incorrectos." }
+{
+  "isSuccess": false,
+  "message": "Email o contraseña incorrectos.",
+  "data": null
+}
 ```
 
 ### Error Validación (400 ModelState)
 ```json
 {
-  "Email": ["El email es obligatorio."],
-  "Password": ["La contraseña debe tener al menos 6 caracteres."]
+  "isSuccess": false,
+  "message": "Errores de validación",
+  "data": {
+    "Email": ["El email es obligatorio."],
+    "Password": ["La contraseña debe tener al menos 6 caracteres."]
+  }
 }
 ```
+
+> **Nota**: El frontend desempaqueta automáticamente con el composable `useAuth` / llamadas fetch directas.
 
 ---
 
 ## Convenciones de Nombres en JSON
 
-- **Propiedades**: PascalCase (coincide con C# models)
+- **Propiedades**: **camelCase** (configurado `JsonNamingPolicy.CamelCase` en Program.cs)
   ```json
-  { "Nombre": "Juan", "FechaNacimiento": "2000-01-15T00:00:00" }
+  { "nombre": "Juan", "fechaNacimiento": "2000-01-15T00:00:00" }
   ```
-- **Enums/Strings**: Valores tal cual (`"Role": "Admin"`, `"Estado": "Activa"`)
+- **Enums/Strings**: Valores tal cual (`"role": "Admin"`, `"estado": "Activa"`)
 - **Fechas**: ISO 8601 (`"2026-09-25T15:30:00Z"`)
-- **Nulls**: Omitidos o `null` explícito (configurado `JsonIgnoreCondition.WhenWritingNull`)
+- **Nulls**: Omitidos (`JsonIgnoreCondition.WhenWritingNull`)
 
 ---
 
@@ -123,7 +147,7 @@ GET /api/alumnos?page=1&pageSize=20&search=perez&carreraId=3
 
 ---
 
-## Endpoints por Módulo (Actualizados)
+## Endpoints por Módulo (Actualizados - Código Real)
 
 | Módulo | Endpoints | Auth |
 |--------|-----------|------|
@@ -135,9 +159,48 @@ GET /api/alumnos?page=1&pageSize=20&search=perez&carreraId=3
 | | `POST /api/alumnos` | **Público** (inscripción) |
 | **Administradores** | `GET/POST/PUT/DELETE /api/administradores` | JWT |
 | | `PUT /api/administradores/{id}/password` | JWT |
+| | `POST /api/administradores/with-password` | JWT (crear con pass) |
 | **Profesores** | `GET/POST/PUT/DELETE /api/profesores` | JWT |
 | **Formularios** | `GET/POST/PUT/DELETE /api/formularios` | JWT |
-| **Listados** | `GET /api/listado` | JWT |
+| **Listados** | `GET /api/listado` (join Alumno+Carrera) | JWT |
+
+---
+
+## Detalle de Endpoints Especiales
+
+### POST /api/administradores/with-password
+Crear administrador con password (el POST normal retorna 400 indicando usar este endpoint):
+```json
+// Request
+{
+  "nombre": "Juan",
+  "apellido": "Pérez",
+  "email": "juan@test.com",
+  "role": "Admin",
+  "password": "Password123"
+}
+```
+
+### PUT /api/administradores/{id}/password
+Cambio de password (requiere password actual):
+```json
+// Request
+{
+  "passwordActual": "Password123",
+  "nuevaPassword": "NewPassword456"
+}
+```
+
+### POST /api/auth/verify-password
+Verificar password actual (para operaciones sensibles):
+```json
+// Request
+{ "password": "Password123" }
+// Response: { "isSuccess": true, "message": "Contraseña verificada correctamente" }
+```
+
+### POST /api/setup/admin
+Solo en `Environment.IsDevelopment()`. Retorna 404 en producción. Solo funciona si no hay admins.
 
 ---
 

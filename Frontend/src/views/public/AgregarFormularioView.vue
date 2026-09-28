@@ -104,18 +104,25 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
+import { apiPost } from '@/composables/useApiFetch'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
-const { authHeaders } = useAuth()
-const API = import.meta.env.VITE_API_URL
 
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-const formulario = reactive({
+interface FormularioForm {
+  nombre: string
+  estado: 'Borrador' | 'Abierto' | 'Cerrado'
+  fechaApertura: string
+  fechaCierre: string
+  descripcion: string
+}
+
+const formulario = reactive<FormularioForm>({
   nombre: '',
-  estado: 'Borrador' as 'Borrador' | 'Abierto' | 'Cerrado',
+  estado: 'Borrador',
   fechaApertura: '',
   fechaCierre: '',
   descripcion: ''
@@ -137,27 +144,20 @@ const guardarFormulario = async () => {
     error.value = 'La fecha de cierre es obligatoria'
     return
   }
+  if (formulario.fechaCierre <= formulario.fechaApertura) {
+    error.value = 'La fecha de cierre debe ser posterior a la de apertura'
+    return
+  }
 
   loading.value = true
 
   try {
-    const res = await fetch(`${API}/api/formularios`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify(formulario)
-    })
+    const res = await apiPost('/api/formularios', formulario)
 
-    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-
-    alert('Formulario guardado correctamente')
+    ElMessage.success('Formulario guardado correctamente')
     router.push('/formularios')
-  } catch (err: unknown) {
-    console.error(err)
-    if (err instanceof Error) {
-      error.value = err.message
-    } else {
-      error.value = 'Error al guardar el formulario'
-    }
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Error al guardar el formulario'
   } finally {
     loading.value = false
   }

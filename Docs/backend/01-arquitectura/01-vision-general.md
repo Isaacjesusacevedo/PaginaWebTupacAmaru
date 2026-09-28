@@ -28,7 +28,7 @@ El backend del **Instituto Tupac Amaru** es una **API REST** construida con **AS
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    SQL SERVER (Express)                      │
+│                    SQL SERVER (Express / LocalDB)            │
 │         Tablas: Administradores, Alumnos, Carreras,         │
 │                 Profesores, Formularios                      │
 └─────────────────────────────────────────────────────────────┘
@@ -38,33 +38,33 @@ El backend del **Instituto Tupac Amaru** es una **API REST** construida con **AS
 
 | Capa | Proyecto | Responsabilidad | Tecnologías |
 |------|----------|-----------------|-------------|
-| **API** | `Instituto.API` | Controllers, Middleware, DI, Config | ASP.NET Core 9, JWT, CORS |
-| **BR** | `Instituto.BR` | Business Logic, Validaciones, Orquestación | BCrypt, DTOs, Interfaces |
-| **AD** | `Instituto.AD` | Data Access, Repositorios, SQL, ADO.NET | `Microsoft.Data.SqlClient`, `AccesoDB` |
+| **API** | `Instituto.API` | Controllers, Middleware, DI, Config, Global Exception Handler | ASP.NET Core 9, JWT, CORS |
+| **BR** | `Instituto.BR` | Business Logic, Validaciones, Orquestación, Result Pattern | BCrypt, DTOs, Interfaces |
+| **AD** | `Instituto.AD` | Data Access, Repositorios, SQL, ADO.NET (`AccesoDB`) | `Microsoft.Data.SqlClient`, `AccesoDB` |
 
 ## Principios de Diseño
 
 | Principio | Implementación |
 |-----------|----------------|
 | **Separation of Concerns** | Controllers (API) → Services (BR) → Repositories (AD) |
-| **Dependency Inversion** | Interfaces `ICrudJsonService<T>`, `IAdminAuthService`, `IRepository` |
+| **Dependency Inversion** | Interfaces `ICrudService<T>`, `IAdministradorService`, `IRepository` |
 | **Single Responsibility** | Un servicio por entidad, un controlador por recurso |
 | **DRY** | `AccesoDB` base + Repositorios tipados con helpers reutilizables |
-| **Security by Default** | `[Authorize]` global, `[AllowAnonymous]` explícito |
+| **Security by Default** | `[Authorize]` global (Program.cs), `[AllowAnonymous]` explícito |
 | **Fail Fast** | Validaciones tempranas, excepciones tipadas (`EntityNotFoundException`, `PersistenceException`) |
 | **Layer Isolation** | API no conoce AD, BR no conoce API ni AD directamente |
 
-## Tecnologías Principales
+## Tecnologías Principales (Versiones Exactas)
 
 | Componente | Tecnología | Versión |
 |------------|------------|---------|
 | Framework | ASP.NET Core | 9.0 |
-| Base de Datos | SQL Server (Express) | 2022+ |
-| Data Access | ADO.NET (`Microsoft.Data.SqlClient`) | 5.2.2 |
+| Base de Datos | SQL Server (Express / LocalDB) | 2022+ |
+| Data Access | ADO.NET (`Microsoft.Data.SqlClient`) | 5.2+ |
 | Auth | JWT Bearer Tokens | 9.0.5 |
-| Hashing | BCrypt.Net-Next | 4.0.3 |
-| Serialización | System.Text.Json | Built-in |
-| Testing | MSTest + Moq | 3.6.4 / 4.20.72 |
+| Hashing | BCrypt.Net-Next | 4.0.3 (workFactor: 12) |
+| Serialización | System.Text.Json | Built-in (CamelCase) |
+| Testing | MSTest + Moq | 3.6+ / 4.20+ |
 
 ## Flujo de Request Típico
 
@@ -72,24 +72,24 @@ El backend del **Instituto Tupac Amaru** es una **API REST** construida con **AS
 1. HTTP Request llega a Kestrel
         │
         ▼
-2. Middleware Pipeline:
-   - Exception Handler (global)
+2. Middleware Pipeline (Program.cs):
+   - Global Exception Handler (UseExceptionHandler)
    - Routing
-   - CORS
-   - Authentication (JWT validation)
+   - CORS ("VueCors" policy)
+   - Authentication (JWT Bearer validation)
    - Authorization (policy/role check)
         │
         ▼
 3. Controller Action ejecutada
         │
         ▼
-4. Service Layer (BR) - Lógica de negocio + validaciones
+4. Service Layer (BR) - Lógica de negocio + validaciones + Result Pattern
         │
         ▼
 5. Repository (AD) - SQL parameterizado via AccesoDB
         │
         ▼
-6. Response serializada a JSON
+6. Response serializada a JSON (ApiResponse<T> wrapper)
         │
         ▼
 7. HTTP Response
@@ -98,8 +98,34 @@ El backend del **Instituto Tupac Amaru** es una **API REST** construida con **AS
 ## Convenciones de Código
 
 - **Naming**: PascalCase para tipos/miembros públicos, camelCase para parámetros/privados
-- **Async**: Todas las operaciones I/O son `async`/`await`
+- **Async**: Todas las operaciones I/O son `async`/`await` (excepto AccesoDB que es sync)
 - **Nullability**: `<Nullable>enable</Nullable>` en csproj
 - **Records**: Para DTOs inmutables (`LoginDto`, `AdminResult`, `SetupAdminDto`, `ServiceResult<T>`)
-- **Interfaces**: Prefijo `I` (`IRepository`, `ICrudJsonService<T>`, `IAdminAuthService`)
+- **Interfaces**: Prefijo `I` (`IRepository`, `ICrudService<T>`, `IAdministradorService`)
 - **Result Pattern**: `ServiceResult<T>` para respuestas de servicios con éxito/fallo tipados
+- **Response Wrapper**: `ApiResponse<T>` en controladores (camelCase JSON)
+
+## Configuración Real (appsettings)
+
+```json
+// appsettings.Development.json (SQL Auth)
+{
+  "ConnectionStrings": {
+    "SqlServer": "Server=localhost;Database=InstitutoDB;User Id=instituto_user;Password=Instituto2026;TrustServerCertificate=True;"
+  },
+  "Jwt": {
+    "Key": "Tupac@Amaru#Instituto!JWT$2026*Clave&MuySecreta=32chars",
+    "Issuer": "InstitutoTupacAmaru",
+    "Audience": "InstitutoTupacAmaruAdmin"
+  }
+}
+```
+
+```json
+// appsettings.json (LocalDB - Windows Auth)
+{
+  "ConnectionStrings": {
+    "SqlServer": "Server=(localdb)\\MSSQLLocalDB;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;"
+  }
+}
+```

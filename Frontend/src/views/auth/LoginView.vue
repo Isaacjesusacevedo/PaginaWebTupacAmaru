@@ -77,36 +77,37 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
-const router   = useRouter()
+const router = useRouter()
 const { guardarSesion } = useAuth()
 
-const email    = ref('')
+const email = ref('')
 const password = ref('')
-const loading  = ref(false)
-const error    = ref<string | null>(null)
+const loading = ref(false)
+const error = ref<string | null>(null)
 const showPassword = ref(false)
 
 const API = import.meta.env.VITE_API_URL
 
 const login = async () => {
-  error.value   = null
+  error.value = null
   loading.value = true
 
   try {
     const res = await fetch(`${API}/api/auth/login`, {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ email: email.value, password: password.value })
+      body: JSON.stringify({ email: email.value, password: password.value })
     })
 
-    const data = await res.json()
+    const json = await res.json()
 
-    if (!res.ok) {
-      error.value = data.error ?? 'No se pudo iniciar sesión.'
+    if (!res.ok || !json.isSuccess || !json.data?.token) {
+      error.value = json.message ?? 'Email o contraseña incorrectos.'
       return
     }
 
-    guardarSesion(data.token, data.admin)
+    // Acceder a json.data.token y json.data.admin (desenvolver wrapper manualmente)
+    guardarSesion(json.data.token, json.data.admin)
     router.push('/')
 
   } catch {

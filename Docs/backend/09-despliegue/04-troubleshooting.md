@@ -10,11 +10,14 @@
 **Causa**: BD no existe o login sin permisos.
 **Solución**:
 ```bash
-# Verificar BD existe
+# Verificar BD existe (LocalDB)
 sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT name FROM sys.databases WHERE name = 'InstitutoDB'"
 
-# Ejecutar script creación
-sqlcmd -S "(localdb)\MSSQLLocalDB" -i backend/Database/CreateDatabase.sql
+# Verificar BD existe (SQL Auth - desarrollo actual)
+sqlcmd -S localhost -U instituto_user -P "Instituto2026" -Q "SELECT name FROM sys.databases WHERE name = 'InstitutoDB'"
+
+# Ejecutar script creación (usar DDL documentado en docs/)
+sqlcmd -S "(localdb)\MSSQLLocalDB" -i create_instituto_db.sql
 
 # Verificar permisos (producción)
 # GRANT CONNECT, SELECT, INSERT, UPDATE, DELETE ON DATABASE::InstitutoDB TO [app_user];
@@ -126,11 +129,12 @@ app.UseCors("VueCors");         // USO después de UseRouting
 **Solución**:
 ```bash
 # Verificar backend
-curl http://localhost:5089/
+curl http://localhost:5127/
 # Debe responder "Backend corriendo correctamente!"
 
-# Verificar puerto en vite.config.ts proxy
-server: { proxy: { '/api': { target: 'http://localhost:5089' } } }
+# Verificar VITE_API_URL en Frontend/.env
+cat Frontend/.env
+# Debe ser: VITE_API_URL=http://localhost:5127
 ```
 
 #### `CORS error en browser console`
@@ -174,17 +178,17 @@ ORDER BY total_elapsed_time DESC;
 
 ```bash
 # 1. API viva
-curl http://localhost:5089/
+curl http://localhost:5127/
 
 # 2. BD conectada (si health check configurado)
-curl http://localhost:5089/health
+curl http://localhost:5127/health
 
 # 3. Auth funciona
-curl -X POST http://localhost:5089/api/auth/login -d '{"email":"x","password":"y"}'
+curl -X POST http://localhost:5127/api/auth/login -d '{"email":"x","password":"y"}'
 # Debe dar 401 (no 500)
 
 # 4. Endpoint protegido
-curl -H "Authorization: Bearer <token>" http://localhost:5089/api/administradores
+curl -H "Authorization: Bearer <token>" http://localhost:5127/api/administradores
 # Debe dar 200 (no 401/403)
 ```
 
@@ -204,9 +208,9 @@ curl -H "Authorization: Bearer <token>" http://localhost:5089/api/administradore
 
 ```bash
 # Ver puertos en uso
-netstat -ano | findstr :5089
+netstat -ano | findstr :5127
 # o
-ss -tlnp | grep 5089
+ss -tlnp | grep 5127
 
 # Ver procesos .NET
 dotnet-trace ps
@@ -216,8 +220,11 @@ ps aux | grep dotnet
 # Ver variables de entorno efectivas
 dotnet run --environment Production --dry-run 2>&1 | head -20
 
-# Test connection string
+# Test connection string (LocalDB)
 sqlcmd -S "(localdb)\MSSQLLocalDB" -d InstitutoDB -Q "SELECT 1"
+
+# Test connection string (SQL Auth - desarrollo)
+sqlcmd -S localhost -U instituto_user -P "Instituto2026" -d InstitutoDB -Q "SELECT 1"
 
 # Verificar JWT key length
 echo -n "TuJwtKeyAqui" | wc -c  # Debe dar >= 32

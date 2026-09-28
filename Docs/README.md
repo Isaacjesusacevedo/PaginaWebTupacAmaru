@@ -6,6 +6,7 @@
 Docs/
 ├── backend/          # Documentación del Backend (ASP.NET Core 9)
 ├── frontend/         # Documentación del Frontend (Vue 3 + Vite)
+├── DATABASE.md       # Documentación completa de la BD (snapshot, DDL, datos)
 └── README.md         # Este archivo
 ```
 
@@ -13,7 +14,7 @@ Docs/
 
 ## Backend (ASP.NET Core 9)
 
-**Tecnologías**: .NET 9, SQL Server (Express), JWT Bearer, BCrypt, ADO.NET (`Microsoft.Data.SqlClient`)
+**Tecnologías**: .NET 9, SQL Server (Express / LocalDB / SQL Auth), JWT Bearer, BCrypt, ADO.NET (`Microsoft.Data.SqlClient`)
 
 ### [Arquitectura](./backend/01-arquitectura/)
 - [Visión General](./backend/01-arquitectura/01-vision-general.md) — Diagramas, principios, stack tecnológico
@@ -22,7 +23,7 @@ Docs/
 
 ### [Base de Datos](./backend/02-base-de-datos/)
 - [Esquema BD](./backend/02-base-de-datos/01-esquema-bd.md) — ER diagram, tablas, columnas, índices, FKs
-- [Script de Creación](./backend/02-base-de-datos/02-script-creacion.md) — `CreateDatabase.sql` completo y ejecución
+- [Script de Creación](./backend/02-base-de-datos/02-script-creacion.md) — DDL completo (el archivo `CreateDatabase.sql` **no está en el repo**; ver este doc)
 - [Migraciones](./backend/02-base-de-datos/03-migraciones.md) — Estrategia manual, patrones ALTER, versionado
 
 ### [Modelos](./backend/03-modelos/)
@@ -32,7 +33,7 @@ Docs/
 
 ### [Servicios](./backend/04-servicios/)
 - [Capa de Servicios](./backend/04-servicios/01-capa-servicios.md) — DI, `AccesoDB`, servicios CRUD, `AdminAuthService`
-- [AccesoDB](./backend/04-servicios/02-accsodb.md) — Template methods, `ExecuteReader/NonQuery/Scalar`, manejo parámetros
+- [AccesoDB](./backend/04-servicios/02-sqlserverbaseservice.md) — Template methods, `ExecuteReader/NonQuery/Scalar`, manejo parámetros
 - [Servicios CRUD](./backend/04-servicios/03-servicios-crud.md) — Detalle 6 servicios: Admin, Alumno, Carrera, Profesor, Formulario, Listado
 - [Servicio Auth](./backend/04-servicios/04-auth-service.md) — Login, BCrypt work factor 12, setup inicial, JWT claims, change-password
 
@@ -57,7 +58,7 @@ Docs/
 - [Manejo Global](./backend/07-excepciones/02-manejo-global-errores.md) — Exception handler, formatos, logging, Problem Details
 
 ### [Configuración](./backend/08-configuracion/)
-- [AppSettings](./backend/08-configuracion/01-appsettings.md) — JSON structure, ConnectionStrings (SQLEXPRESS), JWT, logging
+- [AppSettings](./backend/08-configuracion/01-appsettings.md) — JSON structure, ConnectionStrings (SQL Auth / LocalDB), JWT, logging
 - [Variables de Entorno](./backend/08-configuracion/02-variables-entorno.md) — Dev/Staging/Prod, Docker, K8s, Azure, AWS
 - [CORS y Middleware](./backend/08-configuracion/03-cors-middleware.md) — Pipeline orden, políticas, producción
 
@@ -88,26 +89,33 @@ Docs/
 
 ### Backend
 ```bash
-# 1. Crear BD en SQL Server Express (SSMS / Azure Data Studio / VS Code)
-# Archivo: Instituto.API/Database/CreateDatabase.sql
+# 1. Base de Datos (SQL Server)
+# Opción A: SQL Server Express / Developer Edition
+#   Conectar con SSMS / Azure Data Studio / VS Code
+#   Crear BD 'InstitutoDB' y ejecutar DDL (ver docs/backend/02-base-de-datos/02-script-creacion.md)
+#
+# Opción B: LocalDB (desarrollo)
+#   Se crea automáticamente al ejecutar la API con appsettings.json
 
-# 2. Configurar connection string en appsettings.Development.json
-# Ya configurado para SQLEXPRESS: "Server=DESKTOP-DQ8JUA\\G;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;"
+# 2. Configurar connection string en appsettings.Development.json (SQL Auth)
+# "Server=localhost;Database=InstitutoDB;User Id=instituto_user;Password=Instituto2026;TrustServerCertificate=True;"
 
 # 3. Compilar y ejecutar
 cd Instituto.API
 dotnet run --environment Development
-# → http://localhost:5127 | https://localhost:7217
+# → http://localhost:5127 | https://localhost:7244
 
-# 4. Crear primer admin (una sola vez)
-curl -X POST http://localhost:5127/api/setup/admin -H "Content-Type: application/json" -d '{"nombre":"Admin","apellido":"Sistema","email":"admin@tupac.edu","password":"AdminSeguro2026!","role":"Admin"}'
+# 4. Crear primer admin (una sola vez, solo en Development)
+curl -X POST http://localhost:5127/api/setup/admin \
+  -H "Content-Type: application/json" \
+  -d '{"nombre":"Super","apellido":"Admin","email":"admin@tupac.edu.ar","password":"Password123","role":"SuperAdmin"}'
 ```
 
 ### Frontend
 ```bash
 cd Frontend
 npm install
-npm run dev  # http://localhost:5173 (proxy a backend:5127)
+npm run dev  # → http://localhost:5176
 ```
 
 ---
@@ -117,6 +125,21 @@ npm run dev  # http://localhost:5173 (proxy a backend:5127)
 | Aspecto | Backend | Frontend |
 |---------|---------|----------|
 | **Base URL** | `http://localhost:5127` | `VITE_API_URL=http://localhost:5127` |
-| **Auth** | JWT Bearer 8hs | `sessionStorage` + `useAuth` |
+| **Auth** | JWT Bearer 8h | `sessionStorage` + `useAuth` |
 | **CORS** | `AllowAnyOrigin()` (dev) | Proxy Vite `/api` → 5127 |
 | **Endpoints** | Documentados en [05-api-controladores](./backend/05-api-controladores/) | Consumidos en [06-integracion-api](./frontend/10-frontend/06-integracion-api.md) |
+| **Response Wrapper** | `ApiResponse<T>` | Se desempaqueta en composables |
+
+---
+
+## 📋 Notas Importantes (Estado Actual)
+
+| Tema | Estado | Detalle |
+|------|--------|---------|
+| **Script DDL** | ❌ No en repo | Ver `docs/DATABASE.md` o `backend/02-base-de-datos/02-script-creacion.md` |
+| **Connection String** | ✅ Configurado | `appsettings.Development.json` (SQL Auth) + `appsettings.json` (LocalDB) |
+| **Soft Delete Admin** | ✅ Implementado | Índice UNIQUE parcial `WHERE Activo = 1` |
+| **Swagger/OpenAPI** | ❌ No configurado | Ver [convenciones-api.md](./backend/05-api-controladores/01-convenciones-api.md#documentación-openapiswagger-no-configurado) |
+| **Paginación** | ❌ No implementada | `GetAll` retorna todo |
+| **Tests Backend** | ✅ 44 passing | `dotnet test Instituto.sln` |
+| **Profesores Frontend** | ❌ Sin vistas | Backend CRUD completo ✅ |

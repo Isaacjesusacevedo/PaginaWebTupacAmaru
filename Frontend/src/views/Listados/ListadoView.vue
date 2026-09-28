@@ -64,7 +64,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useAuth } from '@/composables/useAuth'
+import { apiGet } from '@/composables/useApiFetch'
 
 interface AlumnoListado {
   alumnoId: number
@@ -76,18 +76,14 @@ interface AlumnoListado {
   edad: number
 }
 
-const { authHeaders } = useAuth()
-const API = import.meta.env.VITE_API_URL
-
 const listado = ref<AlumnoListado[]>([])
 const loading = ref(true)
 const error   = ref<string | null>(null)
 
 const cargarListado = async () => {
   try {
-    const res = await fetch(`${API}/api/listado`, { headers: authHeaders() })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    listado.value = await res.json()
+    const data = await apiGet<AlumnoListado[]>('/api/listado')
+    listado.value = data
   } catch (err) {
     console.error(err)
     error.value = 'No se pudo cargar el listado'

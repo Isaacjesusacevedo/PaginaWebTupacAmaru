@@ -9,45 +9,49 @@ cd SitioWebInstituto/instituto
 
 ## 2. Base de Datos
 
-### Ejecutar Script SQL
+> **Nota**: El archivo `CreateDatabase.sql` **no existe en el repo**. Usar el DDL documentado en:
+> - `docs/backend/02-base-de-datos/02-script-creacion.md`
+> - `docs/DATABASE.md`
+
+### Ejecutar DDL (Script Documentado)
 
 **Opción A: SSMS (GUI)**
 1. Abrir SQL Server Management Studio
-2. Conectar a: `(localdb)\MSSQLLocalDB` (Windows Auth)
-3. Archivo → Abrir → `backend/Database/CreateDatabase.sql`
+2. Conectar a: `localhost` (SQL Auth: `instituto_user` / `Instituto2026`) o `(localdb)\MSSQLLocalDB` (Windows Auth)
+3. Nueva consulta → Pegar DDL de `docs/backend/02-base-de-datos/02-script-creacion.md`
 4. Ejecutar (F5)
 
-**Opción B: Línea de comandos**
+**Opción B: Línea de comandos (LocalDB)**
 ```bash
-cd backend
-sqlcmd -S "(localdb)\MSSQLLocalDB" -i Database/CreateDatabase.sql
+sqlcmd -S "(localdb)\MSSQLLocalDB" -i create_instituto_db.sql
 ```
 
-**Opción C: PowerShell**
-```powershell
-Invoke-Sqlcmd -ServerInstance "(localdb)\MSSQLLocalDB" -InputFile "backend/Database/CreateDatabase.sql"
+**Opción C: sqlcmd con SQL Auth**
+```bash
+sqlcmd -S localhost -U instituto_user -P "Instituto2026" -i create_instituto_db.sql
 ```
 
 **Verificación**:
 ```sql
 USE InstitutoDB;
 SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';
--- Debe retornar: Administradores, Alumnos, Carreras, Profesores
+-- Debe retornar: Administradores, Alumnos, Carreras, Formularios, Profesores
 ```
 
 ## 3. Configuración Backend
 
 ### Development (Local)
 ```bash
-cd backend
+cd Instituto.API
 
-# Opción A: User Secrets (recomendado)
+# Opción A: User Secrets (recomendado para LocalDB)
 dotnet user-secrets init
 dotnet user-secrets set "ConnectionStrings:SqlServer" "Server=(localdb)\MSSQLLocalDB;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;"
 dotnet user-secrets set "Jwt:Key" "TuClaveDesarrollo32CharsMinimo!!!"
 
-# Opción B: appsettings.Development.json (ya existe con valores por defecto)
-# Editar si necesario
+# Opción B: appsettings.Development.json (ya existe con SQL Auth para localhost)
+# Server=localhost;Database=InstitutoDB;User Id=instituto_user;Password=Instituto2026;TrustServerCertificate=True;
+# No tocar si usas SQL Server local con usuario instituto_user
 ```
 
 ### Production
@@ -64,64 +68,67 @@ export ASPNETCORE_URLS="http://0.0.0.0:8080"
 ## 4. Restaurar Dependencias y Compilar
 
 ```bash
-cd backend
+cd Instituto.API
 dotnet restore
 dotnet build --configuration Release
 ```
 
-## 5. Crear Primer Administrador (Solo Primera Vez)
+## 5. Crear Primer Administrador (Solo Primera Vez, Solo Development)
 
 ```bash
 # Asegurar que backend esté corriendo en Development
+cd Instituto.API
 dotnet run --environment Development &
+# O en otra terminal
 
-# Esperar a "Now listening on: http://localhost:5089"
+# Esperar a "Now listening on: http://localhost:5127"
 
-# Crear admin
-curl -X POST http://localhost:5089/api/setup/admin \
+# Crear admin (endpoint solo disponible en Development)
+curl -X POST http://localhost:5127/api/setup/admin \
   -H "Content-Type: application/json" \
   -d '{
-    "nombre": "Admin",
-    "apellido": "Sistema",
-    "email": "admin@tupac.edu",
-    "password": "AdminSeguro2026!",
-    "role": "Admin"
+    "nombre": "Super",
+    "apellido": "Admin",
+    "email": "admin@tupac.edu.ar",
+    "password": "Password123",
+    "role": "SuperAdmin"
   }'
 
 # Respuesta esperada:
-# {"mensaje":"Administrador 'admin@tupac.edu' creado correctamente. Este endpoint ya no puede volver a usarse."}
+# {"isSuccess":true,"message":"Operación exitosa","data":"Administrador 'admin@tupac.edu.ar' creado correctamente. Este endpoint ya no puede volver a usarse."}
 ```
 
 ## 6. Verificar Login
 
 ```bash
-curl -X POST http://localhost:5089/api/auth/login \
+curl -X POST http://localhost:5127/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@tupac.edu","password":"AdminSeguro2026!"}'
+  -d '{"email":"admin@tupac.edu.ar","password":"Password123"}'
 
-# Respuesta: { "token": "...", "expiraEn": "...", "admin": {...} }
+# Respuesta (ApiResponse<LoginResponse>):
+# {"isSuccess":true,"message":"Operación exitosa","data":{"token":"...","expiraEn":"...","admin":{"id":1,"nombre":"Super","apellido":"Admin","email":"admin@tupac.edu.ar","role":"SuperAdmin"}}}
 ```
 
 ## 7. Probar Endpoints CRUD
 
 ```bash
-# Guardar token
+# Guardar token (extraer del login anterior)
 TOKEN="<token-del-login>"
 
 # Carreras (público GET)
-curl http://localhost:5089/api/carreras
+curl http://localhost:5127/api/carreras
 
 # Alumnos (auth)
-curl -H "Authorization: Bearer $TOKEN" http://localhost:5089/api/alumnos
+curl -H "Authorization: Bearer $TOKEN" http://localhost:5127/api/alumnos
 
 # Crear carrera (auth)
-curl -X POST http://localhost:5089/api/carreras \
+curl -X POST http://localhost:5127/api/carreras \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"nombre":"Tecnicatura en IA","duracionAnios":3,"estado":"Activa"}'
 
 # Listado (auth)
-curl -H "Authorization: Bearer $TOKEN" http://localhost:5089/api/listado
+curl -H "Authorization: Bearer $TOKEN" http://localhost:5127/api/listado
 ```
 
 ---
@@ -129,24 +136,15 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:5089/api/listado
 ## 8. Frontend (Vue 3) - Instalación Paralela
 
 ```bash
-cd ../Frondend
+cd ../Frontend
 npm install
 npm run dev
-# Abre http://localhost:5173
+# Abre http://localhost:5176
 ```
 
-**Configurar proxy** (ya incluido en `vite.config.ts`):
-```typescript
-export default defineConfig({
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5089',
-        changeOrigin: true
-      }
-    }
-  }
-})
+**No hay proxy Vite** - El frontend usa `fetch` directo a `VITE_API_URL=http://localhost:5127` (configurado en `.env`):
+```env
+VITE_API_URL=http://localhost:5127
 ```
 
 ---
@@ -155,7 +153,7 @@ export default defineConfig({
 
 ### Backend - Self-Contained
 ```bash
-cd backend
+cd Instituto.API
 dotnet publish -c Release -o ./publish --self-contained false
 # Copiar carpeta publish/ al servidor
 ```
@@ -167,7 +165,7 @@ dotnet publish -c Release -o ./publish
 
 ### Frontend - Build Estático
 ```bash
-cd ../Frondend
+cd ../Frontend
 npm run build
 # Copiar carpeta dist/ a servidor web (nginx/IIS/Apache)
 ```
@@ -185,8 +183,8 @@ After=network.target
 
 [Service]
 Type=notify
-WorkingDirectory=/var/www/instituto/backend
-ExecStart=/usr/bin/dotnet /var/www/instituto/backend/Backend.dll
+WorkingDirectory=/var/www/instituto/Instituto.API
+ExecStart=/usr/bin/dotnet /var/www/instituto/Instituto.API/Instituto.API.dll
 Restart=always
 RestartSec=10
 KillSignal=SIGINT

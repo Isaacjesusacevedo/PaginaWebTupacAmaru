@@ -85,7 +85,7 @@
 
 ---
 
-## appsettings.Development.json
+## appsettings.Development.json (SQL Auth - Usado Actualmente)
 
 ```json
 {
@@ -97,7 +97,7 @@
   },
 
   "ConnectionStrings": {
-    "SqlServer": "Server=(localdb)\\MSSQLLocalDB;Database=InstitutoDB;Trusted_Connection=True;TrustServerCertificate=True;"
+    "SqlServer": "Server=localhost;Database=InstitutoDB;User Id=instituto_user;Password=Instituto2026;TrustServerCertificate=True;"
   },
 
   "Jwt": {
@@ -108,9 +108,11 @@
 }
 ```
 
+- **Connection String**: SQL Server Authentication (usuario `instituto_user`)
 - **Jwt.Key real** (solo desarrollo)
-- Misma connection string que base
 - Logging más verbose si se desea
+
+> **Nota**: El archivo `appsettings.Development.json` **sí está en el repo** con credenciales de desarrollo. En producción usar variables de entorno / Key Vault.
 
 ---
 
@@ -238,9 +240,9 @@ var connStr = builder.Configuration.GetConnectionString("SqlServer")
 
 | Config | Development | Staging | Production |
 |--------|-------------|---------|------------|
-| `ConnectionStrings:SqlServer` | LocalDB | SQL Server Staging | SQL Server Prod |
-| `Jwt:Key` | User Secrets / appsettings.Development.json | Env Var / Key Vault | Env Var / Key Vault |
-| `Logging:LogLevel:Default` | Debug/Information | Warning | Warning/Error |
+| `ConnectionStrings:SqlServer` | SQL Auth (`instituto_user`) | SQL Server Staging | SQL Server Prod |
+| `Jwt:Key` | appsettings.Development.json (32 chars) | Env Var / Key Vault | Env Var / Key Vault |
+| `Logging:LogLevel:Default` | Information | Warning | Warning/Error |
 | `AllowedHosts` | `*` | `staging.tupac.edu` | `api.tupac.edu` |
 | `ASPNETCORE_ENVIRONMENT` | `Development` | `Staging` | `Production` |
-| `ASPNETCORE_URLS` | `http://localhost:5089` | `http://0.0.0.0:8080` | `http://0.0.0.0:8080` |
+| `ASPNETCORE_URLS` | `http://localhost:5127` | `http://0.0.0.0:8080` | `http://0.0.0.0:8080` |

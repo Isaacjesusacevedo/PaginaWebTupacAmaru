@@ -107,5 +107,5 @@ const idNum = Number(id)  // Conversión manual si se necesita number
 
 | Variable | Descripción | Ejemplo |
 |----------|-------------|---------|
-| `VITE_API_URL` | Base URL del backend API | `http://localhost:5089` |
+| `VITE_API_URL` | Base URL del backend API | `http://localhost:5127` |
 | `BASE_URL` | Base path del frontend (Vite) | `/` o `/app/` |

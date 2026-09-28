@@ -3,6 +3,7 @@ using Instituto.AD.Interfaces;
 using Instituto.AD.Models;
 using Instituto.BR.DTOs;
 using Instituto.BR.Interfaces;
+using Microsoft.Data.SqlClient;
 
 namespace Instituto.BR.Services;
 
@@ -33,16 +34,27 @@ public class AdministradorService : IAdministradorService
         if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
             return ServiceResult<Administrador>.Fail("La contraseña debe tener al menos 8 caracteres.");
 
+        // ⚠️ Normalizar ANTES de chequear duplicados
+        admin.Email = admin.Email.ToLower().Trim();
+
         if (_repository.ExistsByEmail(admin.Email))
             return ServiceResult<Administrador>.Fail("Ya existe un administrador con ese email.");
 
         admin.PasswordHash = BCryptNet.HashPassword(password, workFactor: 12);
-        admin.Email = admin.Email.ToLower().Trim();
         admin.Activo = true;
         admin.FechaCreacion = DateTime.Now;
 
-        var created = _repository.Create(admin);
-        return ServiceResult<Administrador>.Ok(created, "Administrador creado correctamente.");
+        try
+        {
+            var created = _repository.Create(admin);
+            return ServiceResult<Administrador>.Ok(created, "Administrador creado correctamente.");
+        }
+        catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
+        {
+            // 2627 = Violation of UNIQUE KEY constraint
+            // 2601 = Cannot insert duplicate key row with unique index
+            return ServiceResult<Administrador>.Fail("Ya existe un administrador con ese email.");
+        }
     }
 
     public ServiceResult<Administrador> Update(int id, Administrador admin)
@@ -63,17 +75,25 @@ public class AdministradorService : IAdministradorService
         if (existing == null)
             return ServiceResult<Administrador>.Fail($"El administrador con Id {id} no existe.");
 
+        // ⚠️ Normalizar ANTES de comparar
+        admin.Email = admin.Email.ToLower().Trim();
+
         if (!existing.Email.Equals(admin.Email, StringComparison.OrdinalIgnoreCase))
         {
             if (_repository.ExistsByEmail(admin.Email))
                 return ServiceResult<Administrador>.Fail("Ya existe un administrador con ese email.");
         }
 
-        admin.Email = admin.Email.ToLower().Trim();
-        _repository.Update(id, admin);
-        
-        var updated = _repository.GetById(id);
-        return ServiceResult<Administrador>.Ok(updated!, "Administrador actualizado correctamente.");
+        try
+        {
+            _repository.Update(id, admin);
+            var updated = _repository.GetById(id);
+            return ServiceResult<Administrador>.Ok(updated!, "Administrador actualizado correctamente.");
+        }
+        catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
+        {
+            return ServiceResult<Administrador>.Fail("Ya existe un administrador con ese email.");
+        }
     }
 
     public ServiceResult ChangePassword(int id, string passwordActual, string nuevaPassword)
@@ -96,7 +116,7 @@ public class AdministradorService : IAdministradorService
 
         var newHash = BCryptNet.HashPassword(nuevaPassword, workFactor: 12);
         _repository.UpdatePasswordHash(id, newHash);
-        
+
         return ServiceResult.Ok("Contraseña actualizada correctamente.");
     }
 
@@ -157,7 +177,7 @@ public class AdministradorService : IAdministradorService
 
         var newHash = BCryptNet.HashPassword(nuevaPassword, workFactor: 12);
         _repository.UpdatePasswordHash(admin.Id, newHash);
-        
+
         return ServiceResult.Ok("Contraseña actualizada correctamente.");
     }
 }

@@ -107,12 +107,11 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
+import { apiGet, apiPut } from '@/composables/useApiFetch'
+import { ElMessage } from 'element-plus'
 
-const route  = useRoute()
+const route = useRoute()
 const router = useRouter()
-const { authHeaders } = useAuth()
-const API = import.meta.env.VITE_API_URL
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -136,50 +135,38 @@ const carrera = reactive<Carrera>({
   horario: '',
   estado: 'Activa'
 })
-// Cargar datos de la carrera
-onMounted(async () => {
-  const id = Number(route.params.id)
 
-  if (!id || isNaN(id)) {
-    error.value = 'ID inválido'
-    return
-  }
+// ✅ Leer el ID de la ruta (más confiable que defineProps)
+const id = Number(route.params.id)
+
+if (isNaN(id) || id <= 0) {
+  ElMessage.error('ID de carrera inválido')
+  router.push('/carreras')
+}
+
+onMounted(async () => {
+  if (isNaN(id) || id <= 0) return
 
   try {
-    const res = await fetch(`${API}/api/carreras/${id}`)
-    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-
-    const data = await res.json()
+    const data = await apiGet<Carrera>(`/api/carreras/${id}`)
     Object.assign(carrera, data)
-  } catch {
-    error.value = 'No se pudieron cargar los datos de la carrera'
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'No se pudieron cargar los datos de la carrera'
   }
 })
 
 const guardarCarrera = async () => {
+  if (isNaN(id) || id <= 0) return
+
   loading.value = true
   error.value = null
 
-  const id = Number(route.params.id)
-
   try {
-    const res = await fetch(`${API}/api/carreras/${id}`, {
-      method:  'PUT',
-      headers: authHeaders(),
-      body:    JSON.stringify({ ...carrera, id })
-    })
-
-    if (!res.ok) {
-      const msg = await res.text()
-      throw new Error(msg || `Error HTTP ${res.status}`)
-    }
-
+    await apiPut(`/api/carreras/${id}`, { ...carrera, id })
+    ElMessage.success('Carrera actualizada correctamente')
     router.push('/carreras')
   } catch (err) {
-    error.value =
-      err instanceof Error
-        ? err.message
-        : 'Error al actualizar la carrera'
+    error.value = err instanceof Error ? err.message : 'Error al actualizar la carrera'
   } finally {
     loading.value = false
   }

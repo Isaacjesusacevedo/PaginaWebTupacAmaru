@@ -1,5 +1,7 @@
 # Esquema de Base de Datos
 
+> **Nota**: El archivo `CreateDatabase.sql` **no existe en el repositorio**. El DDL completo está documentado en [`02-script-creacion.md`](./02-script-creacion.md) y en [`docs/DATABASE.md`](../../DATABASE.md).
+
 ## Diagrama Entidad-Relación
 
 ```
@@ -9,21 +11,21 @@
 │ PK Id           │       │ PK Id           │
 │ Nombre          │       │ Nombre          │
 │ Apellido        │       │ DuracionAnios   │
-│ Email (UQ)      │       │ Turno           │
+│ Email (UQ*)     │       │ Turno           │
 │ PasswordHash    │       │ Modalidad       │
-│ Role            │       │ Horario         │
-│ Activo (bit)    │       │ Estado          │
-│ FechaCreacion   │       └────────┬────────┘
-└─────────────────┘                │
-                                   │ 1:N
-                                   ▼
+│ PasswordTemp    │       │ Horario         │
+│ Role            │       │ Estado          │
+│ Activo (bit)    │       └────────┬────────┘
+│ FechaCreacion   │                │
+└─────────────────┘                │ 1:N
+                                    ▼
 ┌─────────────────┐       ┌─────────────────┐
 │    ALUMNOS      │       │   PROFESORES    │
 ├─────────────────┤       ├─────────────────┤
 │ PK Id           │       │ PK Id           │
 │ Nombre          │       │ Nombre          │
 │ Apellido        │       │ Apellido        │
-│ Email           │       │ Email (UQ)      │
+│ Email (UQ)      │       │ Email (UQ)      │
 │ DNI (UQ)        │       │ Telefono        │
 │ FechaNacimiento │       │ Especialidad    │
 │ Direccion       │       └─────────────────┘
@@ -33,6 +35,7 @@
 │ TituloSecundario│
 │ Turno           │
 │ FK CarreraId ───┘
+│ FechaCreacion   │
 └─────────────────┘
 
 ┌─────────────────┐
@@ -46,109 +49,140 @@
 │ Descripcion     │
 │ FechaCreacion   │
 └─────────────────┘
+
+(*) UQ parcial: UNIQUE INDEX `UQ_Administradores_Email_Activo` WHERE Activo = 1
 ```
 
-## Tablas Detalladas
+## Tablas Detalladas (Basado en Código Real: Modelos + Repositorios)
 
 ### 1. Administradores
 
-| Columna | Tipo | Null | Default | Constraints | Descripción |
-|---------|------|------|---------|-------------|-------------|
-| Id | INT | NO | IDENTITY(1,1) | PK, CLUSTERED | Identificador único |
-| Nombre | NVARCHAR(100) | NO | | | Nombre(s) |
-| Apellido | NVARCHAR(100) | NO | | | Apellido(s) |
-| Email | NVARCHAR(255) | NO | | UNIQUE, INDEX | Login único |
-| PasswordHash | NVARCHAR(255) | NO | | | BCrypt hash (work factor 12) |
-| Role | NVARCHAR(50) | NO | 'Admin' | | 'Admin' / 'SuperAdmin' |
-| Activo | BIT | NO | 1 | | Soft delete flag |
-| FechaCreacion | DATETIME2 | NO | SYSDATETIME() | | Auditoría |
+| Columna | Tipo | Longitud | Nullable | Identity | Restricción | Default |
+|---------|------|----------|----------|----------|-------------|---------|
+| Id | int |  | NO | SÍ | PK |  |
+| Nombre | nvarchar | 100 | NO |  |  |  |
+| Apellido | nvarchar | 100 | NO |  |  |  |
+| Email | nvarchar | 150 | NO |  | UNIQUE (parcial) |  |
+| PasswordHash | nvarchar | 255 | NO |  |  |  |
+| PasswordTemp | nvarchar | 255 | SÍ |  |  |  |
+| Role | nvarchar | 50 | NO |  |  | 'Admin' |
+| Activo | bit |  | NO |  |  | 1 |
+| FechaCreacion | datetime |  | NO |  |  | GETDATE() |
 
 **Índices**:
 - PK: `Id` (clustered)
-- UNIQUE NONCLUSTERED: `Email`
-- NONCLUSTERED: `IX_Administradores_Email` (búsqueda login)
+- **UNIQUE NONCLUSTERED parcial**: `UQ_Administradores_Email_Activo` sobre `Email WHERE Activo = 1`
+  - Permite reutilizar emails de admins inactivos (soft delete)
+
+**Notas**:
+- Implementa **soft delete** (borrar lógico = `Activo = 0`)
+- `PasswordTemp` no se usa actualmente en el código (campo heredado)
+- Email se normaliza a lowercase en repositorio/servicio antes de guardar
+
+---
 
 ### 2. Carreras
 
-| Columna | Tipo | Null | Default | Constraints | Descripción |
-|---------|------|------|---------|-------------|-------------|
-| Id | INT | NO | IDENTITY(1,1) | PK | Identificador |
-| Nombre | NVARCHAR(200) | NO | | | Nombre carrera |
-| DuracionAnios | INT | NO | | CHECK (1-10) | Años de duración |
-| Turno | NVARCHAR(50) | YES | NULL | | Mañana/Tarde/Noche |
-| Modalidad | NVARCHAR(50) | YES | NULL | | Presencial/Virtual/Híbrida |
-| Horario | NVARCHAR(100) | YES | NULL | | Ej: "Lun-Vie 18-22hs" |
-| Estado | NVARCHAR(50) | NO | 'Activa' | | 'Activa'/'Inactiva' |
-| FechaCreacion | DATETIME2 | NO | SYSDATETIME() | | Auditoría |
+| Columna | Tipo | Longitud | Nullable | Identity | Restricción | Default |
+|---------|------|----------|----------|----------|-------------|---------|
+| Id | int |  | NO | SÍ | PK |  |
+| Nombre | nvarchar | 200 | NO |  |  |  |
+| DuracionAnios | int |  | NO |  | CHECK (1-10) en servicio |  |
+| Turno | nvarchar | 50 | SÍ |  |  |  |
+| Modalidad | nvarchar | 50 | SÍ |  |  |  |
+| Horario | nvarchar | 100 | SÍ |  |  |  |
+| Estado | nvarchar | 50 | SÍ |  |  | 'Activa' |
+| FechaCreacion | datetime |  | NO |  |  | GETDATE() |
+
+**Nota**: No usa soft delete. La FK de Alumnos impide borrar si hay alumnos (validado en `CarreraService.Delete`).
+
+---
 
 ### 3. Alumnos
 
-| Columna | Tipo | Null | Default | Constraints | Descripción |
-|---------|------|------|---------|-------------|-------------|
-| Id | INT | NO | IDENTITY(1,1) | PK | Identificador |
-| Nombre | NVARCHAR(100) | NO | | | Nombre(s) |
-| Apellido | NVARCHAR(100) | NO | | | Apellido(s) |
-| Email | NVARCHAR(255) | NO | | | Contacto |
-| DNI | INT | NO | | UNIQUE, CHECK(7-8 dígitos) | Documento único |
-| FechaNacimiento | DATE | NO | | | Para calcular edad |
-| Direccion | NVARCHAR(200) | YES | NULL | | Opcional |
-| Nacionalidad | NVARCHAR(100) | YES | NULL | | Opcional |
-| FechaInscripcion | DATETIME2 | NO | SYSDATETIME() | | Auto en CREATE |
-| Telefono | NVARCHAR(50) | YES | NULL | | Opcional |
-| TituloSecundario | NVARCHAR(200) | YES | NULL | | Opcional |
-| Turno | NVARCHAR(50) | YES | NULL | | Mañana/Tarde/Noche |
-| CarreraId | INT | NO | | FK → Carreras.Id | Obligatorio |
-| FechaCreacion | DATETIME2 | NO | SYSDATETIME() | | Auditoría |
+| Columna | Tipo | Longitud | Nullable | Identity | Restricción | Default |
+|---------|------|----------|----------|----------|-------------|---------|
+| Id | int |  | NO | SÍ | PK |  |
+| Nombre | nvarchar | 100 | NO |  |  |  |
+| Apellido | nvarchar | 100 | NO |  |  |  |
+| Email | nvarchar | 150 | NO |  | UNIQUE |  |
+| DNI | int |  | NO |  | UNIQUE |  |
+| FechaNacimiento | datetime |  | NO |  |  |  |
+| Direccion | nvarchar | 200 | SÍ |  |  |  |
+| Nacionalidad | nvarchar | 100 | SÍ |  |  |  |
+| FechaInscripcion | datetime |  | SÍ |  |  | GETDATE() |
+| Telefono | nvarchar | 50 | SÍ |  |  |  |
+| TituloSecundario | nvarchar | 200 | SÍ |  |  |  |
+| Turno | nvarchar | 50 | SÍ |  |  |  |
+| CarreraId | int |  | NO |  | **FK** → Carreras.Id |  |
+| FechaCreacion | datetime |  | NO |  |  | GETDATE() |
 
-**Índices**:
+**Relaciones**: `FK_Alumnos_Carreras` → `Carreras(Id)` ON DELETE NO ACTION
+
+**Índices** (recomendados):
 - PK: `Id`
-- UNIQUE NONCLUSTERED: `DNI`
-- NONCLUSTERED: `IX_Alumnos_CarreraId` (joins, filtros)
-- NONCLUSTERED: `IX_Alumnos_DNI` (búsqueda por documento)
+- UNIQUE: `Email`, `DNI`
+- NONCLUSTERED: `IX_Alumnos_CarreraId`
 
-**Foreign Key**:
-- `FK_Alumnos_Carreras`: `CarreraId` → `Carreras(Id)` ON DELETE NO ACTION
+**Edad**: Se calcula en C# (`Alumno.Edad` property), no en BD.
+
+---
 
 ### 4. Profesores
 
-| Columna | Tipo | Null | Default | Constraints | Descripción |
-|---------|------|------|---------|-------------|-------------|
-| Id | INT | NO | IDENTITY(1,1) | PK | Identificador |
-| Nombre | NVARCHAR(100) | NO | | | Nombre(s) |
-| Apellido | NVARCHAR(100) | NO | | | Apellido(s) |
-| Email | NVARCHAR(255) | NO | | UNIQUE | Contacto único |
-| Telefono | NVARCHAR(50) | YES | NULL | | Opcional |
-| Especialidad | NVARCHAR(100) | YES | NULL | | Área de enseñanza |
-| FechaCreacion | DATETIME2 | NO | SYSDATETIME() | | Auditoría |
+| Columna | Tipo | Longitud | Nullable | Identity | Restricción | Default |
+|---------|------|----------|----------|----------|-------------|---------|
+| Id | int |  | NO | SÍ | PK |  |
+| Nombre | nvarchar | 100 | NO |  |  |  |
+| Apellido | nvarchar | 100 | NO |  |  |  |
+| Email | nvarchar | 150 | NO |  | UNIQUE |  |
+| Telefono | nvarchar | 50 | SÍ |  |  |  |
+| Especialidad | nvarchar | 100 | SÍ |  |  |  |
+| FechaCreacion | datetime |  | NO |  |  | GETDATE() |
 
-**Índices**:
-- PK: `Id`
-- UNIQUE NONCLUSTERED: `Email`
-- NONCLUSTERED: `IX_Profesores_Email` (búsqueda)
+**Nota**: Sin soft delete, sin FK a otras tablas.
+
+---
 
 ### 5. Formularios
 
-| Columna | Tipo | Null | Default | Constraints | Descripción |
-|---------|------|------|---------|-------------|-------------|
-| Id | INT | NO | IDENTITY(1,1) | PK | Identificador |
-| Nombre | NVARCHAR(200) | NO | | | Nombre formulario |
-| Estado | NVARCHAR(20) | NO | 'Borrador' | CHECK ('Borrador','Abierto','Cerrado') | Estado flujo |
-| FechaApertura | DATETIME2 | NO | | | Inicio período |
-| FechaCierre | DATETIME2 | NO | | | Fin período |
-| Descripcion | NVARCHAR(1000) | YES | NULL | | Detalle opcional |
-| FechaCreacion | DATETIME2 | NO | SYSDATETIME() | | Auditoría |
+| Columna | Tipo | Longitud | Nullable | Identity | Restricción | Default |
+|---------|------|----------|----------|----------|-------------|---------|
+| Id | int |  | NO | SÍ | PK |  |
+| Nombre | nvarchar | 200 | NO |  |  |  |
+| Estado | nvarchar | 50 | NO |  |  | 'Borrador' |
+| FechaApertura | datetime |  | NO |  |  |  |
+| FechaCierre | datetime |  | NO |  |  |  |
+| Descripcion | nvarchar | 500 | SÍ |  |  |  |
+| FechaCreacion | datetime |  | NO |  |  | GETDATE() |
 
-**Estados válidos**: `Borrador`, `Abierto`, `Cerrado`
+**Estados válidos**: `Borrador`, `Abierto`, `Cerrado` (validado en servicio, no CHECK en BD actual)
 
-## Reglas de Negocio a Nivel BD
+---
+
+## Reglas de Negocio a Nivel BD (Implementadas en Servicios)
 
 1. **Soft Delete**: `Administradores.Activo = 0` en lugar de DELETE físico
-2. **Cascada**: NO hay ON DELETE CASCADE (integridad manual en servicios)
-3. **Unicidad**: Email único en Administradores y Profesores; DNI único en Alumnos
-4. **Checks**: `DuracionAnios 1-10`, `DNI 7-8 dígitos`, `Estado IN ('Borrador','Abierto','Cerrado')`
-5. **Defaults**: `Estado='Activa'`, `Activo=1`, `FechaCreacion=SYSDATETIME()`
-6. **Foreign Keys**: `Alumnos.CarreraId` → `Carreras.Id` (NO ACTION)
+2. **Sin Cascada**: NO hay ON DELETE CASCADE (integridad manual en servicios BR)
+3. **Unicidad**: 
+   - Email único en Administradores (solo activos), Profesores, Alumnos
+   - DNI único en Alumnos
+4. **Validaciones en Servicio (BR)**:
+   - `DuracionAnios 1-10` (`CarreraService`)
+   - `Password min 8 chars` (`AdministradorService`, `AlumnoService` no tiene password)
+   - `Estado IN ('Borrador','Abierto','Cerrado')` (`FormularioService`)
+5. **Defaults**: `Activo=1`, `FechaCreacion=GETDATE()`, `Estado='Activa'/'Borrador'`
+6. **FK**: `Alumnos.CarreraId` → `Carreras.Id` (NO ACTION, validado en servicio)
 
-## Script de Creación Completo
+---
 
-Ver: [`02-script-creacion.md`](./02-script-creacion.md) o archivo `Instituto.API/Database/CreateDatabase.sql`
+## Diferencias: Documentación Anterior vs Código Real
+
+| Aspecto | Doc Anterior | Código Real |
+|---------|--------------|-------------|
+| Admin Email UNIQUE | Total | **Parcial** (`WHERE Activo = 1`) |
+| Admin PasswordTemp | No documentado | Existe en modelo/tabla |
+| Alumno FechaCreacion | SYSDATETIME() | GETDATE() en INSERT |
+| Formulario Estado CHECK | En BD | En servicio (`FormularioService`) |
+| Carreras CHECK Duracion | En BD | En servicio (`CarreraService`) |
+| Script CreateDatabase.sql | En `Instituto.API/Database/` | **No existe en repo** |

@@ -86,7 +86,7 @@ ESLint 9 flat config con:
 
 ### `.env` / `.env.example`
 ```env
-VITE_API_URL=http://localhost:5089
+VITE_API_URL=http://localhost:5127
 ```
 - **`.env`** - Valores locales (no commitear secretos reales)
 - **`.env.example`** - Plantilla para el equipo
@@ -97,7 +97,7 @@ VITE_API_URL=http://localhost:5089
 
 | Variable | Descripción | Ejemplo Desarrollo | Ejemplo Producción |
 |----------|-------------|-------------------|-------------------|
-| `VITE_API_URL` | Base URL del backend | `http://localhost:5089` | `https://api.instituto.edu.ar` |
+| `VITE_API_URL` | Base URL del backend | `http://localhost:5127` | `https://api.instituto.edu.ar` |
 | `BASE_URL` | Base path del frontend (Vite) | `/` | `/app/` |
 
 **Acceso en código:** `import.meta.env.VITE_API_URL`

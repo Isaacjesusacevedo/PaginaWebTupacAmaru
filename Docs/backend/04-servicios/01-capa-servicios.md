@@ -203,19 +203,26 @@ public ServiceResult Delete(int id)
 ```csharp
 public interface IAdministradorService
 {
-    Task<AdminResult?> LoginAsync(string email, string password);
-    Task<bool> HayAdminsAsync();
-    Task CrearPrimerAdminAsync(SetupAdminDto dto);
+    List<Administrador> GetAll();
+    Administrador? GetById(int id);
+    ServiceResult<Administrador> Create(Administrador admin, string password);
+    ServiceResult<Administrador> Update(int id, Administrador admin);
     ServiceResult ChangePassword(int id, string passwordActual, string nuevaPassword);
+    ServiceResult Delete(int id);
+    AdminResult? Login(string email, string password);
+    bool HayAdmins();
+    Task<AdminResult?> CrearPrimerAdminAsync(SetupAdminDto dto);
     ServiceResult ChangePasswordByEmail(string email, string passwordActual, string nuevaPassword);
 }
 ```
 
+> **Nota**: `Login` es **síncrono** (no `async`). Solo `CrearPrimerAdminAsync` es `async` por convención de setup inicial.
+
 ### Implementación Detallada
 
-#### LoginAsync
+#### Login (Síncrono)
 ```csharp
-public async Task<AdminResult?> LoginAsync(string email, string password)
+public AdminResult? Login(string email, string password)
 {
     var admin = _repository.GetByEmail(email);
     if (admin == null) return null;
@@ -225,9 +232,10 @@ public async Task<AdminResult?> LoginAsync(string email, string password)
 }
 ```
 
-- **Case-insensitive email**: `Trim().ToLower()`
-- **Solo activos**: Repositorio filtra `Activo = 1`
+- **Case-insensitive email**: `Trim().ToLower()` (normalizado en repositorio)
+- **Solo activos**: Repositorio filtra `Activo = 1` en `GetByEmail`
 - **BCrypt verify**: Compara password plano vs hash almacenado
+- **Síncrono**: No usa `async/await` (repositorio ADO.NET es sync)
 
 #### CrearPrimerAdminAsync
 ```csharp

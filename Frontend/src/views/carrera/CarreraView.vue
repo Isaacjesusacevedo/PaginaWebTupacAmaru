@@ -85,6 +85,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { apiGet } from '@/composables/useApiFetch'
 
 interface Carrera {
   id: number
@@ -96,23 +97,17 @@ interface Carrera {
   estado: string
 }
 
-const API = import.meta.env.VITE_API_URL
-
 const carreras = ref<Carrera[]>([])
 const error = ref<string | null>(null)
 
 const cargarCarreras = async () => {
   try {
-    const res = await fetch(`${API}/api/carreras`)
-    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-    carreras.value = await res.json()
+    carreras.value = await apiGet<Carrera[]>('/api/carreras')
   } catch (err: unknown) {
     console.error('Error al cargar carreras:', err)
-    if (err instanceof Error) {
-      error.value = `No se pudieron cargar las carreras: ${err.message}`
-    } else {
-      error.value = 'No se pudieron cargar las carreras'
-    }
+    error.value = err instanceof Error
+      ? `No se pudieron cargar las carreras: ${err.message}`
+      : 'No se pudieron cargar las carreras'
   }
 }
 
