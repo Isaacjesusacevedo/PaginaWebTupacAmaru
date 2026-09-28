@@ -1,7 +1,7 @@
 <template>
   <header v-if="!ocultarNavbar" class="navbar">
     <div class="logo">
-      <RouterLink to="/"><img src="./logs/LogTupac.jpg" alt="Logo" /></RouterLink>
+      <RouterLink to="/"><img src=""></RouterLink>
     </div>
     <nav class="menu">
       <RouterLink to="/inscripcion">Inscripción</RouterLink>
