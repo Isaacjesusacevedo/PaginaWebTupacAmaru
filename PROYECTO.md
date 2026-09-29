@@ -997,9 +997,7 @@ Endpoints consumidos por módulo:
 VITE_API_URL=http://localhost:5127
 ```
 
-**vite.config.ts**: alias @ -> ./src, plugin Vue, devTools.
-
-**tsconfig.app.json**: strict mode, alias @/*, DOM lib.
+**vite.config.js**: alias @ -> ./src, plugin Vue, devTools.
 
 **Scripts disponibles:**
 ```bash

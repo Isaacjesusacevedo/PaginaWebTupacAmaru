@@ -25,7 +25,7 @@ Sistema web para el **Instituto Superior Docente Túpac Amaru** que centraliza l
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        CLIENTE (Navegador)                      │
-│  Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router │
+│  Vue 3 + JavaScript + Vite + Element Plus + Pinia + Vue Router │
 └────────────────────────────┬────────────────────────────────────┘
                              │ HTTPS / REST API + JWT
                              ▼
