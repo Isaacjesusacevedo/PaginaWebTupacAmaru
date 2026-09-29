@@ -4,7 +4,7 @@ import { useAuth } from '@/composables/useAuth'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    // ── Públicas ────────────────────────────────────────────────────────────
+    //  Públicas
     {
       path: '/',
       name: 'home',
@@ -22,7 +22,7 @@ const router = createRouter({
       component: () => import('../views/Listados/InscripciónView.vue')
     },
 
-    // ── Auth ────────────────────────────────────────────────────────────────
+    //  Auth
     {
       path: '/login',
       name: 'login',
@@ -30,7 +30,7 @@ const router = createRouter({
       meta: { soloInvitado: true }
     },
 
-    // ── Administración ──────────────────────────────────────────────────────
+    //  Administración
     {
       path: '/administracion',
       name: 'administracion',
@@ -58,7 +58,7 @@ const router = createRouter({
       props: true
     },
 
-    // ── Carreras ────────────────────────────────────────────────────────────
+    //  Carreras
     {
       path: '/carreras',
       name: 'carreras',
@@ -86,7 +86,7 @@ const router = createRouter({
       props: true
     },
 
-    // ── Formularios ─────────────────────────────────────────────────────────
+    //  Formularios
     {
       path: '/formularios',
       name: 'formularios',
@@ -114,7 +114,7 @@ const router = createRouter({
       props: true
     },
 
-    // ── Listados ────────────────────────────────────────────────────────────
+    //  Listados
     {
       path: '/listados',
       name: 'listados',
@@ -122,7 +122,7 @@ const router = createRouter({
       meta: { requiereAuth: true }
     },
 
-    // ── 404 ─────────────────────────────────────────────────────────────────
+    //  404
     {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
@@ -131,16 +131,16 @@ const router = createRouter({
   ]
 })
 
-// ── Navigation guard global ──────────────────────────────────────────────────
+//  Navigation guard global
 router.beforeEach((to) => {
   const { isAuthenticated } = useAuth()
   const autenticado = isAuthenticated()
 
-  // Ruta protegida y no hay sesión → redirigir al login
+  // Ruta protegida y no hay sesión  redirigir al login
   if (to.meta.requiereAuth && !autenticado)
     return { name: 'login' }
 
-  // Ya está logueado e intenta entrar al login → redirigir al inicio
+  // Ya está logueado e intenta entrar al login  redirigir al inicio
   if (to.meta.soloInvitado && autenticado)
     return { name: 'home' }
 })

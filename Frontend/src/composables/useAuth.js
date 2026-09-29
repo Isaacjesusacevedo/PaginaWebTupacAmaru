@@ -1,20 +1,12 @@
 const TOKEN_KEY = 'auth_token'
 const ADMIN_KEY = 'auth_admin'
 
-export interface AdminSession {
-  id: number
-  nombre: string
-  apellido: string
-  email: string
-  role: string
-}
-
 export function useAuth() {
   /**
    * Obtiene el token de sessionStorage.
    * Filtra tokens inválidos ("undefined", "null", vacíos o demasiado cortos).
    */
-  const getToken = (): string | null => {
+  const getToken = () => {
     const token = sessionStorage.getItem(TOKEN_KEY)
     if (!token || token === 'undefined' || token === 'null' || token.length < 20) {
       return null
@@ -22,19 +14,19 @@ export function useAuth() {
     return token
   }
 
-  const getAdmin = (): AdminSession | null => {
+  const getAdmin = () => {
     const raw = sessionStorage.getItem(ADMIN_KEY)
     if (!raw || raw === 'undefined' || raw === 'null') return null
     try {
-      return JSON.parse(raw) as AdminSession
+      return JSON.parse(raw)
     } catch {
       return null
     }
   }
 
-  const isAuthenticated = (): boolean => !!getToken()
+  const isAuthenticated = () => !!getToken()
 
-  const guardarSesion = (token: string, admin: AdminSession): void => {
+  const guardarSesion = (token, admin) => {
     // Validación defensiva: no guardar si el token es inválido
     if (!token || token === 'undefined' || token === 'null' || token.length < 20) {
       console.warn('[useAuth] Intentando guardar un token inválido:', token)
@@ -44,13 +36,13 @@ export function useAuth() {
     sessionStorage.setItem(ADMIN_KEY, JSON.stringify(admin))
   }
 
-  const cerrarSesion = (): void => {
+  const cerrarSesion = () => {
     sessionStorage.removeItem(TOKEN_KEY)
     sessionStorage.removeItem(ADMIN_KEY)
   }
 
   /** Devuelve los headers necesarios para llamadas autenticadas. */
-  const authHeaders = (): Record<string, string> => {
+  const authHeaders = () => {
     const token = getToken()
     return token
       ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }

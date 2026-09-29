@@ -76,8 +76,8 @@ onMounted(async () => {
     admin.value = data
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'No se pudo cargar el administrador'
-  })
-}
+  }
+})
 
 const eliminarAdministrador = async () => {
   loading.value = true
