@@ -17,14 +17,14 @@ Hooks de Vue 3 con lógica reactiva reutilizable.
 
 | Archivo | Descripción |
 |---------|-------------|
-| `useAuth.ts` | Gestión completa de autenticación: token, sesión admin, headers, login/logout. |
+| `useAuth.js` | Gestión completa de autenticación: token, sesión admin, headers, login/logout. |
 
 ### `src/router/`
 Configuración de enrutamiento SPA.
 
 | Archivo | Descripción |
 |---------|-------------|
-| `index.ts` | Definición de rutas, lazy loading, metadatos de auth, navigation guards globales. |
+| `index.js` | Definición de rutas, lazy loading, metadatos de auth, navigation guards globales. |
 
 ### `src/views/`
 Vistas organizadas por dominio/funcionalidad (cada archivo = una ruta).

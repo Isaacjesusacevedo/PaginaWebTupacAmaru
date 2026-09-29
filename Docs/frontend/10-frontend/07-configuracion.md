@@ -6,15 +6,17 @@
 ```json
 {
   "name": "lag-comunity-frontend",
+  "author": "lag-comunity",
+  "license": "MIT",
   "version": "0.1.2",
+  "private": true,
   "type": "module",
   "engines": { "node": "^20.19.0 || >=22.12.0" },
   "scripts": {
     "dev": "vite",
-    "build": "run-p type-check \"build-only {@}\" --",
+    "build": "vite build",
     "preview": "vite preview",
     "build-only": "vite build",
-    "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
     "format": "prettier --write src/"
   },
@@ -26,8 +28,6 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "@tsconfig/node22": "^22.0.2",
-    "@types/node": "^22.16.5",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.6.0",
@@ -37,7 +37,6 @@
     "jiti": "^2.4.2",
     "npm-run-all2": "^8.0.4",
     "prettier": "3.6.2",
-    "typescript": "~5.8.0",
     "vite": "^7.0.6",
     "vite-plugin-vue-devtools": "^8.0.0",
     "vue-tsc": "^3.0.4"
@@ -45,8 +44,10 @@
 }
 ```
 
-### `vite.config.ts`
-```typescript
+### `vite.config.js`
+```javascript
+import { fileURLToPath, URL } from 'node:url'
+
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
@@ -55,7 +56,7 @@ export default defineConfig({
   plugins: [vue(), vueDevTools()],
   resolve: {
     alias: {
-      '@': '/src'
+      '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   }
 })
@@ -63,21 +64,12 @@ export default defineConfig({
 - **Alias `@`** → `src/` (usado en imports: `@/components/`, `@/composables/`)
 - **Vue DevTools** habilitado en desarrollo
 
-### `tsconfig.json` / `tsconfig.app.json` / `tsconfig.node.json`
-Configuración TypeScript estricta con:
-- `target: ES2022`
-- `module: ESNext`
-- `moduleResolution: bundler`
-- `strict: true`
-- `jsx: preserve` (Vue SFC)
-- `baseUrl: .` + `paths: { "@/*": ["src/*"] }`
-
-### `eslint.config.ts`
+### `eslint.config.js`
 ESLint 9 flat config con:
 - `plugin:vue/vue3-recommended`
 - `plugin:@typescript-eslint/recommended`
 - `plugin:prettier/recommended`
-- Reglas Vue + TypeScript + Prettier integradas
+- Reglas Vue + JavaScript + Prettier integradas
 
 ### `.prettierrc.json`
 ```json

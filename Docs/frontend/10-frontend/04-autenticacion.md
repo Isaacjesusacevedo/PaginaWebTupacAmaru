@@ -1,8 +1,8 @@
 # Autenticación y Autorización (Frontend)
 
-## Composables: `useAuth.ts`
+## Composables: `useAuth.js`
 
-**Archivo:** `src/composables/useAuth.ts`
+**Archivo:** `src/composables/useAuth.js`
 
 Gestiona todo el estado de autenticación del lado del cliente usando `sessionStorage`.
 
@@ -138,7 +138,7 @@ const handleLogout = () => {
 
 ## Integración con Navigation Guards
 
-El guard global en `router/index.ts` usa `useAuth()`:
+El guard global en `router/index.js` usa `useAuth()`:
 
 ```typescript
 router.beforeEach((to) => {

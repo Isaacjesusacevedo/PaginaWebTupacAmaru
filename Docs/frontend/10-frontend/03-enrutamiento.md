@@ -2,9 +2,9 @@
 
 ## Configuración Principal
 
-**Archivo:** `src/router/index.ts`
+**Archivo:** `src/router/index.js`
 
-```typescript
+```javascript
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [ ... ]
@@ -51,7 +51,7 @@ const router = createRouter({
 
 ### Lógica de Protección
 
-```typescript
+```javascript
 router.beforeEach((to) => {
   const { isAuthenticated } = useAuth()
   const autenticado = isAuthenticated()

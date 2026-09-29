@@ -53,7 +53,7 @@ Sistema web para el **Instituto Superior Docente Túpac Amaru** que centraliza l
 | Tecnología | Versión | Uso |
 |------------|---------|-----|
 | Vue 3 | 3.5.18 | Framework reactivo (Composition API) |
-| TypeScript | 5.8.0 | Tipado estricto |
+| JavaScript | ES2023+ | Lógica de aplicación (sin TypeScript) |
 | Vite | 7.0.6 | Bundler & Dev Server |
 | Vue Router | 4.5.1 | SPA Routing + Guards |
 | Pinia | 3.0.3 | Estado global (configurado; auth vía `useAuth` composable + sessionStorage) |
@@ -111,7 +111,7 @@ Instituto.sln
 │
 ├── Frontend/                  # Vue 3 + Vite
 │   ├── package.json
-│   ├── vite.config.ts
+│   ├── vite.config.js
 │   ├── .env                   # VITE_API_URL=http://localhost:5127
 │   └── src/                   # 19 vistas, composables, components, router, CSS modular
 │
@@ -293,11 +293,10 @@ dotnet test Instituto.sln
 ```bash
 cd Frontend
 npm run dev        # Servidor desarrollo (Vite)
-npm run build      # Build producción (type-check + vite build)
+npm run build      # Build producción (vite build)
 npm run preview    # Preview build
 npm run lint       # ESLint + fix
 npm run format     # Prettier
-npm run type-check # vue-tsc --build
 ```
 
 **Backend:**

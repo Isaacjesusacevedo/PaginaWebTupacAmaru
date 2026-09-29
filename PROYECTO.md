@@ -11,7 +11,7 @@
 2. [Arquitectura General](#2-arquitectura-general)
 3. [Estructura de Directorios](#3-estructura-de-directorios)
 4. [Back-end — ASP.NET Core 9 + SQL Server](#4-back-end--aspnet-core-9--sql-server)
-5. [Front-end — Vue 3 + TypeScript + Vite](#5-front-end--vue-3--typescript--vite)
+5. [Front-end — Vue 3 + JavaScript + Vite](#5-front-end--vue-3--javascript--vite)
 6. [Paradigma y Metodología de Desarrollo](#6-paradigma-y-metodología-de-desarrollo)
 7. [Flujo de Datos](#7-flujo-de-datos)
 8. [Requisitos Funcionales y Técnicos](#8-requisitos-funcionales-y-técnicos)
@@ -42,7 +42,7 @@ El sistema expone un **panel interno** accesible por personal administrativo (JW
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                        CLIENTE (Navegador)                                 │
-│  Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router           │
+│  Vue 3 + JavaScript + Vite + Element Plus + Pinia + Vue Router           │
 └────────────────────────────────────────────────────────────────────────────┘
                                  │ HTTPS / REST API + JWT
                                  ▼
@@ -79,7 +79,7 @@ Instituto.sln
 ├── Instituto.AD.Test/         # Unit tests AD (MSTest + Moq) — 20 tests
 ├── Instituto.BR.Test/         # Unit tests BR (MSTest + Moq) — 17 tests
 ├── Instituto.API.Test/        # Integration tests API (MSTest + WebApplicationFactory) — 7 tests
-├── Frontend/                  # Vue 3 + Vite + TypeScript
+├── Frontend/                  # Vue 3 + Vite + JavaScript
 ├── Docs/                      # Documentación técnica
 │   ├── backend/               # Docs backend (arquitectura, BD, servicios, API, etc.)
 │   ├── frontend/              # Docs frontend (router, auth, componentes, build)
@@ -733,7 +733,7 @@ Script DDL: `docs/backend/02-base-de-datos/02-script-creacion.md` o `docs/DATABA
 
 > **Nota**: `appsettings.Development.json` está en el repo con credenciales de desarrollo. En producción usar variables de entorno / Key Vault.
 
-## 5. Front-end — Vue 3 + TypeScript + Vite
+## 5. Front-end — Vue 3 + JavaScript + Vite
 
 ### 5.1 Stack y Dependencias (Versiones Exactas)
 
@@ -741,10 +741,9 @@ Script DDL: `docs/backend/02-base-de-datos/02-script-creacion.md` o `docs/DATABA
 | Paquete | Versión | Propósito |
 |---------|---------|-----------|
 | vue | **3.5.18** | Framework reactivo (Composition API) |
-| typescript | **5.8.0** | Tipado estricto |
 | vite | **7.0.6** | Bundler & Dev Server |
 | vue-router | **4.5.1** | SPA Routing + Guards |
-| pinia | **3.0.3** | Estado global (auth store) |
+| pinia | **3.0.3** | Estado global (configurado; auth vía `useAuth` composable + sessionStorage) |
 | element-plus | **2.11.1** | Componentes UI |
 | @element-plus/icons-vue | **1.1.4** | Iconografía |
 
@@ -753,7 +752,6 @@ Script DDL: `docs/backend/02-base-de-datos/02-script-creacion.md` o `docs/DATABA
 |---------|---------|-----------|
 | eslint | **9.31.0** | Linting |
 | prettier | **3.6.2** | Formato |
-| vue-tsc | **3.0.4** | Type-check |
 | @vitejs/plugin-vue | **6.0.1** | Plugin Vue para Vite |
 | vite-plugin-vue-devtools | **8.0.0** | DevTools en desarrollo |
 
@@ -766,15 +764,15 @@ Script DDL: `docs/backend/02-base-de-datos/02-script-creacion.md` o `docs/DATABA
 VITE_API_URL=http://localhost:5127
 ```
 
-**vite.config.ts**: alias `@` -> `./src`, plugin Vue, devTools. **No hay proxy Vite configurado** - el frontend usa `fetch` directo a `VITE_API_URL`.
+**vite.config.js**: alias `@` -> `./src`, plugin Vue, devTools. **No hay proxy Vite configurado** - el frontend usa `fetch` directo a `VITE_API_URL`.
 
-**tsconfig.app.json**: strict mode, alias `@/*`, DOM lib.
+No hay `tsconfig` (proyecto en JavaScript puro).
 
 ---
 
-### 5.3 Inicialización: main.ts
+### 5.3 Inicialización: main.js
 
-```typescript
+```javascript
 import './assets/css/base/main.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
@@ -783,11 +781,16 @@ import 'element-plus/dist/index.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
+import { setRouter } from '@/composables/useApiFetch'
 
 const app = createApp(App)
+
 app.use(createPinia())
 app.use(router)
 app.use(ElementPlus)
+
+// Inyectar el router en useApiFetch para manejo de 401/403
+setRouter(router)
 
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
@@ -800,7 +803,7 @@ app.mount('#app')
 
 ### 5.4 Sistema de Rutas y Guards
 
-**Archivo:** src/router/index.ts
+**Archivo:** src/router/index.js
 
 | Ruta | Nombre | Componente | Meta | Props |
 |------|--------|------------|------|-------|
@@ -824,7 +827,7 @@ app.mount('#app')
 | * | not-found | NotFound | - | - |
 
 **Guards globales (router.beforeEach):**
-```typescript
+```javascript
 router.beforeEach((to) => {
   const { isAuthenticated } = useAuth()
   const autenticado = isAuthenticated()
@@ -839,41 +842,54 @@ router.beforeEach((to) => {
 
 ---
 
-### 5.5 Composable: useAuth.ts
+### 5.5 Composable: useAuth.js
 
-```typescript
+```javascript
 const TOKEN_KEY = 'auth_token'
 const ADMIN_KEY = 'auth_admin'
 
-export interface AdminSession {
-  id: number
-  nombre: string
-  apellido: string
-  email: string
-  role: string
-}
-
 export function useAuth() {
-  const getToken = () => sessionStorage.getItem(TOKEN_KEY)
+  const getToken = () => {
+    const token = sessionStorage.getItem(TOKEN_KEY)
+    if (!token || token === 'undefined' || token === 'null' || token.length < 20) {
+      return null
+    }
+    return token
+  }
+
   const getAdmin = () => {
     const raw = sessionStorage.getItem(ADMIN_KEY)
-    return raw ? JSON.parse(raw) as AdminSession : null
+    if (!raw || raw === 'undefined' || raw === 'null') return null
+    try {
+      return JSON.parse(raw)
+    } catch {
+      return null
+    }
   }
+
   const isAuthenticated = () => !!getToken()
-  const guardarSesion = (token: string, admin: AdminSession) => {
+
+  const guardarSesion = (token, admin) => {
+    if (!token || token === 'undefined' || token === 'null' || token.length < 20) {
+      console.warn('[useAuth] Intentando guardar un token inválido:', token)
+      return
+    }
     sessionStorage.setItem(TOKEN_KEY, token)
     sessionStorage.setItem(ADMIN_KEY, JSON.stringify(admin))
   }
+
   const cerrarSesion = () => {
     sessionStorage.removeItem(TOKEN_KEY)
     sessionStorage.removeItem(ADMIN_KEY)
   }
+
   const authHeaders = () => {
     const token = getToken()
     return token
       ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       : { 'Content-Type': 'application/json' }
   }
+
   return { getToken, getAdmin, isAuthenticated, guardarSesion, cerrarSesion, authHeaders }
 }
 ```
