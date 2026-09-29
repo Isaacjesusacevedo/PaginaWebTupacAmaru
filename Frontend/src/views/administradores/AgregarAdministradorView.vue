@@ -1,20 +1,17 @@
 <template>
   <main class="section">
     <div class="card card-center">
-      <!-- MEDIA -->
       <img
         class="card-media"
         src="@/components/Banner/bannerProfesor.jpg"
         alt="Banner profesor"
       />
 
-      <!-- HEADER -->
       <header class="card-header text-center">
         <h1>Agregar Administrador</h1>
         <p class="subtitle">Completá los datos del nuevo administrador</p>
       </header>
 
-      <!-- FORM -->
       <form class="form" @submit.prevent="guardarAdministrador">
 
         <div class="form-row">
@@ -105,7 +102,7 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -115,7 +112,7 @@ import { apiPost } from '@/composables/useApiFetch'
 const router = useRouter()
 
 const loading = ref(false)
-const error = ref<string | null>(null)
+const error = ref(null)
 const showPassword = ref(false)
 const showConfirm = ref(false)
 const confirmPassword = ref('')
@@ -131,7 +128,6 @@ const admin = reactive({
 const guardarAdministrador = async () => {
   error.value = null
 
-  // Validaciones
   if (!admin.nombre.trim() || !admin.apellido.trim()) {
     error.value = 'Nombre y apellido son obligatorios'
     return
@@ -152,7 +148,6 @@ const guardarAdministrador = async () => {
   loading.value = true
 
   try {
-    // ✅ Endpoint correcto: with-password
     await apiPost('/api/administradores/with-password', {
       nombre: admin.nombre,
       apellido: admin.apellido,

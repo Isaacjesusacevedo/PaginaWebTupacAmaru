@@ -2,14 +2,12 @@
   <main class="section">
     <div class="card card-center">
 
-      <!-- MEDIA -->
       <img
         class="card-media"
         src="@/components/Banner/bannerProfesor.jpg"
         alt="Banner profesor"
       />
 
-      <!-- HEADER -->
       <header class="text-center">
         <h1>Gestión de Carreras</h1>
         <p class="subtitle">
@@ -17,10 +15,8 @@
         </p>
       </header>
 
-      <!-- TABLE -->
       <div class="table">
 
-        <!-- TABLE HEADER -->
         <div class="table-header table-cols-default">
           <span>Nombre</span>
           <span>Duración</span>
@@ -31,7 +27,6 @@
           <span>Acciones</span>
         </div>
 
-        <!-- TABLE ROWS -->
         <div
           v-for="carrera in carreras"
           :key="carrera.id"
@@ -67,12 +62,10 @@
 
       </div>
 
-      <!-- ERROR -->
       <p v-if="error" class="text-center text-danger">
         {{ error }}
       </p>
 
-      <!-- FOOTER CTA -->
       <footer class="table-actions center">
         <router-link class="btn btn-primary" to="/agregarcarreras">
           Agregar carrera
@@ -83,27 +76,17 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue'
 import { apiGet } from '@/composables/useApiFetch'
 
-interface Carrera {
-  id: number
-  nombre: string
-  duracionAnios: number
-  turno: string
-  modalidad: string
-  horario: string
-  estado: string
-}
-
-const carreras = ref<Carrera[]>([])
-const error = ref<string | null>(null)
+const carreras = ref([])
+const error = ref(null)
 
 const cargarCarreras = async () => {
   try {
-    carreras.value = await apiGet<Carrera[]>('/api/carreras')
-  } catch (err: unknown) {
+    carreras.value = await apiGet('/api/carreras')
+  } catch (err) {
     console.error('Error al cargar carreras:', err)
     error.value = err instanceof Error
       ? `No se pudieron cargar las carreras: ${err.message}`

@@ -2,20 +2,17 @@
   <main class="section">
     <div class="card card-center card-lg">
 
-      <!-- MEDIA -->
       <img
         class="card-media"
         src="@/components/Banner/bannerProfesor.jpg"
         alt="Banner profesor"
       />
 
-      <!-- HEADER -->
       <header class="text-center">
         <h1>Iniciar sesión</h1>
         <p class="subtitle">Accedé al panel de administración</p>
       </header>
 
-      <!-- FORM -->
       <form class="form" @submit.prevent="login">
 
         <div class="form-row">
@@ -72,7 +69,7 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
@@ -83,7 +80,7 @@ const { guardarSesion } = useAuth()
 const email = ref('')
 const password = ref('')
 const loading = ref(false)
-const error = ref<string | null>(null)
+const error = ref(null)
 const showPassword = ref(false)
 
 const API = import.meta.env.VITE_API_URL
@@ -106,7 +103,6 @@ const login = async () => {
       return
     }
 
-    // Acceder a json.data.token y json.data.admin (desenvolver wrapper manualmente)
     guardarSesion(json.data.token, json.data.admin)
     router.push('/')
 

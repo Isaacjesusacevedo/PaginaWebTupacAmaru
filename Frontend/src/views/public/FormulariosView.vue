@@ -2,14 +2,12 @@
   <main class="section">
     <div class="card card-center">
 
-      <!-- MEDIA -->
       <img
         class="card-media"
         src="@/components/Banner/bannerProfesor.jpg"
         alt="Banner formularios"
       />
 
-      <!-- HEADER -->
       <header class="text-center">
         <h1>Lista de Formularios</h1>
         <p class="subtitle">
@@ -17,10 +15,8 @@
         </p>
       </header>
 
-      <!-- TABLE -->
       <div class="table">
 
-        <!-- TABLE HEADER -->
         <div class="table-header table-cols-formularios">
           <span>Nombre</span>
           <span>Estado</span>
@@ -29,7 +25,6 @@
           <span>Acciones</span>
         </div>
 
-        <!-- TABLE ROWS -->
         <div
           v-for="formulario in formularios"
           :key="formulario.id"
@@ -67,12 +62,10 @@
 
       </div>
 
-      <!-- ERROR -->
       <p v-if="error" class="text-center" style="color: var(--color-danger);">
         {{ error }}
       </p>
 
-      <!-- FOOTER CTA -->
       <footer class="table-actions center">
         <router-link class="btn btn-primary" to="/agregarformulario">
           Agregar formulario
@@ -83,25 +76,17 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue'
 import { apiGet, apiDelete } from '@/composables/useApiFetch'
 import { ElMessage } from 'element-plus'
 
-interface Formulario {
-  id: number
-  nombre: string
-  estado: 'Abierto' | 'Cerrado' | 'Borrador'
-  fechaApertura: string
-  fechaCierre: string
-}
-
-const formularios = ref<Formulario[]>([])
-const error = ref<string | null>(null)
+const formularios = ref([])
+const error = ref(null)
 
 const cargarFormularios = async () => {
   try {
-    const data = await apiGet<Formulario[]>('/api/formularios')
+    const data = await apiGet('/api/formularios')
     formularios.value = data
   } catch (err) {
     console.error('Error al cargar formularios:', err)
@@ -113,7 +98,7 @@ const cargarFormularios = async () => {
   }
 }
 
-const getEstadoClass = (estado: string): string => {
+const getEstadoClass = (estado) => {
   switch (estado) {
     case 'Abierto': return 'estado-abierto'
     case 'Cerrado': return 'estado-cerrado'
@@ -122,11 +107,10 @@ const getEstadoClass = (estado: string): string => {
   }
 }
 
-const eliminar = async (id: number) => {
+const eliminar = async (id) => {
   try {
     await apiDelete(`/api/formularios/${id}`)
     ElMessage.success('Formulario eliminado correctamente')
-    // Recargar la lista
     await cargarFormularios()
   } catch (err) {
     ElMessage.error(err instanceof Error ? err.message : 'Error al eliminar el formulario')

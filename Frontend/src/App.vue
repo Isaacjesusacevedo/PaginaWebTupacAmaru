@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import NavBar from './components/NavBar.vue';
 import { RouterView } from 'vue-router';
 </script>
@@ -18,7 +18,7 @@ body {
 }
 
 main {
-  padding-top: 60px; /* altura de la navbar */
+  padding-top: 60px;
 }
 
 </style>

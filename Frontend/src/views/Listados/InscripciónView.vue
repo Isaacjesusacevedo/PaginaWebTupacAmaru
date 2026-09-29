@@ -2,14 +2,12 @@
   <main class="section">
     <div class="card card-center card-lg">
 
-      <!-- MEDIA -->
       <img
         class="card-media"
         src="/src/components/Banner/bannerEstudiante.jpg"
         alt="Banner inscripción"
       />
 
-      <!-- HEADER -->
       <section class="text-center">
         <h1>
           Formulario de Inscripción Alumnos Tupac Amaru <br />
@@ -22,7 +20,6 @@
 
       <form class="form" @submit.prevent="guardarAlumno">
 
-        <!-- DATOS PERSONALES -->
         <section>
           <h2>Datos personales</h2>
           <hr />
@@ -64,7 +61,6 @@
           </div>
         </section>
 
-        <!-- CONTACTO -->
         <section>
           <h2>Contacto</h2>
           <hr />
@@ -87,7 +83,6 @@
           </div>
         </section>
 
-        <!-- INFORMACIÓN ACADÉMICA -->
         <section>
           <h2>Información académica</h2>
           <hr />
@@ -122,7 +117,6 @@
             </label>
           </div>
 
-          <!-- CAMPOS TÍTULO -->
           <div v-if="documentacion.titulo" class="form-row mt-3">
             <div class="field">
               <label>Fecha de egreso del secundario</label>
@@ -135,7 +129,6 @@
             </div>
           </div>
 
-          <!-- CAMPOS TÍTULO EN TRÁMITE -->
           <div v-if="documentacion.tituloEnTramite" class="form-row mt-3">
             <div class="field">
               <label>Fecha estimada de obtención del título</label>
@@ -150,7 +143,6 @@
 
         </section>
 
-        <!-- INSCRIPCIÓN -->
         <section>
           <h2>Inscripción</h2>
           <hr />
@@ -182,12 +174,10 @@
           </div>
         </section>
 
-        <!-- ERROR -->
         <p v-if="error" class="text-center mt-2" style="color: var(--color-danger)">
           {{ error }}
         </p>
 
-        <!-- ACTION -->
         <button
           type="submit"
           class="btn btn-success btn-block"
@@ -196,7 +186,6 @@
           {{ loading ? 'Guardando...' : 'Enviar inscripción' }}
         </button>
 
-        <!-- FOOTER -->
         <footer class="form-footer">
           <p>
             Revisá que los datos ingresados sean correctos antes de enviar el formulario.
@@ -211,7 +200,7 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { reactive, ref, watch, onMounted } from 'vue'
 import { computed } from 'vue'
 
@@ -222,25 +211,8 @@ const edad = computed(() => {
   return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25))
 })
 
-// ---------------------- Alumno ----------------------
-interface Alumno {
-  Nombre: string
-  Apellido: string
-  DNI: string
-  Email: string
-  FechaNacimiento: string
-  Direccion: string
-  Nacionalidad: string
-  Telefono: string
-  TituloSecundario: string
-  Turno: string
-  CarreraId: number
-  FechaInscripcion: string
-  FechaEstimadaTitulo: string
-  InstitucionTitulo: string
-}
 
-const alumno = reactive<Alumno>({
+const alumno = reactive({
   Nombre: "",
   Apellido: "",
   DNI: "",
@@ -257,7 +229,6 @@ const alumno = reactive<Alumno>({
   InstitucionTitulo: ""
 })
 
-// ---------------------- Documentación ----------------------
 const documentacion = reactive({
   titulo: false,
   tituloEnTramite: false,
@@ -282,17 +253,10 @@ watch(() => documentacion.tituloEnTramite, (v) => {
   }
 })
 
-// ---------------------- Estados ----------------------
 const loading = ref(false)
-const error = ref<string | null>(null)
+const error = ref(null)
 
-// ---------------------- Carreras ----------------------
-interface Carrera {
-  id: number
-  nombre: string
-  estado?: string
-}
-const carreras = ref<Carrera[]>([])
+const carreras = ref([])
 const API = import.meta.env.VITE_API_URL
 
 const cargarCarreras = async () => {
@@ -308,7 +272,6 @@ const cargarCarreras = async () => {
 
 onMounted(cargarCarreras)
 
-// ---------------------- Funciones ----------------------
 const resetAlumno = () => {
   alumno.Nombre = ""
   alumno.Apellido = ""
@@ -324,7 +287,6 @@ const resetAlumno = () => {
   alumno.FechaInscripcion = ""
   alumno.FechaEstimadaTitulo = ""
   alumno.InstitucionTitulo = ""
-  // Reset documentación checkboxes
   documentacion.titulo = false
   documentacion.tituloEnTramite = false
   documentacion.materiasAdeudadas = false
@@ -341,14 +303,12 @@ const guardarAlumno = async () => {
     return
   }
 
-  // Validación condicional: si tiene título, requiere fecha egreso y título
   if (documentacion.titulo && (!alumno.FechaInscripcion || !alumno.TituloSecundario)) {
     error.value = "Si posee título, debe completar fecha de egreso y título secundario"
     loading.value = false
     return
   }
 
-  // Validación condicional: si tiene título en trámite, requiere fecha estimada e institución
   if (documentacion.tituloEnTramite && (!alumno.FechaEstimadaTitulo || !alumno.InstitucionTitulo)) {
     error.value = "Si tiene título en trámite, debe completar fecha estimada e institución"
     loading.value = false
@@ -365,7 +325,7 @@ const guardarAlumno = async () => {
 
     alert("Alumno guardado correctamente")
     resetAlumno()
-  } catch (err: unknown) {
+  } catch (err) {
     console.error(err)
     if (err instanceof Error) error.value = err.message
     else error.value = "Hubo un error al guardar el alumno"

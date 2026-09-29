@@ -2,14 +2,12 @@
   <main class="section">
     <div class="card card-center">
 
-      <!-- MEDIA -->
       <img
         class="card-media"
         src="@/components/Banner/bannerProfesor.jpg"
         alt="Banner profesor"
       />
 
-      <!-- HEADER -->
       <header class="card-header text-center">
         <h1>Agregar Carrera</h1>
         <p class="subtitle">
@@ -17,7 +15,6 @@
         </p>
       </header>
 
-      <!-- FORM -->
       <form class="form" @submit.prevent="guardarCarrera">
 
         <div class="form-row">
@@ -83,7 +80,6 @@
           </div>
         </div>
 
-        <!-- ACTIONS -->
         <div class="form-actions">
           <button
             type="submit"
@@ -98,7 +94,6 @@
           </router-link>
         </div>
 
-        <!-- ERROR -->
         <p v-if="error" class="form-error text-center">
           {{ error }}
         </p>
@@ -108,62 +103,61 @@
   </main>
 </template>
 
-<script setup lang="ts">
-  import { reactive, ref } from 'vue'
-  import { useRouter } from 'vue-router'
-  import { useAuth } from '@/composables/useAuth'
+<script setup>
+import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
 
-  const router = useRouter()
-  const { authHeaders } = useAuth()
-  const API = import.meta.env.VITE_API_URL
+const router = useRouter()
+const { authHeaders } = useAuth()
+const API = import.meta.env.VITE_API_URL
 
-  const loading = ref(false)
-  const error = ref<string | null>(null)
+const loading = ref(false)
+const error = ref(null)
 
-  const carrera = reactive({
-    nombre: '',
-    duracionAnios: 0,
-    turno: 'Mañana',
-    modalidad: 'Presencial',
-    horario: '',
-    estado: 'Activa'
-  })
+const carrera = reactive({
+  nombre: '',
+  duracionAnios: 0,
+  turno: 'Mañana',
+  modalidad: 'Presencial',
+  horario: '',
+  estado: 'Activa'
+})
 
-  const guardarCarrera = async () => {
-    error.value = null
+const guardarCarrera = async () => {
+  error.value = null
 
-    // Validación simple
-    if (!carrera.nombre.trim()) {
-      error.value = 'El nombre no puede estar vacío'
-      return
-    }
-    if (carrera.duracionAnios <= 0) {
-      error.value = 'La duración debe ser mayor a 0'
-      return
-    }
-
-    loading.value = true
-
-    try {
-      const res = await fetch(`${API}/api/carreras`, {
-        method:  'POST',
-        headers: authHeaders(),
-        body:    JSON.stringify(carrera)
-      })
-
-      if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-
-      alert('Carrera guardada correctamente')
-      router.push('/carreras')
-    } catch (err: unknown) {
-      console.error(err)
-      if (err instanceof Error) {
-        error.value = err.message
-      } else {
-        error.value = 'Error al guardar la carrera'
-      }
-    } finally {
-      loading.value = false
-    }
+  if (!carrera.nombre.trim()) {
+    error.value = 'El nombre no puede estar vacío'
+    return
   }
-  </script>
+  if (carrera.duracionAnios <= 0) {
+    error.value = 'La duración debe ser mayor a 0'
+    return
+  }
+
+  loading.value = true
+
+  try {
+    const res = await fetch(`${API}/api/carreras`, {
+      method:  'POST',
+      headers: authHeaders(),
+      body:    JSON.stringify(carrera)
+    })
+
+    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
+
+    alert('Carrera guardada correctamente')
+    router.push('/carreras')
+  } catch (err) {
+    console.error(err)
+    if (err instanceof Error) {
+      error.value = err.message
+    } else {
+      error.value = 'Error al guardar la carrera'
+    }
+  } finally {
+    loading.value = false
+  }
+}
+</script>

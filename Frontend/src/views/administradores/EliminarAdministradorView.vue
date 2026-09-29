@@ -2,14 +2,12 @@
   <main class="section">
     <div class="card card-center">
 
-      <!-- MEDIA -->
       <img
         class="card-media"
         src="@/components/Banner/bannerProfesor.jpg"
         alt="Banner profesor"
       />
 
-      <!-- HEADER -->
       <header class="text-center">
         <h1>Eliminar Administrador</h1>
         <p class="subtitle">
@@ -17,10 +15,8 @@
         </p>
       </header>
 
-      <!-- TABLE -->
       <div v-if="admin" class="table">
 
-        <!-- TABLE HEADER -->
         <div class="table-header table-cols-admin">
           <span>Nombre</span>
           <span>Apellido</span>
@@ -29,7 +25,6 @@
           <span>Acciones</span>
         </div>
 
-        <!-- TABLE ROW -->
         <div class="table-row table-cols-admin">
           <span>{{ admin.nombre }}</span>
           <span>{{ admin.apellido }}</span>
@@ -53,7 +48,6 @@
 
       </div>
 
-      <!-- ERROR -->
       <p v-if="error" class="text-center text-danger">
         {{ error }}
       </p>
@@ -62,7 +56,7 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiGet, apiDelete } from '@/composables/useApiFetch'
@@ -70,29 +64,20 @@ import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 
-// ✅ Usamos props (porque el router tiene props: true)
-const props = defineProps<{ id: string }>()
-
-interface Administrador {
-  id: number
-  nombre: string
-  apellido: string
-  email: string
-  role: string
-}
+const props = defineProps(['id'])
 
 const loading = ref(false)
-const error = ref<string | null>(null)
-const admin = ref<Administrador | null>(null)
+const error = ref(null)
+const admin = ref(null)
 
 onMounted(async () => {
   try {
-    const data = await apiGet<Administrador>(`/api/administradores/${Number(props.id)}`)
+    const data = await apiGet(`/api/administradores/${Number(props.id)}`)
     admin.value = data
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'No se pudo cargar el administrador'
-  }
-})
+  })
+}
 
 const eliminarAdministrador = async () => {
   loading.value = true

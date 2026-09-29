@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 const openReadmeInEditor = () => fetch('/__open-in-editor?file=README.md')
 </script>
 

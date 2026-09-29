@@ -2,14 +2,12 @@
   <main class="section">
     <div class="card card-center">
 
-      <!-- MEDIA -->
       <img
         class="card-media"
         src="@/components/Banner/bannerEstudiante.jpg"
         alt="Banner formulario"
       />
 
-      <!-- HEADER -->
       <header class="card-header text-center">
         <h1>Agregar Formulario</h1>
         <p class="subtitle">
@@ -17,7 +15,6 @@
         </p>
       </header>
 
-      <!-- FORM -->
       <form class="form" @submit.prevent="guardarFormulario">
 
         <div class="form-row">
@@ -76,7 +73,6 @@
           </div>
         </div>
 
-        <!-- ACTIONS -->
         <div class="form-actions">
           <button
             type="submit"
@@ -91,7 +87,6 @@
           </router-link>
         </div>
 
-        <!-- ERROR -->
         <p v-if="error" class="form-error text-center" style="color: var(--color-danger);">
           {{ error }}
         </p>
@@ -101,7 +96,7 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiPost } from '@/composables/useApiFetch'
@@ -110,17 +105,9 @@ import { ElMessage } from 'element-plus'
 const router = useRouter()
 
 const loading = ref(false)
-const error = ref<string | null>(null)
+const error = ref(null)
 
-interface FormularioForm {
-  nombre: string
-  estado: 'Borrador' | 'Abierto' | 'Cerrado'
-  fechaApertura: string
-  fechaCierre: string
-  descripcion: string
-}
-
-const formulario = reactive<FormularioForm>({
+const formulario = reactive({
   nombre: '',
   estado: 'Borrador',
   fechaApertura: '',
@@ -131,7 +118,6 @@ const formulario = reactive<FormularioForm>({
 const guardarFormulario = async () => {
   error.value = null
 
-  // Validación simple
   if (!formulario.nombre.trim()) {
     error.value = 'El nombre no puede estar vacío'
     return

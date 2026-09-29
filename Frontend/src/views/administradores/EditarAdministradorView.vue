@@ -1,20 +1,17 @@
 <template>
   <main class="section">
     <div class="card card-center">
-      <!-- MEDIA -->
       <img
         class="card-media"
         src="@/components/Banner/bannerProfesor.jpg"
         alt="Banner profesor"
       />
 
-      <!-- HEADER -->
       <header class="card-header text-center">
         <h1>Editar Administrador</h1>
         <p class="subtitle">Modificá los datos del administrador</p>
       </header>
 
-      <!-- FORM -->
       <form class="form" @submit.prevent="guardarAdministrador">
         <div class="form-row">
           <div class="field">
@@ -71,7 +68,6 @@
     </div>
   </main>
 
-  <!-- MODAL DE RE-AUTENTICACIÓN -->
   <el-dialog
     v-model="showReauthDialog"
     class="reauth-dialog"
@@ -143,7 +139,7 @@
   </el-dialog>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { reactive, ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -153,31 +149,13 @@ import { apiGet, apiPut } from '@/composables/useApiFetch'
 const route = useRoute()
 const router = useRouter()
 
-// ── ID desde la ruta ─────────────────────────────────────
 const id = Number(route.params.id)
 if (isNaN(id) || id <= 0) {
   ElMessage.error('ID de administrador inválido')
   router.push('/administracion')
 }
 
-// ── Estado del formulario ────────────────────────────────
-interface AdministradorApi {
-  id: number
-  nombre: string
-  apellido: string
-  email: string
-  role: string
-  passwordHash?: string
-}
-
-interface AdministradorForm {
-  id: number
-  nombre: string
-  apellido: string
-  email: string
-}
-
-const admin = reactive<AdministradorForm>({
+const admin = reactive({
   id: 0,
   nombre: '',
   apellido: '',
@@ -185,25 +163,23 @@ const admin = reactive<AdministradorForm>({
 })
 
 const loading = ref(false)
-const error = ref<string | null>(null)
-const errorPassword = ref<string | null>(null)
+const error = ref(null)
+const errorPassword = ref(null)
 const nuevaPassword = ref('')
 const showNuevaPassword = ref(false)
 const passwordValida = computed(() => nuevaPassword.value.length >= 8)
 
-// ── Estado de re-autenticación ───────────────────────────
 const showReauthDialog = ref(true)
 const loadingReauth = ref(false)
 const reauthPassword = ref('')
-const reauthError = ref<string | null>(null)
+const reauthError = ref(null)
 const reauthVerified = ref(false)
 const passwordVerificada = ref('')
 
-// ── Cargar datos del admin ───────────────────────────────
 const loadAdminData = async () => {
   if (isNaN(id) || id <= 0) return
   try {
-    const data = await apiGet<AdministradorApi>(`/api/administradores/${id}`)
+    const data = await apiGet(`/api/administradores/${id}`)
     admin.id = data.id
     admin.nombre = data.nombre
     admin.apellido = data.apellido
@@ -213,12 +189,8 @@ const loadAdminData = async () => {
   }
 }
 
-onMounted(() => {
-  // El diálogo se abre automáticamente (showReauthDialog = true)
-  // Los datos se cargan recién después de verificar la contraseña
-})
+onMounted(() => {})
 
-// ── Re-autenticación ─────────────────────────────────────
 const confirmReauth = async () => {
   if (!reauthPassword.value.trim()) {
     reauthError.value = 'La contraseña es obligatoria'
@@ -250,7 +222,7 @@ const confirmReauth = async () => {
     reauthError.value = null
 
     await loadAdminData()
-  } catch (err: unknown) {
+  } catch (err) {
     reauthError.value = err instanceof Error ? err.message : 'Error al verificar contraseña'
   } finally {
     loadingReauth.value = false
@@ -269,7 +241,6 @@ onUnmounted(() => {
   passwordVerificada.value = ''
 })
 
-// ── Guardar cambios ──────────────────────────────────────
 const guardarAdministrador = async () => {
   if (isNaN(id) || id <= 0) return
 
@@ -285,7 +256,6 @@ const guardarAdministrador = async () => {
       return
     }
 
-    // 1. Guardar datos generales
     const payload = {
       nombre: admin.nombre,
       apellido: admin.apellido,
@@ -295,7 +265,6 @@ const guardarAdministrador = async () => {
     await apiPut(`/api/administradores/${id}`, payload)
     ElMessage.success('Datos actualizados correctamente')
 
-    // 2. Cambiar contraseña si se pidió
     if (quiereCambiarPassword) {
       if (!passwordVerificada.value) {
         errorPassword.value = 'Sesión de verificación expirada. Recargá la página.'

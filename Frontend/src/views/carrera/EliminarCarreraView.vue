@@ -2,14 +2,12 @@
   <main class="section">
     <div class="card card-center">
 
-      <!-- MEDIA -->
       <img
         class="card-media"
         src="@/components/Banner/bannerProfesor.jpg"
         alt="Banner profesor"
       />
 
-      <!-- HEADER -->
       <header class="text-center">
         <h1>Eliminar Carrera</h1>
         <p class="subtitle">
@@ -17,10 +15,8 @@
         </p>
       </header>
 
-      <!-- TABLE -->
       <div v-if="carrera" class="table">
 
-        <!-- TABLE HEADER -->
         <div class="table-header table-cols-default">
           <span>Nombre</span>
           <span>Duración</span>
@@ -31,7 +27,6 @@
           <span>Acciones</span>
         </div>
 
-        <!-- TABLE ROW -->
         <div class="table-row table-cols-default">
           <span>{{ carrera.nombre }}</span>
           <span>{{ carrera.duracionAnios }} años</span>
@@ -57,7 +52,6 @@
 
       </div>
 
-      <!-- ERROR -->
       <p v-if="error" class="text-center text-danger">
         {{ error }}
       </p>
@@ -66,7 +60,7 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { apiGet, apiDelete } from '@/composables/useApiFetch'
@@ -75,19 +69,9 @@ import { ElMessage } from 'element-plus'
 const route = useRoute()
 const router = useRouter()
 
-interface Carrera {
-  id: number
-  nombre: string
-  duracionAnios: number
-  turno: string
-  modalidad: string
-  horario: string
-  estado: string
-}
-
 const loading = ref(false)
-const error = ref<string | null>(null)
-const carrera = ref<Carrera | null>(null)
+const error = ref(null)
+const carrera = ref(null)
 
 const id = Number(route.params.id)
 
@@ -100,7 +84,7 @@ onMounted(async () => {
   if (isNaN(id) || id <= 0) return
 
   try {
-    carrera.value = await apiGet<Carrera>(`/api/carreras/${id}`)
+    carrera.value = await apiGet(`/api/carreras/${id}`)
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'No se pudo cargar la carrera'
   }

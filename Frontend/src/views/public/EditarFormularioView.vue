@@ -1,19 +1,18 @@
 <template>
   <main class="section">
     <div class="card card-center">
-      <!-- MEDIA -->
+
       <img
         class="card-media"
         src="@/components/Banner/bannerProfesor.jpg"
         alt="Banner formulario"
       />
-      <!-- HEADER -->
+
       <header class="text-center">
         <h1>Editar Formulario</h1>
         <p class="subtitle">Modificá los datos del formulario</p>
       </header>
 
-      <!-- FORM -->
       <form class="form" @submit.prevent="guardarFormulario">
 
         <div class="form-row">
@@ -72,7 +71,6 @@
           </div>
         </div>
 
-        <!-- ACTIONS -->
         <div class="form-actions">
           <button
             type="submit"
@@ -87,7 +85,6 @@
           </router-link>
         </div>
 
-        <!-- ERROR -->
         <p v-if="error" class="form-error text-center">
           {{ error }}
         </p>
@@ -97,7 +94,7 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiGet, apiPut } from '@/composables/useApiFetch'
@@ -105,24 +102,12 @@ import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 
-// Props desde la ruta (props: true en router)
-const props = defineProps<{
-  id: string
-}>()
+const props = defineProps(['id'])
 
 const loading = ref(false)
-const error = ref<string | null>(null)
+const error = ref(null)
 
-interface Formulario {
-  id: number
-  nombre: string
-  estado: 'Borrador' | 'Abierto' | 'Cerrado'
-  fechaApertura: string
-  fechaCierre: string
-  descripcion: string
-}
-
-const formulario = reactive<Formulario>({
+const formulario = reactive({
   id: 0,
   nombre: '',
   estado: 'Borrador',
@@ -131,10 +116,9 @@ const formulario = reactive<Formulario>({
   descripcion: ''
 })
 
-// Cargar datos del formulario
 onMounted(async () => {
   try {
-    const data = await apiGet<Formulario>(`/api/formularios/${Number(props.id)}`)
+    const data = await apiGet(`/api/formularios/${Number(props.id)}`)
     Object.assign(formulario, data)
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'No se pudieron cargar los datos del formulario'
@@ -145,7 +129,6 @@ const guardarFormulario = async () => {
   loading.value = true
   error.value = null
 
-  // Validación simple
   if (!formulario.nombre.trim()) {
     error.value = 'El nombre no puede estar vacío'
     loading.value = false

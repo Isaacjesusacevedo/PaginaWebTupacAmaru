@@ -1,19 +1,16 @@
 <template>
   <main class="section">
     <div class="card card-center">
-      <!-- MEDIA -->
       <img
         class="card-media"
         src="@/components/Banner/bannerProfesor.jpg"
         alt="Banner profesor"
       />
-      <!-- HEADER -->
       <header class="text-center">
         <h1>Editar Carrera</h1>
         <p class="subtitle">Modificá los datos de la carrera</p>
       </header>
 
-      <!-- FORM -->
       <form class="form" @submit.prevent="guardarCarrera">
 
         <div class="form-row">
@@ -79,7 +76,6 @@
           </div>
         </div>
 
-        <!-- ACTIONS -->
         <div class="form-actions">
           <button
             type="submit"
@@ -94,7 +90,6 @@
           </router-link>
         </div>
 
-        <!-- ERROR -->
         <p v-if="error" class="form-error text-center">
           {{ error }}
         </p>
@@ -104,7 +99,7 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { apiGet, apiPut } from '@/composables/useApiFetch'
@@ -114,19 +109,9 @@ const route = useRoute()
 const router = useRouter()
 
 const loading = ref(false)
-const error = ref<string | null>(null)
+const error = ref(null)
 
-interface Carrera {
-  id: number
-  nombre: string
-  duracionAnios: number
-  turno: string
-  modalidad: string
-  horario: string
-  estado: string
-}
-
-const carrera = reactive<Carrera>({
+const carrera = reactive({
   id: 0,
   nombre: '',
   duracionAnios: 1,
@@ -136,7 +121,6 @@ const carrera = reactive<Carrera>({
   estado: 'Activa'
 })
 
-// ✅ Leer el ID de la ruta (más confiable que defineProps)
 const id = Number(route.params.id)
 
 if (isNaN(id) || id <= 0) {
@@ -148,7 +132,7 @@ onMounted(async () => {
   if (isNaN(id) || id <= 0) return
 
   try {
-    const data = await apiGet<Carrera>(`/api/carreras/${id}`)
+    const data = await apiGet(`/api/carreras/${id}`)
     Object.assign(carrera, data)
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'No se pudieron cargar los datos de la carrera'

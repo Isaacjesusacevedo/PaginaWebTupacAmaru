@@ -2,14 +2,12 @@
   <main class="section">
     <div class="card card-center">
 
-      <!-- MEDIA -->
       <img
         class="card-media"
         src="@/components/Banner/bannerProfesor.jpg"
         alt="Banner formulario"
       />
 
-      <!-- HEADER -->
       <header class="text-center">
         <h1>Eliminar Formulario</h1>
         <p class="subtitle">
@@ -17,10 +15,8 @@
         </p>
       </header>
 
-      <!-- TABLE -->
       <div v-if="formulario" class="table">
 
-        <!-- TABLE HEADER -->
         <div class="table-header table-cols-formularios">
           <span>Nombre</span>
           <span>Estado</span>
@@ -29,7 +25,6 @@
           <span>Acciones</span>
         </div>
 
-        <!-- TABLE ROW -->
         <div class="table-row table-cols-formularios">
           <span>{{ formulario.nombre }}</span>
           <span>
@@ -57,7 +52,6 @@
 
       </div>
 
-      <!-- ERROR -->
       <p v-if="error" class="text-center text-danger">
         {{ error }}
       </p>
@@ -66,7 +60,7 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiGet, apiDelete } from '@/composables/useApiFetch'
@@ -74,34 +68,21 @@ import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 
-// Props desde la ruta (props: true en router)
-const props = defineProps<{
-  id: string
-}>()
-
-interface Formulario {
-  id: number
-  nombre: string
-  estado: 'Abierto' | 'Cerrado' | 'Borrador'
-  fechaApertura: string
-  fechaCierre: string
-  descripcion: string
-}
+const props = defineProps(['id'])
 
 const loading = ref(false)
-const error = ref<string | null>(null)
-const formulario = ref<Formulario | null>(null)
+const error = ref(null)
+const formulario = ref(null)
 
 onMounted(async () => {
   try {
-    const data = await apiGet<Formulario>(`/api/formularios/${Number(props.id)}`)
+    const data = await apiGet(`/api/formularios/${Number(props.id)}`)
     formulario.value = data
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'No se pudo cargar el formulario'
   }
 })
 
-// Eliminar el formulario
 const eliminarFormulario = async () => {
   loading.value = true
   error.value = null
@@ -118,7 +99,7 @@ const eliminarFormulario = async () => {
   }
 }
 
-const getEstadoClass = (estado: string): string => {
+const getEstadoClass = (estado) => {
   switch (estado) {
     case 'Abierto': return 'estado-abierto'
     case 'Cerrado': return 'estado-cerrado'
