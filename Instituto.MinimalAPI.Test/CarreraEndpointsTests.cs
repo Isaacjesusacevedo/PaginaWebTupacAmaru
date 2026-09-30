@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using Instituto.API;
-using Instituto.API.Models;
+using Instituto.MinimalAPI;
+using Instituto.MinimalAPI.Models;
 using Instituto.AD.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -12,7 +12,7 @@ using System.Text.Encodings.Web;
 using System.Security.Claims;
 using Moq;
 
-namespace Instituto.API.Test;
+namespace Instituto.MinimalAPI.Test;
 
 [TestClass]
 public sealed class CarreraControllerTests

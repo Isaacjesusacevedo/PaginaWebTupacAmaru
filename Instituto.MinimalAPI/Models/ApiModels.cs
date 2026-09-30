@@ -1,6 +1,6 @@
 using Instituto.BR.DTOs;
 
-namespace Instituto.API.Models;
+namespace Instituto.MinimalAPI.Models;
 
 public class LoginRequest
 {

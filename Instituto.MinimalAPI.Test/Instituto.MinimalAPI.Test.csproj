@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Instituto.API\Instituto.API.csproj" />
+    <ProjectReference Include="..\Instituto.MinimalAPI\Instituto.MinimalAPI.csproj" />
     <ProjectReference Include="..\Instituto.BR\Instituto.BR.csproj" />
     <ProjectReference Include="..\Instituto.AD\Instituto.AD.csproj" />
   </ItemGroup>

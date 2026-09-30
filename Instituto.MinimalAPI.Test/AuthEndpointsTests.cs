@@ -1,12 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
-using Instituto.API;
-using Instituto.API.Models;
+using Instituto.MinimalAPI;
+using Instituto.MinimalAPI.Models;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
-namespace Instituto.API.Test;
+namespace Instituto.MinimalAPI.Test;
 
 [TestClass]
 public sealed class AuthControllerTests

@@ -5,7 +5,7 @@ using Instituto.AD.Interfaces;
 using Instituto.AD.Repositories;
 using Instituto.AD;
 using Instituto.AD.Models;
-using Instituto.API.Models;
+using Instituto.MinimalAPI.Models;
 using Instituto.BR.DTOs;
 
 var builder = WebApplication.CreateBuilder(args);
