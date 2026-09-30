@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Instituto.API.Controllers;
 
 [ApiController]
-[Authorize]
+
 [Route("api/profesores")]
 public class ProfesorController : ControllerBase
 {

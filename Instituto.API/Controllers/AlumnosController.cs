@@ -19,14 +19,14 @@ public class AlumnosController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize]
+    
     public IActionResult GetAll()
     {
         return Ok(ApiResponse<List<Alumno>>.Success(_service.GetAll()));
     }
 
     [HttpGet("{id:int}")]
-    [Authorize]
+    
     public IActionResult GetById(int id)
     {
         var alumno = _service.GetById(id);
@@ -37,7 +37,7 @@ public class AlumnosController : ControllerBase
     }
 
     [HttpPost]
-    [AllowAnonymous]
+    
     public IActionResult Create([FromBody] Alumno alumno)
     {
         var result = _service.Create(alumno);
@@ -48,7 +48,7 @@ public class AlumnosController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize]
+    
     public IActionResult Update(int id, [FromBody] Alumno alumno)
     {
         var result = _service.Update(id, alumno);
@@ -59,7 +59,7 @@ public class AlumnosController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize]
+    
     public IActionResult Delete(int id)
     {
         var result = _service.Delete(id);

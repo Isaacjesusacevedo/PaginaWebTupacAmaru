@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Instituto.API.Controllers;
 
 [ApiController]
-[Authorize]
+
 [Route("api/listado")]
 public class ListadoController : ControllerBase
 {

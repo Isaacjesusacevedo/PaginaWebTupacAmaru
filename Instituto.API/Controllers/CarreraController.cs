@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Instituto.API.Controllers;
 
 [ApiController]
-[Authorize]
+
 [Route("api/carreras")]
 public class CarreraController : ControllerBase
 {
@@ -20,14 +20,14 @@ public class CarreraController : ControllerBase
     }
 
     [HttpGet]
-    [AllowAnonymous]
+    
     public IActionResult GetAll()
     {
         return Ok(ApiResponse<List<Carrera>>.Success(_service.GetAll()));
     }
 
     [HttpGet("{id:int}")]
-    [AllowAnonymous]
+    
     public IActionResult GetById(int id)
     {
         var carrera = _service.GetById(id);
