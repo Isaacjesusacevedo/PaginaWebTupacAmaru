@@ -37,6 +37,15 @@ public record VerifyPasswordDto
     public string Password { get; init; } = string.Empty;
 }
 
+public record AdminCreateDto
+{
+    public string Nombre { get; init; } = string.Empty;
+    public string Apellido { get; init; } = string.Empty;
+    public string Email { get; init; } = string.Empty;
+    public string Role { get; init; } = "Admin";
+    public string Password { get; init; } = string.Empty;
+}
+
 public class AlumnoListadoDto
 {
     public int AlumnoId { get; set; }
