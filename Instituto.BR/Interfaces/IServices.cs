@@ -5,55 +5,55 @@ namespace Instituto.BR.Interfaces;
 
 public interface ICarreraService
 {
-    List<Carrera> GetAll();
-    Carrera? GetById(int id);
-    ServiceResult<Carrera> Create(Carrera carrera);
-    ServiceResult<Carrera> Update(int id, Carrera carrera);
-    ServiceResult Delete(int id);
+    Task<List<Carrera>> GetAllAsync();
+    Task<Carrera?> GetByIdAsync(int id);
+    Task<ServiceResult<Carrera>> CreateAsync(Carrera carrera);
+    Task<ServiceResult<Carrera>> UpdateAsync(int id, Carrera carrera);
+    Task<ServiceResult> DeleteAsync(int id);
 }
 
 public interface IAlumnoService
 {
-    List<Alumno> GetAll();
-    Alumno? GetById(int id);
-    ServiceResult<Alumno> Create(Alumno alumno);
-    ServiceResult<Alumno> Update(int id, Alumno alumno);
-    ServiceResult Delete(int id);
+    Task<List<Alumno>> GetAllAsync();
+    Task<Alumno?> GetByIdAsync(int id);
+    Task<ServiceResult<Alumno>> CreateAsync(Alumno alumno);
+    Task<ServiceResult<Alumno>> UpdateAsync(int id, Alumno alumno);
+    Task<ServiceResult> DeleteAsync(int id);
 }
 
 public interface IAdministradorService
 {
-    List<Administrador> GetAll();
-    Administrador? GetById(int id);
-    ServiceResult<Administrador> Create(Administrador admin, string password);
-    ServiceResult<Administrador> Update(int id, Administrador admin);
-    ServiceResult ChangePassword(int id, string passwordActual, string nuevaPassword);
-    ServiceResult Delete(int id);
-    AdminResult? Login(string email, string password);
-    bool HayAdmins();
+    Task<List<Administrador>> GetAllAsync();
+    Task<Administrador?> GetByIdAsync(int id);
+    Task<ServiceResult<Administrador>> CreateAsync(Administrador admin, string password);
+    Task<ServiceResult<Administrador>> UpdateAsync(int id, Administrador admin);
+    Task<ServiceResult> ChangePasswordAsync(int id, string passwordActual, string nuevaPassword);
+    Task<ServiceResult> DeleteAsync(int id);
+    Task<AdminResult?> LoginAsync(string email, string password);
+    Task<bool> HayAdminsAsync();
     Task<AdminResult?> CrearPrimerAdminAsync(SetupAdminDto dto);
-    ServiceResult ChangePasswordByEmail(string email, string passwordActual, string nuevaPassword);
+    Task<ServiceResult> ChangePasswordByEmailAsync(string email, string passwordActual, string nuevaPassword);
 }
 
 public interface IProfesorService
 {
-    List<Profesor> GetAll();
-    Profesor? GetById(int id);
-    ServiceResult<Profesor> Create(Profesor profesor);
-    ServiceResult<Profesor> Update(int id, Profesor profesor);
-    ServiceResult Delete(int id);
+    Task<List<Profesor>> GetAllAsync();
+    Task<Profesor?> GetByIdAsync(int id);
+    Task<ServiceResult<Profesor>> CreateAsync(Profesor profesor);
+    Task<ServiceResult<Profesor>> UpdateAsync(int id, Profesor profesor);
+    Task<ServiceResult> DeleteAsync(int id);
 }
 
 public interface IFormularioService
 {
-    List<Formulario> GetAll();
-    Formulario? GetById(int id);
-    ServiceResult<Formulario> Create(Formulario formulario);
-    ServiceResult<Formulario> Update(int id, Formulario formulario);
-    ServiceResult Delete(int id);
+    Task<List<Formulario>> GetAllAsync();
+    Task<Formulario?> GetByIdAsync(int id);
+    Task<ServiceResult<Formulario>> CreateAsync(Formulario formulario);
+    Task<ServiceResult<Formulario>> UpdateAsync(int id, Formulario formulario);
+    Task<ServiceResult> DeleteAsync(int id);
 }
 
 public interface IListadoService
 {
-    List<AlumnoListadoDto> GetListado();
+    Task<List<AlumnoListadoDto>> GetListadoAsync();
 }

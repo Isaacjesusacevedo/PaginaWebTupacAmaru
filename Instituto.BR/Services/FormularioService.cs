@@ -14,11 +14,13 @@ public class FormularioService : IFormularioService
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
-    public List<Formulario> GetAll() => _repository.GetAll();
+    public async Task<List<Formulario>> GetAllAsync()
+        => await _repository.GetAllAsync();
 
-    public Formulario? GetById(int id) => _repository.GetById(id);
+    public async Task<Formulario?> GetByIdAsync(int id)
+        => await _repository.GetByIdAsync(id);
 
-    public ServiceResult<Formulario> Create(Formulario formulario)
+    public async Task<ServiceResult<Formulario>> CreateAsync(Formulario formulario)
     {
         if (string.IsNullOrWhiteSpace(formulario.Nombre))
             return ServiceResult<Formulario>.Fail("El nombre es obligatorio.");
@@ -36,16 +38,16 @@ public class FormularioService : IFormularioService
             return ServiceResult<Formulario>.Fail("La fecha de cierre debe ser posterior a la de apertura.");
 
         var validEstados = new[] { "Borrador", "Abierto", "Cerrado" };
-        if (!validEstados.Contains(formulario.Estado))
+        if (!new[] { "Borrador", "Abierto", "Cerrado" }.Contains(formulario.Estado))
             return ServiceResult<Formulario>.Fail("El estado debe ser: Borrador, Abierto o Cerrado.");
 
-        var created = _repository.Create(formulario);
+        var created = await _repository.CreateAsync(formulario);
         return ServiceResult<Formulario>.Ok(created, "Formulario creado correctamente.");
     }
 
-    public ServiceResult<Formulario> Update(int id, Formulario formulario)
+    public async Task<ServiceResult<Formulario>> UpdateAsync(int id, Formulario formulario)
     {
-        if (!_repository.Exists(id))
+        if (!await _repository.ExistsAsync(id))
             return ServiceResult<Formulario>.Fail($"El formulario con Id {id} no existe.");
 
         if (string.IsNullOrWhiteSpace(formulario.Nombre))
@@ -54,29 +56,29 @@ public class FormularioService : IFormularioService
         if (string.IsNullOrWhiteSpace(formulario.Estado))
             return ServiceResult<Formulario>.Fail("El estado es obligatorio.");
 
-        if (formulario.FechaApertura == default)
+        if (!formulario.FechaApertura.HasValue)
             return ServiceResult<Formulario>.Fail("La fecha de apertura es obligatoria.");
 
-        if (formulario.FechaCierre == default)
+        if (!formulario.FechaCierre.HasValue)
             return ServiceResult<Formulario>.Fail("La fecha de cierre es obligatoria.");
 
         if (formulario.FechaCierre <= formulario.FechaApertura)
             return ServiceResult<Formulario>.Fail("La fecha de cierre debe ser posterior a la de apertura.");
 
         var validEstados = new[] { "Borrador", "Abierto", "Cerrado" };
-        if (!validEstados.Contains(formulario.Estado))
+        if (!new[] { "Borrador", "Abierto", "Cerrado" }.Contains(formulario.Estado))
             return ServiceResult<Formulario>.Fail("El estado debe ser: Borrador, Abierto o Cerrado.");
 
-        _repository.Update(id, formulario);
+        await _repository.UpdateAsync(id, formulario);
         return ServiceResult<Formulario>.Ok(formulario, "Formulario actualizado correctamente.");
     }
 
-    public ServiceResult Delete(int id)
+    public async Task<ServiceResult> DeleteAsync(int id)
     {
-        if (!_repository.Exists(id))
+        if (!await _repository.ExistsAsync(id))
             return ServiceResult.Fail($"El formulario con Id {id} no existe.");
 
-        _repository.Delete(id);
+        await _repository.DeleteAsync(id);
         return ServiceResult.Ok("Formulario eliminado correctamente.");
     }
 }

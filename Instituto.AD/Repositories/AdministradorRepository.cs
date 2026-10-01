@@ -1,16 +1,18 @@
 using Instituto.AD.Interfaces;
 using Instituto.AD.Models;
+using Instituto.AD.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 
 namespace Instituto.AD.Repositories;
 
 public class AdministradorRepository : IAdministradorRepository
 {
-    private readonly string _connectionString;
+    private readonly InstitutoDbContext _context;
 
-    public AdministradorRepository(string connectionString)
+    public AdministradorRepository(InstitutoDbContext context)
     {
-        _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     private static Administrador MapReaderToAdministrador(SqlDataReader reader)
@@ -28,110 +30,102 @@ public class AdministradorRepository : IAdministradorRepository
         };
     }
 
-    public List<Administrador> GetAll()
+    public async Task<List<Administrador>> GetAllAsync()
     {
-        var admins = new List<Administrador>();
-        using var db = new AccesoDB(_connectionString);
-        using var reader = db.GetData("SELECT * FROM Administradores WHERE Activo = 1 ORDER BY Id");
-        while (reader.Read())
-        {
-            admins.Add(MapReaderToAdministrador(reader));
-        }
-        return admins;
+        return await _context.Administradores
+            .FromSqlRaw("EXEC sp_Administradores_GetAll")
+            .ToListAsync();
     }
 
-    public Administrador? GetById(int id)
+    public async Task<Administrador?> GetByIdAsync(int id)
     {
-        using var db = new AccesoDB(_connectionString);
-        using var reader = db.GetData(
-            "SELECT * FROM Administradores WHERE Id = @Id AND Activo = 1",
-            new DBParameters().Agregar("@Id", id));
-        
-        return reader.Read() ? MapReaderToAdministrador(reader) : null;
+        return await _context.Administradores
+            .FromSqlRaw("EXEC sp_Administradores_GetById @Id", new SqlParameter("@Id", id))
+            .FirstOrDefaultAsync();
     }
 
-    public Administrador? GetByEmail(string email)
+    public async Task<Administrador?> GetByEmailAsync(string email)
     {
-        using var db = new AccesoDB(_connectionString);
-        using var reader = db.GetData(
-            "SELECT * FROM Administradores WHERE Email = @Email AND Activo = 1",
-            new DBParameters().Agregar("@Email", email.ToLower().Trim()));
-        
-        return reader.Read() ? MapReaderToAdministrador(reader) : null;
+        return await _context.Administradores
+            .FromSqlRaw("EXEC sp_Administradores_GetByEmail @Email", new SqlParameter("@Email", email.ToLower().Trim()))
+            .FirstOrDefaultAsync();
     }
 
-    public Administrador Create(Administrador entity)
+    public async Task<Administrador> CreateAsync(Administrador entity)
     {
-        using var db = new AccesoDB(_connectionString);
-        var parametros = new DBParameters()
-            .Agregar("@Nombre", entity.Nombre)
-            .Agregar("@Apellido", entity.Apellido)
-            .Agregar("@Email", entity.Email.ToLower().Trim())
-            .Agregar("@PasswordHash", entity.PasswordHash)
-            .Agregar("@Role", entity.Role)
-            .Agregar("@Activo", true)
-            .Agregar("@FechaCreacion", DateTime.Now);
+        var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
 
-        var id = Convert.ToInt32(db.ExecuteScalar(
-            @"INSERT INTO Administradores (Nombre, Apellido, Email, PasswordHash, Role, Activo, FechaCreacion)
-              VALUES (@Nombre, @Apellido, @Email, @PasswordHash, @Role, @Activo, @FechaCreacion);
-              SELECT SCOPE_IDENTITY();",
-            parametros));
+        using var command = connection.CreateCommand();
+        command.CommandText = "EXEC sp_Administradores_Create @Nombre, @Apellido, @Email, @PasswordHash, @Role";
+        command.Parameters.Add(new SqlParameter("@Nombre", entity.Nombre));
+        command.Parameters.Add(new SqlParameter("@Apellido", entity.Apellido));
+        command.Parameters.Add(new SqlParameter("@Email", entity.Email.ToLower().Trim()));
+        command.Parameters.Add(new SqlParameter("@PasswordHash", entity.PasswordHash));
+        command.Parameters.Add(new SqlParameter("@Role", entity.Role));
 
-        entity.Id = id;
+        var result = await command.ExecuteScalarAsync();
+        entity.Id = Convert.ToInt32(result);
         return entity;
     }
 
-    public void Update(int id, Administrador entity)
+    public async Task UpdateAsync(int id, Administrador entity)
     {
-        using var db = new AccesoDB(_connectionString);
-        var parametros = new DBParameters()
-            .Agregar("@Id", id)
-            .Agregar("@Nombre", entity.Nombre)
-            .Agregar("@Apellido", entity.Apellido)
-            .Agregar("@Email", entity.Email.ToLower().Trim())
-            .Agregar("@Role", entity.Role);
+        var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
 
-        db.Execute(
-            @"UPDATE Administradores SET Nombre = @Nombre, Apellido = @Apellido, Email = @Email, Role = @Role 
-              WHERE Id = @Id AND Activo = 1",
-            parametros);
+        using var command = connection.CreateCommand();
+        command.CommandText = "EXEC sp_Administradores_Update @Id, @Nombre, @Apellido, @Email, @Role";
+        command.Parameters.Add(new SqlParameter("@Id", id));
+        command.Parameters.Add(new SqlParameter("@Nombre", entity.Nombre));
+        command.Parameters.Add(new SqlParameter("@Apellido", entity.Apellido));
+        command.Parameters.Add(new SqlParameter("@Email", entity.Email.ToLower().Trim()));
+        command.Parameters.Add(new SqlParameter("@Role", entity.Role));
+
+        await command.ExecuteNonQueryAsync();
     }
 
-    public void Delete(int id)
+    public async Task DeleteAsync(int id)
     {
-        using var db = new AccesoDB(_connectionString);
-        db.Execute(
-            "UPDATE Administradores SET Activo = 0 WHERE Id = @Id AND Activo = 1",
-            new DBParameters().Agregar("@Id", id));
+        var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "EXEC sp_Administradores_SoftDelete @Id";
+        command.Parameters.Add(new SqlParameter("@Id", id));
+        await command.ExecuteNonQueryAsync();
     }
 
-    public bool Exists(int id)
+    public async Task<bool> ExistsAsync(int id)
     {
-        using var db = new AccesoDB(_connectionString);
-        var result = db.ExecuteScalar("SELECT COUNT(*) FROM Administradores WHERE Id = @Id AND Activo = 1", new DBParameters().Agregar("@Id", id));
-        return Convert.ToInt32(result) > 0;
+        return await _context.Database
+            .SqlQueryRaw<int>("EXEC sp_Administradores_Exists @Id", new SqlParameter("@Id", id))
+            .FirstOrDefaultAsync() == 1;
     }
 
-    public bool ExistsByEmail(string email)
+    public async Task<bool> ExistsByEmailAsync(string email)
     {
-        using var db = new AccesoDB(_connectionString);
-        var result = db.ExecuteScalar("SELECT COUNT(*) FROM Administradores WHERE Email = @Email AND Activo = 1", new DBParameters().Agregar("@Email", email.ToLower().Trim()));
-        return Convert.ToInt32(result) > 0;
+        return await _context.Database
+            .SqlQueryRaw<int>("EXEC sp_Administradores_ExistsByEmail @Email", new SqlParameter("@Email", email.ToLower().Trim()))
+            .FirstOrDefaultAsync() == 1;
     }
 
-    public int Count()
+    public async Task<int> CountAsync()
     {
-        using var db = new AccesoDB(_connectionString);
-        var result = db.ExecuteScalar("SELECT COUNT(*) FROM Administradores");
-        return Convert.ToInt32(result);
+        return await _context.Database
+            .SqlQueryRaw<int>("EXEC sp_Administradores_Count")
+            .FirstOrDefaultAsync();
     }
 
-    public void UpdatePasswordHash(int id, string newHash)
+    public async Task UpdatePasswordHashAsync(int id, string newHash)
     {
-        using var db = new AccesoDB(_connectionString);
-        db.Execute(
-            "UPDATE Administradores SET PasswordHash = @PasswordHash WHERE Id = @Id",
-            new DBParameters().Agregar("@Id", id).Agregar("@PasswordHash", newHash));
+        var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "EXEC sp_Administradores_UpdatePasswordHash @Id, @PasswordHash";
+        command.Parameters.Add(new SqlParameter("@Id", id));
+        command.Parameters.Add(new SqlParameter("@PasswordHash", newHash));
+        await command.ExecuteNonQueryAsync();
     }
 }

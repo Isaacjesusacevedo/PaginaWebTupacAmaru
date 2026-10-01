@@ -16,11 +16,13 @@ public class AdministradorService : IAdministradorService
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
-    public List<Administrador> GetAll() => _repository.GetAll();
+    public async Task<List<Administrador>> GetAllAsync()
+        => await _repository.GetAllAsync();
 
-    public Administrador? GetById(int id) => _repository.GetById(id);
+    public async Task<Administrador?> GetByIdAsync(int id)
+        => await _repository.GetByIdAsync(id);
 
-    public ServiceResult<Administrador> Create(Administrador admin, string password)
+    public async Task<ServiceResult<Administrador>> CreateAsync(Administrador admin, string password)
     {
         if (string.IsNullOrWhiteSpace(admin.Nombre))
             return ServiceResult<Administrador>.Fail("El nombre es obligatorio.");
@@ -37,7 +39,7 @@ public class AdministradorService : IAdministradorService
         // ⚠️ Normalizar ANTES de chequear duplicados
         admin.Email = admin.Email.ToLower().Trim();
 
-        if (_repository.ExistsByEmail(admin.Email))
+        if (await _repository.ExistsByEmailAsync(admin.Email))
             return ServiceResult<Administrador>.Fail("Ya existe un administrador con ese email.");
 
         admin.PasswordHash = BCryptNet.HashPassword(password, workFactor: 12);
@@ -46,7 +48,7 @@ public class AdministradorService : IAdministradorService
 
         try
         {
-            var created = _repository.Create(admin);
+            var created = await _repository.CreateAsync(admin);
             return ServiceResult<Administrador>.Ok(created, "Administrador creado correctamente.");
         }
         catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
@@ -57,9 +59,9 @@ public class AdministradorService : IAdministradorService
         }
     }
 
-    public ServiceResult<Administrador> Update(int id, Administrador admin)
+    public async Task<ServiceResult<Administrador>> UpdateAsync(int id, Administrador admin)
     {
-        if (!_repository.Exists(id))
+        if (!await _repository.ExistsAsync(id))
             return ServiceResult<Administrador>.Fail($"El administrador con Id {id} no existe.");
 
         if (string.IsNullOrWhiteSpace(admin.Nombre))
@@ -71,7 +73,7 @@ public class AdministradorService : IAdministradorService
         if (string.IsNullOrWhiteSpace(admin.Email))
             return ServiceResult<Administrador>.Fail("El email es obligatorio.");
 
-        var existing = _repository.GetById(id);
+        var existing = await _repository.GetByIdAsync(id);
         if (existing == null)
             return ServiceResult<Administrador>.Fail($"El administrador con Id {id} no existe.");
 
@@ -80,14 +82,14 @@ public class AdministradorService : IAdministradorService
 
         if (!existing.Email.Equals(admin.Email, StringComparison.OrdinalIgnoreCase))
         {
-            if (_repository.ExistsByEmail(admin.Email))
+            if (await _repository.ExistsByEmailAsync(admin.Email))
                 return ServiceResult<Administrador>.Fail("Ya existe un administrador con ese email.");
         }
 
         try
         {
-            _repository.Update(id, admin);
-            var updated = _repository.GetById(id);
+            await _repository.UpdateAsync(id, admin);
+            var updated = await _repository.GetByIdAsync(id);
             return ServiceResult<Administrador>.Ok(updated!, "Administrador actualizado correctamente.");
         }
         catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
@@ -96,9 +98,9 @@ public class AdministradorService : IAdministradorService
         }
     }
 
-    public ServiceResult ChangePassword(int id, string passwordActual, string nuevaPassword)
+    public async Task<ServiceResult> ChangePasswordAsync(int id, string passwordActual, string nuevaPassword)
     {
-        if (!_repository.Exists(id))
+        if (!await _repository.ExistsAsync(id))
             return ServiceResult.Fail($"El administrador con Id {id} no existe.");
 
         if (string.IsNullOrWhiteSpace(passwordActual))
@@ -107,7 +109,7 @@ public class AdministradorService : IAdministradorService
         if (string.IsNullOrWhiteSpace(nuevaPassword) || nuevaPassword.Length < 8)
             return ServiceResult.Fail("La nueva contraseña debe tener al menos 8 caracteres.");
 
-        var admin = _repository.GetById(id);
+        var admin = await _repository.GetByIdAsync(id);
         if (admin == null)
             return ServiceResult.Fail($"El administrador con Id {id} no existe.");
 
@@ -115,23 +117,23 @@ public class AdministradorService : IAdministradorService
             return ServiceResult.Fail("La contraseña actual es incorrecta.");
 
         var newHash = BCryptNet.HashPassword(nuevaPassword, workFactor: 12);
-        _repository.UpdatePasswordHash(id, newHash);
+        await _repository.UpdatePasswordHashAsync(id, newHash);
 
         return ServiceResult.Ok("Contraseña actualizada correctamente.");
     }
 
-    public ServiceResult Delete(int id)
+    public async Task<ServiceResult> DeleteAsync(int id)
     {
-        if (!_repository.Exists(id))
+        if (!await _repository.ExistsAsync(id))
             return ServiceResult.Fail($"El administrador con Id {id} no existe.");
 
-        _repository.Delete(id);
+        await _repository.DeleteAsync(id);
         return ServiceResult.Ok("Administrador eliminado correctamente.");
     }
 
-    public AdminResult? Login(string email, string password)
+    public async Task<AdminResult?> LoginAsync(string email, string password)
     {
-        var admin = _repository.GetByEmail(email);
+        var admin = await _repository.GetByEmailAsync(email);
         if (admin == null)
             return null;
 
@@ -141,11 +143,12 @@ public class AdministradorService : IAdministradorService
         return new AdminResult(admin.Id, admin.Nombre, admin.Apellido, admin.Email, admin.Role);
     }
 
-    public bool HayAdmins() => _repository.Count() > 0;
+    public async Task<bool> HayAdminsAsync()
+        => await _repository.CountAsync() > 0;
 
     public async Task<AdminResult?> CrearPrimerAdminAsync(SetupAdminDto dto)
     {
-        if (HayAdmins())
+        if (await HayAdminsAsync())
             return null;
 
         var admin = new Administrador
@@ -156,16 +159,16 @@ public class AdministradorService : IAdministradorService
             Role = dto.Role
         };
 
-        var result = Create(admin, dto.Password);
+        var result = await CreateAsync(admin, dto.Password);
         if (!result.Success)
             return null;
 
         return new AdminResult(result.Data!.Id, result.Data.Nombre, result.Data.Apellido, result.Data.Email, result.Data.Role);
     }
 
-    public ServiceResult ChangePasswordByEmail(string email, string passwordActual, string nuevaPassword)
+    public async Task<ServiceResult> ChangePasswordByEmailAsync(string email, string passwordActual, string nuevaPassword)
     {
-        var admin = _repository.GetByEmail(email);
+        var admin = await _repository.GetByEmailAsync(email);
         if (admin == null)
             return ServiceResult.Fail("Usuario no encontrado.");
 
@@ -176,7 +179,7 @@ public class AdministradorService : IAdministradorService
             return ServiceResult.Fail("La nueva contraseña debe tener al menos 8 caracteres.");
 
         var newHash = BCryptNet.HashPassword(nuevaPassword, workFactor: 12);
-        _repository.UpdatePasswordHash(admin.Id, newHash);
+        await _repository.UpdatePasswordHashAsync(admin.Id, newHash);
 
         return ServiceResult.Ok("Contraseña actualizada correctamente.");
     }

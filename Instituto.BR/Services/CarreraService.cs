@@ -16,11 +16,13 @@ public class CarreraService : ICarreraService
         _alumnoRepository = alumnoRepository ?? throw new ArgumentNullException(nameof(alumnoRepository));
     }
 
-    public List<Carrera> GetAll() => _repository.GetAll();
+    public async Task<List<Carrera>> GetAllAsync()
+        => await _repository.GetAllAsync();
 
-    public Carrera? GetById(int id) => _repository.GetById(id);
+    public async Task<Carrera?> GetByIdAsync(int id)
+        => await _repository.GetByIdAsync(id);
 
-    public ServiceResult<Carrera> Create(Carrera carrera)
+    public async Task<ServiceResult<Carrera>> CreateAsync(Carrera carrera)
     {
         if (string.IsNullOrWhiteSpace(carrera.Nombre))
             return ServiceResult<Carrera>.Fail("El nombre de la carrera es obligatorio.");
@@ -29,13 +31,13 @@ public class CarreraService : ICarreraService
             return ServiceResult<Carrera>.Fail("La duración debe estar entre 1 y 10 años.");
 
         carrera.Estado ??= "Activa";
-        var created = _repository.Create(carrera);
+        var created = await _repository.CreateAsync(carrera);
         return ServiceResult<Carrera>.Ok(created, "Carrera creada correctamente.");
     }
 
-    public ServiceResult<Carrera> Update(int id, Carrera carrera)
+    public async Task<ServiceResult<Carrera>> UpdateAsync(int id, Carrera carrera)
     {
-        if (!_repository.Exists(id))
+        if (!await _repository.ExistsAsync(id))
             return ServiceResult<Carrera>.Fail($"La carrera con Id {id} no existe.");
 
         if (string.IsNullOrWhiteSpace(carrera.Nombre))
@@ -44,20 +46,20 @@ public class CarreraService : ICarreraService
         if (carrera.DuracionAnios < 1 || carrera.DuracionAnios > 10)
             return ServiceResult<Carrera>.Fail("La duración debe estar entre 1 y 10 años.");
 
-        _repository.Update(id, carrera);
+        await _repository.UpdateAsync(id, carrera);
         return ServiceResult<Carrera>.Ok(carrera, "Carrera actualizada correctamente.");
     }
 
-    public ServiceResult Delete(int id)
+    public async Task<ServiceResult> DeleteAsync(int id)
     {
-        if (!_repository.Exists(id))
+        if (!await _repository.ExistsAsync(id))
             return ServiceResult.Fail($"La carrera con Id {id} no existe.");
 
-        // Validación: no eliminar si hay alumnos inscriptos
-        if (_alumnoRepository.ExistsByCarreraId(id))
+        // Validación: no eliminar si tiene alumnos inscriptos
+        if (await _alumnoRepository.ExistsByCarreraIdAsync(id))
             return ServiceResult.Fail("No se puede eliminar la carrera porque tiene alumnos inscriptos.");
 
-        _repository.Delete(id);
+        await _repository.DeleteAsync(id);
         return ServiceResult.Ok("Carrera eliminada correctamente.");
     }
 }

@@ -4,63 +4,63 @@ namespace Instituto.AD.Interfaces;
 
 public interface ICarreraRepository
 {
-    List<Carrera> GetAll();
-    Carrera? GetById(int id);
-    Carrera Create(Carrera entity);
-    void Update(int id, Carrera entity);
-    void Delete(int id);
-    bool Exists(int id);
+    Task<List<Carrera>> GetAllAsync();
+    Task<Carrera?> GetByIdAsync(int id);
+    Task<Carrera> CreateAsync(Carrera entity);
+    Task UpdateAsync(int id, Carrera entity);
+    Task DeleteAsync(int id);
+    Task<bool> ExistsAsync(int id);
 }
 
 public interface IAlumnoRepository
 {
-    List<Alumno> GetAll();
-    Alumno? GetById(int id);
-    Alumno Create(Alumno entity);
-    void Update(int id, Alumno entity);
-    void Delete(int id);
-    bool Exists(int id);
-    bool ExistsByDNI(int dni);
-    bool ExistsByEmail(string email);
-    bool ExistsByCarreraId(int carreraId);
+    Task<List<Alumno>> GetAllAsync();
+    Task<Alumno?> GetByIdAsync(int id);
+    Task<Alumno> CreateAsync(Alumno entity);
+    Task UpdateAsync(int id, Alumno entity);
+    Task DeleteAsync(int id);
+    Task<bool> ExistsAsync(int id);
+    Task<bool> ExistsByDNIAsync(int dni);
+    Task<bool> ExistsByEmailAsync(string email);
+    Task<bool> ExistsByCarreraIdAsync(int carreraId);
 }
 
 public interface IAdministradorRepository
 {
-    List<Administrador> GetAll();
-    Administrador? GetById(int id);
-    Administrador? GetByEmail(string email);
-    Administrador Create(Administrador entity);
-    void Update(int id, Administrador entity);
-    void Delete(int id); // Soft delete
-    bool Exists(int id);
-    bool ExistsByEmail(string email);
-    int Count();
-    void UpdatePasswordHash(int id, string newHash);
+    Task<List<Administrador>> GetAllAsync();
+    Task<Administrador?> GetByIdAsync(int id);
+    Task<Administrador?> GetByEmailAsync(string email);
+    Task<Administrador> CreateAsync(Administrador entity);
+    Task UpdateAsync(int id, Administrador entity);
+    Task DeleteAsync(int id);
+    Task<bool> ExistsAsync(int id);
+    Task<bool> ExistsByEmailAsync(string email);
+    Task<int> CountAsync();
+    Task UpdatePasswordHashAsync(int id, string newHash);
 }
 
 public interface IProfesorRepository
 {
-    List<Profesor> GetAll();
-    Profesor? GetById(int id);
-    Profesor Create(Profesor entity);
-    void Update(int id, Profesor entity);
-    void Delete(int id);
-    bool Exists(int id);
-    bool ExistsByEmail(string email);
+    Task<List<Profesor>> GetAllAsync();
+    Task<Profesor?> GetByIdAsync(int id);
+    Task<Profesor> CreateAsync(Profesor entity);
+    Task UpdateAsync(int id, Profesor entity);
+    Task DeleteAsync(int id);
+    Task<bool> ExistsAsync(int id);
+    Task<bool> ExistsByEmailAsync(string email);
 }
 
 public interface IFormularioRepository
 {
-    List<Formulario> GetAll();
-    Formulario? GetById(int id);
-    Formulario Create(Formulario entity);
-    void Update(int id, Formulario entity);
-    void Delete(int id);
-    bool Exists(int id);
+    Task<List<Formulario>> GetAllAsync();
+    Task<Formulario?> GetByIdAsync(int id);
+    Task<Formulario> CreateAsync(Formulario entity);
+    Task UpdateAsync(int id, Formulario entity);
+    Task DeleteAsync(int id);
+    Task<bool> ExistsAsync(int id);
 }
 
 public interface IListadoRepository
 {
-    List<ListadoItem> GetListado();
+    Task<List<ListadoItem>> GetListadoAsync();
 }

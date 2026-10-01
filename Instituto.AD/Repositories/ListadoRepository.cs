@@ -1,83 +1,38 @@
 using Instituto.AD.Interfaces;
 using Instituto.AD.Models;
+using Instituto.AD.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 
 namespace Instituto.AD.Repositories;
 
 public class ListadoRepository : IListadoRepository
 {
-    private readonly string _connectionString;
+    private readonly InstitutoDbContext _context;
 
-    public ListadoRepository(string connectionString)
+    public ListadoRepository(InstitutoDbContext context)
     {
-        _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
-    private static Alumno MapReaderToAlumno(SqlDataReader reader)
+    private static ListadoItem MapReaderToListadoItem(SqlDataReader reader)
     {
-        return new Alumno
+        return new ListadoItem
         {
-            Id = reader.GetInt32(reader.GetOrdinal("Id")),
-            Nombre = reader.GetString(reader.GetOrdinal("Nombre")),
-            Apellido = reader.GetString(reader.GetOrdinal("Apellido")),
-            Email = reader.GetString(reader.GetOrdinal("Email")),
+            AlumnoId = reader.GetInt32(reader.GetOrdinal("AlumnoId")),
+            NombreCompleto = reader.GetString(reader.GetOrdinal("NombreCompleto")),
             DNI = reader.GetInt32(reader.GetOrdinal("DNI")),
-            FechaNacimiento = reader.GetDateTime(reader.GetOrdinal("FechaNacimiento")),
-            Direccion = reader.IsDBNull(reader.GetOrdinal("Direccion")) ? null : reader.GetString(reader.GetOrdinal("Direccion")),
-            Nacionalidad = reader.IsDBNull(reader.GetOrdinal("Nacionalidad")) ? null : reader.GetString(reader.GetOrdinal("Nacionalidad")),
-            FechaInscripcion = reader.IsDBNull(reader.GetOrdinal("FechaInscripcion")) ? null : reader.GetDateTime(reader.GetOrdinal("FechaInscripcion")),
-            Telefono = reader.IsDBNull(reader.GetOrdinal("Telefono")) ? null : reader.GetString(reader.GetOrdinal("Telefono")),
-            TituloSecundario = reader.IsDBNull(reader.GetOrdinal("TituloSecundario")) ? null : reader.GetString(reader.GetOrdinal("TituloSecundario")),
-            Turno = reader.IsDBNull(reader.GetOrdinal("Turno")) ? null : reader.GetString(reader.GetOrdinal("Turno")),
-            CarreraId = reader.GetInt32(reader.GetOrdinal("CarreraId"))
+            Email = reader.GetString(reader.GetOrdinal("Email")),
+            Carrera = reader.GetString(reader.GetOrdinal("Carrera")),
+            Turno = reader.GetString(reader.GetOrdinal("Turno")),
+            Edad = reader.GetInt32(reader.GetOrdinal("Edad"))
         };
     }
 
-    private static Carrera MapReaderToCarrera(SqlDataReader reader)
+    public async Task<List<ListadoItem>> GetListadoAsync()
     {
-        return new Carrera
-        {
-            Id = reader.GetInt32(reader.GetOrdinal("Id")),
-            Nombre = reader.GetString(reader.GetOrdinal("Nombre"))
-        };
-    }
-
-    public List<ListadoItem> GetListado()
-    {
-        var alumnos = new List<Alumno>();
-        var carreras = new Dictionary<int, string>();
-
-        using (var db = new AccesoDB(_connectionString))
-        {
-            using var reader = db.GetData("SELECT * FROM Alumnos ORDER BY Id");
-            while (reader.Read())
-            {
-                alumnos.Add(MapReaderToAlumno(reader));
-            }
-        }
-
-        using (var db = new AccesoDB(_connectionString))
-        {
-            using var reader = db.GetData("SELECT Id, Nombre FROM Carreras");
-            while (reader.Read())
-            {
-                carreras[reader.GetInt32(reader.GetOrdinal("Id"))] = reader.GetString(reader.GetOrdinal("Nombre"));
-            }
-        }
-
-        return alumnos.Select(a =>
-        {
-            var carreraNombre = carreras.TryGetValue(a.CarreraId, out var c) ? c : "Sin carrera";
-            return new ListadoItem
-            {
-                AlumnoId = a.Id,
-                NombreCompleto = $"{a.Apellido}, {a.Nombre}",
-                DNI = a.DNI,
-                Email = a.Email,
-                Carrera = carreraNombre,
-                Turno = a.Turno,
-                Edad = a.Edad
-            };
-        }).ToList();
+        return await _context.Database
+            .SqlQueryRaw<ListadoItem>("EXEC sp_Listado_GetAll")
+            .ToListAsync();
     }
 }

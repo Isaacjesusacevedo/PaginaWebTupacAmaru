@@ -1,16 +1,18 @@
 using Instituto.AD.Interfaces;
 using Instituto.AD.Models;
+using Instituto.AD.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 
 namespace Instituto.AD.Repositories;
 
 public class FormularioRepository : IFormularioRepository
 {
-    private readonly string _connectionString;
+    private readonly InstitutoDbContext _context;
 
-    public FormularioRepository(string connectionString)
+    public FormularioRepository(InstitutoDbContext context)
     {
-        _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     private static Formulario MapReaderToFormulario(SqlDataReader reader)
@@ -27,76 +29,70 @@ public class FormularioRepository : IFormularioRepository
         };
     }
 
-    public List<Formulario> GetAll()
+    public async Task<List<Formulario>> GetAllAsync()
     {
-        var formularios = new List<Formulario>();
-        using var db = new AccesoDB(_connectionString);
-        using var reader = db.GetData("SELECT * FROM Formularios ORDER BY Id");
-        while (reader.Read())
-        {
-            formularios.Add(MapReaderToFormulario(reader));
-        }
-        return formularios;
+        return await _context.Formularios
+            .FromSqlRaw("EXEC sp_Formularios_GetAll")
+            .ToListAsync();
     }
 
-    public Formulario? GetById(int id)
+    public async Task<Formulario?> GetByIdAsync(int id)
     {
-        using var db = new AccesoDB(_connectionString);
-        using var reader = db.GetData(
-            "SELECT * FROM Formularios WHERE Id = @Id",
-            new DBParameters().Agregar("@Id", id));
-        
-        return reader.Read() ? MapReaderToFormulario(reader) : null;
+        return await _context.Formularios
+            .FromSqlRaw("EXEC sp_Formularios_GetById @Id", new SqlParameter("@Id", id))
+            .FirstOrDefaultAsync();
     }
 
-    public Formulario Create(Formulario entity)
+    public async Task<Formulario> CreateAsync(Formulario entity)
     {
-        using var db = new AccesoDB(_connectionString);
-        var parametros = new DBParameters()
-            .Agregar("@Nombre", entity.Nombre)
-            .Agregar("@Estado", entity.Estado)
-            .Agregar("@FechaApertura", entity.FechaApertura)
-            .Agregar("@FechaCierre", entity.FechaCierre)
-            .Agregar("@Descripcion", entity.Descripcion ?? (object)DBNull.Value)
-            .Agregar("@FechaCreacion", DateTime.Now);
+        var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
 
-        var id = Convert.ToInt32(db.ExecuteScalar(
-            @"INSERT INTO Formularios (Nombre, Estado, FechaApertura, FechaCierre, Descripcion, FechaCreacion)
-              VALUES (@Nombre, @Estado, @FechaApertura, @FechaCierre, @Descripcion, @FechaCreacion);
-              SELECT SCOPE_IDENTITY();",
-            parametros));
+        using var command = connection.CreateCommand();
+        command.CommandText = "EXEC sp_Formularios_Create @Nombre, @Estado, @FechaApertura, @FechaCierre, @Descripcion";
+        command.Parameters.Add(new SqlParameter("@Nombre", entity.Nombre));
+        command.Parameters.Add(new SqlParameter("@Estado", entity.Estado));
+        command.Parameters.Add(new SqlParameter("@FechaApertura", entity.FechaApertura));
+        command.Parameters.Add(new SqlParameter("@FechaCierre", entity.FechaCierre));
+        command.Parameters.Add(new SqlParameter("@Descripcion", entity.Descripcion ?? (object)DBNull.Value));
 
-        entity.Id = id;
+        var result = await command.ExecuteScalarAsync();
+        entity.Id = Convert.ToInt32(await command.ExecuteScalarAsync());
         return entity;
     }
 
-    public void Update(int id, Formulario entity)
+    public async Task UpdateAsync(int id, Formulario entity)
     {
-        using var db = new AccesoDB(_connectionString);
-        var parametros = new DBParameters()
-            .Agregar("@Id", id)
-            .Agregar("@Nombre", entity.Nombre)
-            .Agregar("@Estado", entity.Estado)
-            .Agregar("@FechaApertura", entity.FechaApertura)
-            .Agregar("@FechaCierre", entity.FechaCierre)
-            .Agregar("@Descripcion", entity.Descripcion ?? (object)DBNull.Value);
+        var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
 
-        db.Execute(
-            @"UPDATE Formularios SET Nombre = @Nombre, Estado = @Estado, FechaApertura = @FechaApertura, 
-              FechaCierre = @FechaCierre, Descripcion = @Descripcion WHERE Id = @Id",
-            parametros);
+        using var command = connection.CreateCommand();
+        command.CommandText = "EXEC sp_Formularios_Update @Id, @Nombre, @Estado, @FechaApertura, @FechaCierre, @Descripcion";
+        command.Parameters.Add(new SqlParameter("@Id", id));
+        command.Parameters.Add(new SqlParameter("@Nombre", entity.Nombre));
+        command.Parameters.Add(new SqlParameter("@Estado", entity.Estado));
+        command.Parameters.Add(new SqlParameter("@FechaApertura", entity.FechaApertura));
+        command.Parameters.Add(new SqlParameter("@FechaCierre", entity.FechaCierre));
+        command.Parameters.Add(new SqlParameter("@Descripcion", entity.Descripcion ?? (object)DBNull.Value));
+
+        await command.ExecuteNonQueryAsync();
     }
 
-    public void Delete(int id)
+    public async Task DeleteAsync(int id)
     {
-        using var db = new AccesoDB(_connectionString);
-        db.Execute("DELETE FROM Formularios WHERE Id = @Id", new DBParameters().Agregar("@Id", id));
+        var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "EXEC sp_Formularios_Delete @Id";
+        command.Parameters.Add(new SqlParameter("@Id", id));
+        await command.ExecuteNonQueryAsync();
     }
 
-    public bool Exists(int id)
+    public async Task<bool> ExistsAsync(int id)
     {
-        using var db = new AccesoDB(_connectionString);
-        var result = db.ExecuteScalar("SELECT COUNT(*) FROM Formularios WHERE Id = @Id", new DBParameters().Agregar("@Id", id));
-        return Convert.ToInt32(result) > 0;
+        return await _context.Database
+            .SqlQueryRaw<int>("EXEC sp_Formularios_Exists @Id", new SqlParameter("@Id", id))
+            .FirstOrDefaultAsync() == 1;
     }
 }

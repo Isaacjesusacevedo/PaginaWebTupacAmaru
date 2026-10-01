@@ -14,11 +14,13 @@ public class ProfesorService : IProfesorService
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
-    public List<Profesor> GetAll() => _repository.GetAll();
+    public async Task<List<Profesor>> GetAllAsync()
+        => await _repository.GetAllAsync();
 
-    public Profesor? GetById(int id) => _repository.GetById(id);
+    public async Task<Profesor?> GetByIdAsync(int id)
+        => await _repository.GetByIdAsync(id);
 
-    public ServiceResult<Profesor> Create(Profesor profesor)
+    public async Task<ServiceResult<Profesor>> CreateAsync(Profesor profesor)
     {
         if (string.IsNullOrWhiteSpace(profesor.Nombre))
             return ServiceResult<Profesor>.Fail("El nombre es obligatorio.");
@@ -29,16 +31,16 @@ public class ProfesorService : IProfesorService
         if (string.IsNullOrWhiteSpace(profesor.Email))
             return ServiceResult<Profesor>.Fail("El email es obligatorio.");
 
-        if (_repository.ExistsByEmail(profesor.Email))
+        if (await _repository.ExistsByEmailAsync(profesor.Email))
             return ServiceResult<Profesor>.Fail("Ya existe un profesor con ese email.");
 
-        var created = _repository.Create(profesor);
+        var created = await _repository.CreateAsync(profesor);
         return ServiceResult<Profesor>.Ok(created, "Profesor creado correctamente.");
     }
 
-    public ServiceResult<Profesor> Update(int id, Profesor profesor)
+    public async Task<ServiceResult<Profesor>> UpdateAsync(int id, Profesor profesor)
     {
-        if (!_repository.Exists(id))
+        if (!await _repository.ExistsAsync(id))
             return ServiceResult<Profesor>.Fail($"El profesor con Id {id} no existe.");
 
         if (string.IsNullOrWhiteSpace(profesor.Nombre))
@@ -50,26 +52,26 @@ public class ProfesorService : IProfesorService
         if (string.IsNullOrWhiteSpace(profesor.Email))
             return ServiceResult<Profesor>.Fail("El email es obligatorio.");
 
-        var existing = _repository.GetById(id);
+        var existing = await _repository.GetByIdAsync(id);
         if (existing == null)
             return ServiceResult<Profesor>.Fail($"El profesor con Id {id} no existe.");
 
         if (!existing.Email.Equals(profesor.Email, StringComparison.OrdinalIgnoreCase))
         {
-            if (_repository.ExistsByEmail(profesor.Email))
+            if (await _repository.ExistsByEmailAsync(profesor.Email))
                 return ServiceResult<Profesor>.Fail("Ya existe un profesor con ese email.");
         }
 
-        _repository.Update(id, profesor);
+        await _repository.UpdateAsync(id, profesor);
         return ServiceResult<Profesor>.Ok(profesor, "Profesor actualizado correctamente.");
     }
 
-    public ServiceResult Delete(int id)
+    public async Task<ServiceResult> DeleteAsync(int id)
     {
-        if (!_repository.Exists(id))
+        if (!await _repository.ExistsAsync(id))
             return ServiceResult.Fail($"El profesor con Id {id} no existe.");
 
-        _repository.Delete(id);
+        await _repository.DeleteAsync(id);
         return ServiceResult.Ok("Profesor eliminado correctamente.");
     }
 }

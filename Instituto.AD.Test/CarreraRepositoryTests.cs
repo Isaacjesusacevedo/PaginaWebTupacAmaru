@@ -3,6 +3,7 @@ using Instituto.AD.Models;
 using Instituto.AD.Repositories;
 using Moq;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Instituto.AD.Test;
 
@@ -29,14 +30,14 @@ public sealed class CarreraRepositoryTests
     }
 
     [TestMethod]
-    public void GetAll_ReturnsListOfCarreras()
+    public async Task GetAllAsync_ReturnsListOfCarreras()
     {
         // Arrange
         var expected = new List<Carrera> { _testCarrera };
-        _mockRepo.Setup(r => r.GetAll()).Returns(expected);
+        _mockRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(expected);
 
         // Act
-        var result = _mockRepo.Object.GetAll();
+        var result = await _mockRepo.Object.GetAllAsync();
 
         // Assert
         Assert.AreEqual(1, result.Count);
@@ -44,13 +45,13 @@ public sealed class CarreraRepositoryTests
     }
 
     [TestMethod]
-    public void GetById_ExistingId_ReturnsCarrera()
+    public async Task GetByIdAsync_ExistingId_ReturnsCarrera()
     {
         // Arrange
-        _mockRepo.Setup(r => r.GetById(1)).Returns(_testCarrera);
+        _mockRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(_testCarrera);
 
         // Act
-        var result = _mockRepo.Object.GetById(1);
+        var result = await _mockRepo.Object.GetByIdAsync(1);
 
         // Assert
         Assert.IsNotNull(result);
@@ -58,27 +59,27 @@ public sealed class CarreraRepositoryTests
     }
 
     [TestMethod]
-    public void GetById_NonExistingId_ReturnsNull()
+    public async Task GetByIdAsync_NonExistingId_ReturnsNull()
     {
         // Arrange
-        _mockRepo.Setup(r => r.GetById(99)).Returns((Carrera?)null);
+        _mockRepo.Setup(r => r.GetByIdAsync(99)).ReturnsAsync((Carrera?)null);
 
         // Act
-        var result = _mockRepo.Object.GetById(99);
+        var result = await _mockRepo.Object.GetByIdAsync(99);
 
         // Assert
         Assert.IsNull(result);
     }
 
     [TestMethod]
-    public void Create_ValidCarrera_ReturnsCarreraWithId()
+    public async Task CreateAsync_ValidCarrera_ReturnsCarreraWithId()
     {
         // Arrange
         var newCarrera = new Carrera { Nombre = "Nueva Carrera", DuracionAnios = 2 };
-        _mockRepo.Setup(r => r.Create(It.IsAny<Carrera>())).Returns<Carrera>(c => { c.Id = 5; return c; });
+        _mockRepo.Setup(r => r.CreateAsync(It.IsAny<Carrera>())).ReturnsAsync<Carrera>(c => { c.Id = 5; return c; });
 
         // Act
-        var result = _mockRepo.Object.Create(newCarrera);
+        var result = await _mockRepo.Object.CreateAsync(newCarrera);
 
         // Assert
         Assert.AreEqual(5, result.Id);
@@ -86,26 +87,26 @@ public sealed class CarreraRepositoryTests
     }
 
     [TestMethod]
-    public void Delete_ExistingId_CallsRepository()
+    public async Task DeleteAsync_ExistingId_CallsRepository()
     {
         // Arrange
-        _mockRepo.Setup(r => r.Exists(1)).Returns(true);
+        _mockRepo.Setup(r => r.ExistsAsync(1)).ReturnsAsync(true);
 
         // Act
-        _mockRepo.Object.Delete(1);
+        await _mockRepo.Object.DeleteAsync(1);
 
         // Assert
-        _mockRepo.Verify(r => r.Delete(1), Times.Once);
+        _mockRepo.Verify(r => r.DeleteAsync(1), Times.Once);
     }
 
     [TestMethod]
-    public void Exists_ExistingId_ReturnsTrue()
+    public async Task ExistsAsync_ExistingId_ReturnsTrue()
     {
         // Arrange
-        _mockRepo.Setup(r => r.Exists(1)).Returns(true);
+        _mockRepo.Setup(r => r.ExistsAsync(1)).ReturnsAsync(true);
 
         // Act
-        var result = _mockRepo.Object.Exists(1);
+        var result = await _mockRepo.Object.ExistsAsync(1);
 
         // Assert
         Assert.IsTrue(result);

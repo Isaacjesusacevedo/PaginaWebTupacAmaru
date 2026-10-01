@@ -1,16 +1,18 @@
 using Instituto.AD.Interfaces;
 using Instituto.AD.Models;
+using Instituto.AD.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 
 namespace Instituto.AD.Repositories;
 
 public class CarreraRepository : ICarreraRepository
 {
-    private readonly string _connectionString;
+    private readonly InstitutoDbContext _context;
 
-    public CarreraRepository(string connectionString)
+    public CarreraRepository(InstitutoDbContext context)
     {
-        _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     private static Carrera MapReaderToCarrera(SqlDataReader reader)
@@ -28,78 +30,72 @@ public class CarreraRepository : ICarreraRepository
         };
     }
 
-    public List<Carrera> GetAll()
+    public async Task<List<Carrera>> GetAllAsync()
     {
-        var carreras = new List<Carrera>();
-        using var db = new AccesoDB(_connectionString);
-        using var reader = db.GetData("SELECT Id, Nombre, DuracionAnios, Turno, Modalidad, Horario, Estado, FechaCreacion FROM Carreras ORDER BY Id");
-        while (reader.Read())
-        {
-            carreras.Add(MapReaderToCarrera(reader));
-        }
-        return carreras;
+        return await _context.Carreras
+            .FromSqlRaw("EXEC sp_Carreras_GetAll")
+            .ToListAsync();
     }
 
-    public Carrera? GetById(int id)
+    public async Task<Carrera?> GetByIdAsync(int id)
     {
-        using var db = new AccesoDB(_connectionString);
-        using var reader = db.GetData(
-            "SELECT Id, Nombre, DuracionAnios, Turno, Modalidad, Horario, Estado, FechaCreacion FROM Carreras WHERE Id = @Id",
-            new DBParameters().Agregar("@Id", id));
-        
-        return reader.Read() ? MapReaderToCarrera(reader) : null;
+        return await _context.Carreras
+            .FromSqlRaw("EXEC sp_Carreras_GetById @Id", new SqlParameter("@Id", id))
+            .FirstOrDefaultAsync();
     }
 
-    public Carrera Create(Carrera entity)
+    public async Task<Carrera> CreateAsync(Carrera entity)
     {
-        using var db = new AccesoDB(_connectionString);
-        var parametros = new DBParameters()
-            .Agregar("@Nombre", entity.Nombre)
-            .Agregar("@DuracionAnios", entity.DuracionAnios)
-            .Agregar("@Turno", entity.Turno ?? (object)DBNull.Value)
-            .Agregar("@Modalidad", entity.Modalidad ?? (object)DBNull.Value)
-            .Agregar("@Horario", entity.Horario ?? (object)DBNull.Value)
-            .Agregar("@Estado", entity.Estado ?? "Activa")
-            .Agregar("@FechaCreacion", DateTime.Now);
+        var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
 
-        var id = Convert.ToInt32(db.ExecuteScalar(
-            @"INSERT INTO Carreras (Nombre, DuracionAnios, Turno, Modalidad, Horario, Estado, FechaCreacion)
-              VALUES (@Nombre, @DuracionAnios, @Turno, @Modalidad, @Horario, @Estado, @FechaCreacion);
-              SELECT SCOPE_IDENTITY();",
-            parametros));
+        using var command = connection.CreateCommand();
+        command.CommandText = "EXEC sp_Carreras_Create @Nombre, @DuracionAnios, @Turno, @Modalidad, @Horario, @Estado";
+        command.Parameters.Add(new SqlParameter("@Nombre", entity.Nombre));
+        command.Parameters.Add(new SqlParameter("@DuracionAnios", entity.DuracionAnios));
+        command.Parameters.Add(new SqlParameter("@Turno", entity.Turno ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Modalidad", entity.Modalidad ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Horario", entity.Horario ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Estado", entity.Estado ?? "Activa"));
 
-        entity.Id = id;
+        var result = await command.ExecuteScalarAsync();
+        entity.Id = Convert.ToInt32(result);
         return entity;
     }
 
-    public void Update(int id, Carrera entity)
+    public async Task UpdateAsync(int id, Carrera entity)
     {
-        using var db = new AccesoDB(_connectionString);
-        var parametros = new DBParameters()
-            .Agregar("@Id", id)
-            .Agregar("@Nombre", entity.Nombre)
-            .Agregar("@DuracionAnios", entity.DuracionAnios)
-            .Agregar("@Turno", entity.Turno ?? (object)DBNull.Value)
-            .Agregar("@Modalidad", entity.Modalidad ?? (object)DBNull.Value)
-            .Agregar("@Horario", entity.Horario ?? (object)DBNull.Value)
-            .Agregar("@Estado", entity.Estado ?? (object)DBNull.Value);
+        var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
 
-        db.Execute(
-            @"UPDATE Carreras SET Nombre = @Nombre, DuracionAnios = @DuracionAnios, Turno = @Turno, 
-              Modalidad = @Modalidad, Horario = @Horario, Estado = @Estado WHERE Id = @Id",
-            parametros);
+        using var command = connection.CreateCommand();
+        command.CommandText = "EXEC sp_Carreras_Update @Id, @Nombre, @DuracionAnios, @Turno, @Modalidad, @Horario, @Estado";
+        command.Parameters.Add(new SqlParameter("@Id", id));
+        command.Parameters.Add(new SqlParameter("@Nombre", entity.Nombre));
+        command.Parameters.Add(new SqlParameter("@DuracionAnios", entity.DuracionAnios));
+        command.Parameters.Add(new SqlParameter("@Turno", entity.Turno ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Modalidad", entity.Modalidad ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Horario", entity.Horario ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Estado", entity.Estado ?? (object)DBNull.Value));
+
+        await command.ExecuteNonQueryAsync();
     }
 
-    public void Delete(int id)
+    public async Task DeleteAsync(int id)
     {
-        using var db = new AccesoDB(_connectionString);
-        db.Execute("DELETE FROM Carreras WHERE Id = @Id", new DBParameters().Agregar("@Id", id));
+        var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "EXEC sp_Carreras_Delete @Id";
+        command.Parameters.Add(new SqlParameter("@Id", id));
+        await command.ExecuteNonQueryAsync();
     }
 
-    public bool Exists(int id)
+    public async Task<bool> ExistsAsync(int id)
     {
-        using var db = new AccesoDB(_connectionString);
-        var result = db.ExecuteScalar("SELECT COUNT(*) FROM Carreras WHERE Id = @Id", new DBParameters().Agregar("@Id", id));
-        return Convert.ToInt32(result) > 0;
+        return await _context.Database
+            .SqlQueryRaw<int>("EXEC sp_Carreras_Exists @Id", new SqlParameter("@Id", id))
+            .FirstOrDefaultAsync() == 1;
     }
 }

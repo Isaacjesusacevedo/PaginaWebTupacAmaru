@@ -1,3 +1,5 @@
+using System;
+
 namespace Instituto.AD.Models;
 
 public class Alumno : Persona
@@ -11,5 +13,6 @@ public class Alumno : Persona
     public string? TituloSecundario { get; set; }
     public string? Turno { get; set; }
     public int CarreraId { get; set; }
+    public DateTime FechaCreacion { get; set; } = DateTime.Now;
     public int Edad => (int)((DateTime.Now - FechaNacimiento).TotalDays / 365.25);
 }

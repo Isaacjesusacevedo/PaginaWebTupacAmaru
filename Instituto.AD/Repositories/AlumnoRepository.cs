@@ -1,16 +1,18 @@
 using Instituto.AD.Interfaces;
 using Instituto.AD.Models;
+using Instituto.AD.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 
 namespace Instituto.AD.Repositories;
 
 public class AlumnoRepository : IAlumnoRepository
 {
-    private readonly string _connectionString;
+    private readonly InstitutoDbContext _context;
 
-    public AlumnoRepository(string connectionString)
+    public AlumnoRepository(InstitutoDbContext context)
     {
-        _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     private static Alumno MapReaderToAlumno(SqlDataReader reader)
@@ -33,113 +35,104 @@ public class AlumnoRepository : IAlumnoRepository
         };
     }
 
-    public List<Alumno> GetAll()
+    public async Task<List<Alumno>> GetAllAsync()
     {
-        var alumnos = new List<Alumno>();
-        using var db = new AccesoDB(_connectionString);
-        using var reader = db.GetData("SELECT * FROM Alumnos ORDER BY Id");
-        while (reader.Read())
-        {
-            alumnos.Add(MapReaderToAlumno(reader));
-        }
-        return alumnos;
+        return await _context.Alumnos
+            .FromSqlRaw("EXEC sp_Alumnos_GetAll")
+            .ToListAsync();
     }
 
-    public Alumno? GetById(int id)
+    public async Task<Alumno?> GetByIdAsync(int id)
     {
-        using var db = new AccesoDB(_connectionString);
-        using var reader = db.GetData(
-            "SELECT * FROM Alumnos WHERE Id = @Id",
-            new DBParameters().Agregar("@Id", id));
-        
-        return reader.Read() ? MapReaderToAlumno(reader) : null;
+        return await _context.Alumnos
+            .FromSqlRaw("EXEC sp_Alumnos_GetById @Id", new SqlParameter("@Id", id))
+            .FirstOrDefaultAsync();
     }
 
-    public Alumno Create(Alumno entity)
+    public async Task<Alumno> CreateAsync(Alumno entity)
     {
-        using var db = new AccesoDB(_connectionString);
-        var parametros = new DBParameters()
-            .Agregar("@Nombre", entity.Nombre)
-            .Agregar("@Apellido", entity.Apellido)
-            .Agregar("@Email", entity.Email)
-            .Agregar("@DNI", entity.DNI)
-            .Agregar("@FechaNacimiento", entity.FechaNacimiento)
-            .Agregar("@Direccion", entity.Direccion ?? (object)DBNull.Value)
-            .Agregar("@Nacionalidad", entity.Nacionalidad ?? (object)DBNull.Value)
-            .Agregar("@FechaInscripcion", entity.FechaInscripcion ?? (object)DateTime.Now)
-            .Agregar("@Telefono", entity.Telefono ?? (object)DBNull.Value)
-            .Agregar("@TituloSecundario", entity.TituloSecundario ?? (object)DBNull.Value)
-            .Agregar("@Turno", entity.Turno ?? (object)DBNull.Value)
-            .Agregar("@CarreraId", entity.CarreraId);
+        var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
 
-        var id = Convert.ToInt32(db.ExecuteScalar(
-            @"INSERT INTO Alumnos (Nombre, Apellido, Email, DNI, FechaNacimiento, Direccion, Nacionalidad, 
-              FechaInscripcion, Telefono, TituloSecundario, Turno, CarreraId, FechaCreacion)
-              VALUES (@Nombre, @Apellido, @Email, @DNI, @FechaNacimiento, @Direccion, @Nacionalidad, 
-                      @FechaInscripcion, @Telefono, @TituloSecundario, @Turno, @CarreraId, GETDATE());
-              SELECT SCOPE_IDENTITY();",
-            parametros));
+        using var command = connection.CreateCommand();
+        command.CommandText = "EXEC sp_Alumnos_Create @Nombre, @Apellido, @Email, @DNI, @FechaNacimiento, @Direccion, @Nacionalidad, @FechaInscripcion, @Telefono, @TituloSecundario, @Turno, @CarreraId";
+        command.Parameters.Add(new SqlParameter("@Nombre", entity.Nombre));
+        command.Parameters.Add(new SqlParameter("@Apellido", entity.Apellido));
+        command.Parameters.Add(new SqlParameter("@Email", entity.Email));
+        command.Parameters.Add(new SqlParameter("@DNI", entity.DNI));
+        command.Parameters.Add(new SqlParameter("@FechaNacimiento", entity.FechaNacimiento));
+        command.Parameters.Add(new SqlParameter("@Direccion", entity.Direccion ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Nacionalidad", entity.Nacionalidad ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@FechaInscripcion", entity.FechaInscripcion ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Telefono", entity.Telefono ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@TituloSecundario", entity.TituloSecundario ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Turno", entity.Turno ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@CarreraId", entity.CarreraId));
 
-        entity.Id = id;
+        var result = await command.ExecuteScalarAsync();
+        entity.Id = Convert.ToInt32(result);
         return entity;
     }
 
-    public void Update(int id, Alumno entity)
+    public async Task UpdateAsync(int id, Alumno entity)
     {
-        using var db = new AccesoDB(_connectionString);
-        var parametros = new DBParameters()
-            .Agregar("@Id", id)
-            .Agregar("@Nombre", entity.Nombre)
-            .Agregar("@Apellido", entity.Apellido)
-            .Agregar("@Email", entity.Email)
-            .Agregar("@DNI", entity.DNI)
-            .Agregar("@FechaNacimiento", entity.FechaNacimiento)
-            .Agregar("@Direccion", entity.Direccion ?? (object)DBNull.Value)
-            .Agregar("@Nacionalidad", entity.Nacionalidad ?? (object)DBNull.Value)
-            .Agregar("@Telefono", entity.Telefono ?? (object)DBNull.Value)
-            .Agregar("@TituloSecundario", entity.TituloSecundario ?? (object)DBNull.Value)
-            .Agregar("@Turno", entity.Turno ?? (object)DBNull.Value)
-            .Agregar("@CarreraId", entity.CarreraId);
+        var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
 
-        db.Execute(
-            @"UPDATE Alumnos SET Nombre = @Nombre, Apellido = @Apellido, Email = @Email, DNI = @DNI, 
-              FechaNacimiento = @FechaNacimiento, Direccion = @Direccion, Nacionalidad = @Nacionalidad,
-              Telefono = @Telefono, TituloSecundario = @TituloSecundario, Turno = @Turno, CarreraId = @CarreraId
-              WHERE Id = @Id",
-            parametros);
+        using var command = connection.CreateCommand();
+        command.CommandText = "EXEC sp_Alumnos_Update @Id, @Nombre, @Apellido, @Email, @DNI, @FechaNacimiento, @Direccion, @Nacionalidad, @Telefono, @TituloSecundario, @Turno, @CarreraId";
+        command.Parameters.Add(new SqlParameter("@Id", id));
+        command.Parameters.Add(new SqlParameter("@Nombre", entity.Nombre));
+        command.Parameters.Add(new SqlParameter("@Apellido", entity.Apellido));
+        command.Parameters.Add(new SqlParameter("@Email", entity.Email));
+        command.Parameters.Add(new SqlParameter("@DNI", entity.DNI));
+        command.Parameters.Add(new SqlParameter("@FechaNacimiento", entity.FechaNacimiento));
+        command.Parameters.Add(new SqlParameter("@Direccion", entity.Direccion ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Nacionalidad", entity.Nacionalidad ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Telefono", entity.Telefono ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@TituloSecundario", entity.TituloSecundario ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@Turno", entity.Turno ?? (object)DBNull.Value));
+        command.Parameters.Add(new SqlParameter("@CarreraId", entity.CarreraId));
+
+        await command.ExecuteNonQueryAsync();
     }
 
-    public void Delete(int id)
+    public async Task DeleteAsync(int id)
     {
-        using var db = new AccesoDB(_connectionString);
-        db.Execute("DELETE FROM Alumnos WHERE Id = @Id", new DBParameters().Agregar("@Id", id));
+        var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "EXEC sp_Alumnos_Delete @Id";
+        command.Parameters.Add(new SqlParameter("@Id", id));
+        await command.ExecuteNonQueryAsync();
     }
 
-    public bool Exists(int id)
+    public async Task<bool> ExistsAsync(int id)
     {
-        using var db = new AccesoDB(_connectionString);
-        var result = db.ExecuteScalar("SELECT COUNT(*) FROM Alumnos WHERE Id = @Id", new DBParameters().Agregar("@Id", id));
-        return Convert.ToInt32(result) > 0;
+        return await _context.Database
+            .SqlQueryRaw<int>("EXEC sp_Alumnos_Exists @Id", new SqlParameter("@Id", id))
+            .FirstOrDefaultAsync() == 1;
     }
 
-    public bool ExistsByDNI(int dni)
+    public async Task<bool> ExistsByDNIAsync(int dni)
     {
-        using var db = new AccesoDB(_connectionString);
-        var result = db.ExecuteScalar("SELECT COUNT(*) FROM Alumnos WHERE DNI = @DNI", new DBParameters().Agregar("@DNI", dni));
-        return Convert.ToInt32(result) > 0;
+        return await _context.Database
+            .SqlQueryRaw<int>("EXEC sp_Alumnos_ExistsByDNI @DNI", new SqlParameter("@DNI", dni))
+            .FirstOrDefaultAsync() == 1;
     }
 
-    public bool ExistsByEmail(string email)
+    public async Task<bool> ExistsByEmailAsync(string email)
     {
-        using var db = new AccesoDB(_connectionString);
-        var result = db.ExecuteScalar("SELECT COUNT(*) FROM Alumnos WHERE Email = @Email", new DBParameters().Agregar("@Email", email.ToLower().Trim()));
-        return Convert.ToInt32(result) > 0;
+        return await _context.Database
+            .SqlQueryRaw<int>("EXEC sp_Alumnos_ExistsByEmail @Email", new SqlParameter("@Email", email.ToLower().Trim()))
+            .FirstOrDefaultAsync() == 1;
     }
 
-    public bool ExistsByCarreraId(int carreraId)
+    public async Task<bool> ExistsByCarreraIdAsync(int carreraId)
     {
-        using var db = new AccesoDB(_connectionString);
-        var result = db.ExecuteScalar("SELECT COUNT(*) FROM Alumnos WHERE CarreraId = @CarreraId", new DBParameters().Agregar("@CarreraId", carreraId));
-        return Convert.ToInt32(result) > 0;
+        return await _context.Database
+            .SqlQueryRaw<int>("EXEC sp_Alumnos_ExistsByCarreraId @CarreraId", new SqlParameter("@CarreraId", carreraId))
+            .FirstOrDefaultAsync() == 1;
     }
 }

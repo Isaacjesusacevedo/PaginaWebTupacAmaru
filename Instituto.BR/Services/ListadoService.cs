@@ -14,9 +14,9 @@ public class ListadoService : IListadoService
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
-    public List<AlumnoListadoDto> GetListado()
+    public async Task<List<AlumnoListadoDto>> GetListadoAsync()
     {
-        var items = _repository.GetListado();
+        var items = await _repository.GetListadoAsync();
         return items.Select(i => new AlumnoListadoDto
         {
             AlumnoId = i.AlumnoId,
