@@ -69,16 +69,17 @@
     130px;                  /* Acciones */
 }
 
-/* 4 columnas: Nombre | Duracion | Turno | Modalidad | Horario | Estado | Acciones (Carreras) */
+/* 7 columnas: Nombre | Duración | Turno | Modalidad | Horario | Estado | Acciones (Carreras) */
 .table-cols-carreras {
   grid-template-columns:
-    minmax(200px, 2.2fr)   /* Nombre */
-    90px                    /* Duración */
-    90px                    /* Turno */
-    110px                   /* Modalidad */
+    minmax(180px, 2.2fr)   /* Nombre */
+    80px                    /* Duración */
+    80px                    /* Turno */
+    100px                   /* Modalidad */
     110px                   /* Horario */
-    90px                    /* Estado */
-    130px;                  /* Acciones */
+    80px                    /* Estado */
+    100px;                  /* Acciones */
+  gap: 12px;
 }
 
 /* 7 columnas: Alumno | DNI | Edad | Carrera | Turno | Fecha egreso | Info académica (Listado) */
