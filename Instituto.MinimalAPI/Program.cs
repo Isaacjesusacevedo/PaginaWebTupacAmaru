@@ -12,6 +12,35 @@ using Instituto.AD.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ══════════════════════════════════════════════════════════════════════
+// CONNECTION STRING
+// Prioridad: Variable de entorno CONNECTION_STRING_SQLSERVER > appsettings.json
+// ══════════════════════════════════════════════════════════════════════
+var envConn = Environment.GetEnvironmentVariable("CONNECTION_STRING_SQLSERVER");
+
+Console.WriteLine("═══════════════════════════════════════════════");
+Console.WriteLine("[CONFIG] ENV VAR 'CONNECTION_STRING_SQLSERVER' presente: " + (!string.IsNullOrEmpty(envConn)));
+Console.WriteLine("[CONFIG] ASPNETCORE_ENVIRONMENT: " + Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
+
+if (!string.IsNullOrWhiteSpace(envConn))
+{
+    Console.WriteLine("[CONFIG] Longitud: " + envConn.Length);
+    Console.WriteLine("[CONFIG] Primeros 50 chars: " + envConn.Substring(0, Math.Min(50, envConn.Length)));
+    builder.Configuration["ConnectionStrings:SqlServer"] = envConn;
+    Console.WriteLine("[CONFIG] ✅ Usando connection string de ENV VAR");
+}
+else
+{
+    Console.WriteLine("[CONFIG] ❌ ENV VAR vacía, usando appsettings.json");
+}
+
+var connectionString = builder.Configuration.GetConnectionString("SqlServer")
+    ?? throw new InvalidOperationException("ConnectionStrings:SqlServer no configurado.");
+
+Console.WriteLine("[CONFIG] Connection string FINAL (primeros 60 chars): " +
+    connectionString.Substring(0, Math.Min(60, connectionString.Length)));
+Console.WriteLine("═══════════════════════════════════════════════");
+
 // ── CORS para el front-end Vue ───────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
@@ -31,9 +60,6 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 // ── EF Core ───────────────────────────────────────────────────────────────────
-var connectionString = builder.Configuration.GetConnectionString("SqlServer")
-    ?? throw new InvalidOperationException("ConnectionStrings:SqlServer no configurado.");
-
 builder.Services.AddDbContext<InstitutoDbContext>(options =>
     options.UseSqlServer(connectionString));
 
@@ -64,9 +90,11 @@ builder.Services.AddSwaggerGen(options =>
         Description = "API del Sistema de Gestión Institucional - Instituto Superior Docente Túpac Amaru"
     });
 });
-// Render inyecta el puerto por variable de entorno PORT
+
+// ── Puerto dinámico (Render) ────────────────────────────────────────────────
 var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 // ── Build ────────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
@@ -95,6 +123,53 @@ if (app.Environment.IsDevelopment())
 
 // ── Health check ────────────────────────────────────────────────────────────
 app.MapGet("/", () => "Backend corriendo correctamente!");
+
+// ══════════════════════════════════════════════════════════════════════════
+// DEBUG CONFIG (temporal — quitar en producción)
+// ══════════════════════════════════════════════════════════════════════════
+app.MapGet("/debug-config", () =>
+{
+    var envConnDebug = Environment.GetEnvironmentVariable("CONNECTION_STRING_SQLSERVER");
+    var configConn = builder.Configuration.GetConnectionString("SqlServer");
+    var envAsp = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+    var envPort = Environment.GetEnvironmentVariable("PORT");
+
+    return Results.Ok(new
+    {
+        aspnetcore_environment = envAsp,
+        port = envPort,
+        envVarPresente = !string.IsNullOrEmpty(envConnDebug),
+        envVarLargo = envConnDebug?.Length ?? 0,
+        envVarPrimeros60 = envConnDebug?.Substring(0, Math.Min(60, envConnDebug?.Length ?? 0)),
+        configConnPrimeros60 = configConn?.Substring(0, Math.Min(60, configConn?.Length ?? 0)),
+        todasLasVars = Environment.GetEnvironmentVariables()
+            .Keys.Cast<string>()
+            .Where(k => k.ToUpper().Contains("CONNECTION")
+                     || k.ToUpper().Contains("SQL")
+                     || k.ToUpper().Contains("ASPNETCORE"))
+            .OrderBy(k => k)
+            .ToArray()
+    });
+});
+
+app.MapGet("/debug-db", async (InstitutoDbContext db) =>
+{
+    try
+    {
+        var canConnect = await db.Database.CanConnectAsync();
+        return Results.Ok(new { canConnect, timestamp = DateTime.UtcNow });
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new
+        {
+            canConnect = false,
+            error = ex.Message,
+            innerError = ex.InnerException?.Message,
+            timestamp = DateTime.UtcNow
+        });
+    }
+});
 
 // ============================================================================
 // AUTH ENDPOINTS
@@ -440,9 +515,15 @@ app.MapGet("/health", async (InstitutoDbContext db) =>
         await db.Database.CanConnectAsync();
         return Results.Ok(new { status = "OK", timestamp = DateTime.UtcNow, database = "connected" });
     }
-    catch
+    catch (Exception ex)
     {
-        return Results.Ok(new { status = "error", timestamp = DateTime.UtcNow, database = "error" });
+        return Results.Ok(new
+        {
+            status = "error",
+            timestamp = DateTime.UtcNow,
+            database = "error",
+            detalle = ex.Message
+        });
     }
 }).WithName("HealthCheck").WithTags("Health");
 
