@@ -59,7 +59,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { apiGet, apiDelete } from '@/composables/useApiFetch'
+import { adminApi } from '@/services/api'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -72,7 +72,7 @@ const admin = ref(null)
 
 onMounted(async () => {
   try {
-    const data = await apiGet(`/api/administradores/${Number(props.id)}`)
+    const data = await adminApi.getById(Number(props.id))
     admin.value = data
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'No se pudo cargar el administrador'
@@ -84,7 +84,7 @@ const eliminarAdministrador = async () => {
   error.value = null
 
   try {
-    await apiDelete(`/api/administradores/${Number(props.id)}`)
+    await adminApi.delete(Number(props.id))
     ElMessage.success('Administrador eliminado correctamente')
     router.push('/administracion')
   } catch (err) {

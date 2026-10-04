@@ -8,7 +8,6 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
 import { setRouter } from '@/composables/useApiFetch'
-import { setRouter as setAcademicaRouter } from '@/composables/useAcademicaApi'
 
 const app = createApp(App)
 
@@ -16,9 +15,7 @@ app.use(createPinia())
 app.use(router)
 app.use(ElementPlus)
 
-// Inyectar el router en useApiFetch para manejo de 401/403
 setRouter(router)
-setAcademicaRouter(router)
 
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)

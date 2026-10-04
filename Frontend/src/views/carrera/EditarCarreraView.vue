@@ -102,7 +102,7 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { apiGet, apiPut } from '@/composables/useApiFetch'
+import { carreraApi } from '@/services/api'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -132,7 +132,7 @@ onMounted(async () => {
   if (isNaN(id) || id <= 0) return
 
   try {
-    const data = await apiGet(`/api/carreras/${id}`)
+    const data = await carreraApi.getById(id)
     Object.assign(carrera, data)
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'No se pudieron cargar los datos de la carrera'
@@ -146,7 +146,7 @@ const guardarCarrera = async () => {
   error.value = null
 
   try {
-    await apiPut(`/api/carreras/${id}`, { ...carrera, id })
+    await carreraApi.update(id, { ...carrera, id })
     ElMessage.success('Carrera actualizada correctamente')
     router.push('/carreras')
   } catch (err) {

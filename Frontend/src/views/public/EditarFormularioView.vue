@@ -97,7 +97,7 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { apiGet, apiPut } from '@/composables/useApiFetch'
+import { formularioApi } from '@/services/api'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -118,7 +118,7 @@ const formulario = reactive({
 
 onMounted(async () => {
   try {
-    const data = await apiGet(`/api/formularios/${Number(props.id)}`)
+    const data = await formularioApi.getById(Number(props.id))
     Object.assign(formulario, data)
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'No se pudieron cargar los datos del formulario'
@@ -151,7 +151,7 @@ const guardarFormulario = async () => {
   }
 
   try {
-    await apiPut(`/api/formularios/${Number(props.id)}`, formulario)
+    await formularioApi.update(Number(props.id), formulario)
 
     ElMessage.success('Formulario actualizado correctamente')
     router.push('/formularios')

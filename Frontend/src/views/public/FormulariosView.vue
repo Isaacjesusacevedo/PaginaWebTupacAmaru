@@ -78,7 +78,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { apiGet, apiDelete } from '@/composables/useApiFetch'
+import { formularioApi } from '@/services/api'
 import { ElMessage } from 'element-plus'
 
 const formularios = ref([])
@@ -86,8 +86,7 @@ const error = ref(null)
 
 const cargarFormularios = async () => {
   try {
-    const data = await apiGet('/api/formularios')
-    formularios.value = data
+    formularios.value = await formularioApi.getAll()
   } catch (err) {
     console.error('Error al cargar formularios:', err)
     if (err instanceof Error) {
@@ -109,7 +108,7 @@ const getEstadoClass = (estado) => {
 
 const eliminar = async (id) => {
   try {
-    await apiDelete(`/api/formularios/${id}`)
+    await formularioApi.delete(id)
     ElMessage.success('Formulario eliminado correctamente')
     await cargarFormularios()
   } catch (err) {

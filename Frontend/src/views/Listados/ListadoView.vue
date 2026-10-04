@@ -57,7 +57,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { apiGet } from '@/composables/useApiFetch'
+import { listadoApi } from '@/services/api'
 
 const listado = ref([])
 const loading = ref(true)
@@ -71,7 +71,7 @@ function formatFecha(fechaIso) {
 
 const cargarListado = async () => {
   try {
-    listado.value = await apiGet('/api/listado')
+    listado.value = await listadoApi.getAll()
   } catch (err) {
     console.error(err)
     error.value = err.message ?? 'No se pudo cargar el listado'

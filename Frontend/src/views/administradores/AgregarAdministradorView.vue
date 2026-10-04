@@ -107,7 +107,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Hide, View } from '@element-plus/icons-vue'
-import { apiPost } from '@/composables/useApiFetch'
+import { adminApi } from '@/services/api'
 
 const router = useRouter()
 
@@ -148,7 +148,7 @@ const guardarAdministrador = async () => {
   loading.value = true
 
   try {
-    await apiPost('/api/administradores/with-password', {
+    await adminApi.create({
       nombre: admin.nombre,
       apellido: admin.apellido,
       email: admin.email,

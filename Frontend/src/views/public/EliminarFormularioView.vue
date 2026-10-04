@@ -63,7 +63,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { apiGet, apiDelete } from '@/composables/useApiFetch'
+import { formularioApi } from '@/services/api'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -76,7 +76,7 @@ const formulario = ref(null)
 
 onMounted(async () => {
   try {
-    const data = await apiGet(`/api/formularios/${Number(props.id)}`)
+    const data = await formularioApi.getById(Number(props.id))
     formulario.value = data
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'No se pudo cargar el formulario'
@@ -88,7 +88,7 @@ const eliminarFormulario = async () => {
   error.value = null
 
   try {
-    await apiDelete(`/api/formularios/${Number(props.id)}`)
+    await formularioApi.delete(Number(props.id))
 
     ElMessage.success('Formulario eliminado correctamente')
     router.push('/formularios')

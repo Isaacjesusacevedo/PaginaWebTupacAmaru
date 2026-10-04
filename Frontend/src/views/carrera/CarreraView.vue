@@ -78,14 +78,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { apiGet } from '@/composables/useApiFetch'
+import { carreraApi } from '@/services/api'
 
 const carreras = ref([])
 const error = ref(null)
 
 const cargarCarreras = async () => {
   try {
-    carreras.value = await apiGet('/api/carreras')
+    carreras.value = await carreraApi.getAll()
   } catch (err) {
     console.error('Error al cargar carreras:', err)
     error.value = err instanceof Error

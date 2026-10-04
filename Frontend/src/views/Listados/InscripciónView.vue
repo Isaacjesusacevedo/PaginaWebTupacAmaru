@@ -216,7 +216,7 @@
 
 <script setup>
 import { reactive, ref, watch, onMounted, computed } from 'vue'
-import { academicaPost } from '@/composables/useAcademicaApi'
+import { alumnoApi } from '@/services/api'
 
 // Años cumplidos a una fecha fija del ciclo de inscripción, no a la fecha de hoy.
 const FECHA_REFERENCIA_EDAD = new Date(2026, 5, 30)
@@ -293,13 +293,10 @@ const loading = ref(false)
 const error = ref(null)
 
 const carreras = ref([])
-const API = import.meta.env.VITE_API_URL
 
 const cargarCarreras = async () => {
   try {
-    const res = await fetch(`${API}/api/carreras`)
-    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-    carreras.value = await res.json()
+    carreras.value = await alumnoApi.getCarreras()
   } catch (err) {
     console.error(err)
     error.value = "No se pudieron cargar las carreras"
@@ -409,7 +406,7 @@ const guardarAlumno = async () => {
   loading.value = true
 
   try {
-    await academicaPost('/api/inscripcion', {
+    await alumnoApi.inscribir({
       nombre: alumno.Nombre,
       apellido: alumno.Apellido,
       email: alumno.Email,

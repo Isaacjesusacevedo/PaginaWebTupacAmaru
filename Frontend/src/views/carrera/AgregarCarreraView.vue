@@ -106,11 +106,10 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
+import { ElMessage } from 'element-plus'
+import { carreraApi } from '@/services/api'
 
 const router = useRouter()
-const { authHeaders } = useAuth()
-const API = import.meta.env.VITE_API_URL
 
 const loading = ref(false)
 const error = ref(null)
@@ -139,15 +138,9 @@ const guardarCarrera = async () => {
   loading.value = true
 
   try {
-    const res = await fetch(`${API}/api/carreras`, {
-      method:  'POST',
-      headers: authHeaders(),
-      body:    JSON.stringify(carrera)
-    })
+    await carreraApi.create(carrera)
 
-    if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-
-    alert('Carrera guardada correctamente')
+    ElMessage.success('Carrera guardada correctamente')
     router.push('/carreras')
   } catch (err) {
     console.error(err)

@@ -99,7 +99,7 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { apiPost } from '@/composables/useApiFetch'
+import { formularioApi } from '@/services/api'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -138,7 +138,7 @@ const guardarFormulario = async () => {
   loading.value = true
 
   try {
-    const res = await apiPost('/api/formularios', formulario)
+    await formularioApi.create(formulario)
 
     ElMessage.success('Formulario guardado correctamente')
     router.push('/formularios')

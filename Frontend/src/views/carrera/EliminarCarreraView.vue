@@ -63,7 +63,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { apiGet, apiDelete } from '@/composables/useApiFetch'
+import { carreraApi } from '@/services/api'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -84,7 +84,7 @@ onMounted(async () => {
   if (isNaN(id) || id <= 0) return
 
   try {
-    carrera.value = await apiGet(`/api/carreras/${id}`)
+    carrera.value = await carreraApi.getById(id)
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'No se pudo cargar la carrera'
   }
@@ -97,7 +97,7 @@ const eliminarCarrera = async () => {
   error.value = null
 
   try {
-    await apiDelete(`/api/carreras/${id}`)
+    await carreraApi.delete(id)
     ElMessage.success('Carrera eliminada correctamente')
     router.push('/carreras')
   } catch (err) {

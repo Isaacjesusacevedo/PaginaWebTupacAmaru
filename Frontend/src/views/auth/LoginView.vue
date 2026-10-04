@@ -73,6 +73,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import { authApi } from '@/services/api'
 
 const router = useRouter()
 const { guardarSesion } = useAuth()
@@ -83,22 +84,14 @@ const loading = ref(false)
 const error = ref(null)
 const showPassword = ref(false)
 
-const API = import.meta.env.VITE_API_URL
-
 const login = async () => {
   error.value = null
   loading.value = true
 
   try {
-    const res = await fetch(`${API}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.value, password: password.value })
-    })
+    const json = await authApi.login({ email: email.value, password: password.value })
 
-    const json = await res.json()
-
-    if (!res.ok || !json.isSuccess || !json.data?.token) {
+    if (!json.isSuccess || !json.data?.token) {
       error.value = json.message ?? 'Email o contraseña incorrectos.'
       return
     }

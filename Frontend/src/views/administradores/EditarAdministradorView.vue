@@ -144,7 +144,7 @@ import { reactive, ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Lock, User, Hide, View } from '@element-plus/icons-vue'
-import { apiGet, apiPut } from '@/composables/useApiFetch'
+import { adminApi, authApi } from '@/services/api'
 import { useAuth } from '@/composables/useAuth'
 
 const route = useRoute()
@@ -181,7 +181,7 @@ const passwordVerificada = ref('')
 const loadAdminData = async () => {
   if (isNaN(id) || id <= 0) return
   try {
-    const data = await apiGet(`/api/administradores/${id}`)
+    const data = await adminApi.getById(id)
     admin.id = data.id
     admin.nombre = data.nombre
     admin.apellido = data.apellido
@@ -209,19 +209,7 @@ const confirmReauth = async () => {
   loadingReauth.value = true
 
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${sessionStorage.getItem('auth_token')}`
-      },
-      body: JSON.stringify({ email: loggedAdmin.email, password: reauthPassword.value })
-    })
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      throw new Error(data.error || data.message || 'Contraseña incorrecta')
-    }
+    await authApi.verifyPassword({ email: loggedAdmin.email, password: reauthPassword.value })
 
     passwordVerificada.value = reauthPassword.value
     reauthVerified.value = true
@@ -270,7 +258,7 @@ const guardarAdministrador = async () => {
       email: admin.email
     }
 
-    await apiPut(`/api/administradores/${id}`, payload)
+    await adminApi.update(id, payload)
     ElMessage.success('Datos actualizados correctamente')
 
     if (quiereCambiarPassword) {
@@ -279,22 +267,10 @@ const guardarAdministrador = async () => {
         return
       }
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/administradores/${id}/password`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionStorage.getItem('auth_token')}`
-        },
-        body: JSON.stringify({
-          passwordActual: passwordVerificada.value,
-          nuevaPassword: nuevaPassword.value
-        })
+      await adminApi.changePassword(id, {
+        passwordActual: passwordVerificada.value,
+        nuevaPassword: nuevaPassword.value
       })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Error al cambiar la contraseña')
-      }
 
       ElMessage.success('Contraseña actualizada correctamente')
       nuevaPassword.value = ''

@@ -75,7 +75,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { apiGet } from '@/composables/useApiFetch'
+import { adminApi } from '@/services/api'
 
 const administradores = ref([])
 const loading = ref(true)
@@ -83,7 +83,7 @@ const error = ref(null)
 
 const cargarAdministradores = async () => {
   try {
-    const data = await apiGet(`/api/administradores`)
+    const data = await adminApi.getAll()
     administradores.value = data.map(a => ({
       id: a.id,
       nombre: a.nombre,
