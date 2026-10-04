@@ -64,6 +64,9 @@ builder.Services.AddSwaggerGen(options =>
         Description = "API del Sistema de Gestión Institucional - Instituto Superior Docente Túpac Amaru"
     });
 });
+// Render inyecta el puerto por variable de entorno PORT
+var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 // ── Build ────────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
