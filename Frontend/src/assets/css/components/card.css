@@ -1,6 +1,6 @@
 /* ================================
    CARD BASE
-================================ */
+=============================== */
 .card {
   background-color: var(--color-card);
   border-radius: var(--radius-lg);
@@ -8,8 +8,17 @@
 
   padding: 32px;
   margin-bottom: 32px;
+  width: 100%;
+  box-sizing: border-box;
 
   color: #0f172a;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 20px;
+    margin-bottom: 16px;
+  }
 }
 
 /* ================================

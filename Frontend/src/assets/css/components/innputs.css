@@ -1,18 +1,20 @@
 .field input,
 .field select,
 .field textarea {
-  padding: 10px 14px;
-  font-size: 0.95rem;
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 1rem;
   border-radius: 10px;
   border: 1px solid var(--color-border);
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   background-color: #fff;
+  box-sizing: border-box;
 }
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  border-color: #3b82f6; /* azul suave */
+  border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 .field label {
@@ -30,10 +32,9 @@
 /* Password field with toggle */
 .password-field {
   position: relative;
-  /* NO sobrescribe display/flex-direction de .field */
 }
 .password-field input {
-  padding-right: 44px; /* espacio para el botón */
+  padding-right: 44px;
   width: 100%;
 }
 .password-toggle {

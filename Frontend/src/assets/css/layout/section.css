@@ -3,3 +3,9 @@
   justify-content: center;
   padding: 40px 20px;
 }
+
+@media (max-width: 640px) {
+  .section {
+    padding: 16px 12px;
+  }
+}

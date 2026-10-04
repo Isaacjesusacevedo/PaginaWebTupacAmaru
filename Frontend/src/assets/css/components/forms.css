@@ -1,6 +1,6 @@
 /* ================================
    FORM BASE
-=============================== */
+============================= */
 .form {
   width: 100%;
   font-size: 1rem;
@@ -8,7 +8,7 @@
 
 /* ================================
    FORM ROWS (LAYOUT)
-=============================== */
+============================= */
 .form-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -16,9 +16,15 @@
   margin-bottom: 20px;
 }
 
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ================================
    FORM ACTIONS (LAYOUT)
-=============================== */
+============================= */
 .form-actions {
   display: flex;
   justify-content: center;
@@ -35,7 +41,7 @@
 
 /* ================================
    CHECKLIST (FIXED & CLEAN)
-=============================== */
+============================= */
 .form-checklist {
   display: flex;
   flex-direction: column;
@@ -88,23 +94,9 @@
   font-weight: bold;
 }
 
-
-/* ================================
-   RESPONSIVE
-=============================== */
-@media (max-width: 640px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .form-actions {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* ================================
    DIALOG / MODAL STYLES (scoped to .reauth-dialog)
-=============================== */
+============================= */
 .reauth-dialog {
   /* Header styles */
   .dialog-header {
@@ -316,12 +308,8 @@
 
 /* ================================
    RESPONSIVE
-=============================== */
+============================= */
 @media (max-width: 640px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
   .form-actions {
     flex-direction: column-reverse;
   }
