@@ -97,3 +97,19 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.home-header {
+  margin-bottom: 4px;
+}
+
+.home-header h1 {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+
+.home-header .subtitle {
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+</style>
