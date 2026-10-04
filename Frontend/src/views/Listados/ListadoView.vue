@@ -1,6 +1,6 @@
 <template>
   <main class="section">
-    <div class="card card-center card-lg">
+    <div class="card card-center card-xl">
 
       <img
         class="card-media"

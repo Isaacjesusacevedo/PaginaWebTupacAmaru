@@ -17,7 +17,7 @@
 
       <div class="table">
 
-        <div class="table-header table-cols-default">
+        <div class="table-header table-cols-carreras">
           <span>Nombre</span>
           <span>Duración</span>
           <span>Turno</span>
@@ -30,7 +30,7 @@
         <div
           v-for="carrera in carreras"
           :key="carrera.id"
-          class="table-row table-cols-default"
+          class="table-row table-cols-carreras"
         >
           <span>{{ carrera.nombre }}</span>
           <span>{{ carrera.duracionAnios }} años</span>
@@ -56,7 +56,7 @@
           </div>
         </div>
 
-        <div v-if="carreras.length === 0" class="table-row table-cols-default">
+        <div v-if="carreras.length === 0" class="table-row table-cols-carreras">
           <span class="text-center" style="grid-column: 1 / -1;">No hay carreras registradas</span>
         </div>
 
