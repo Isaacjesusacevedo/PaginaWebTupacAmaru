@@ -150,8 +150,7 @@ app.MapGet("/health", async (InstitutoDbContext db) =>
     }
 }).WithName("HealthCheck").WithTags("Health");
 
-// ── Debug endpoints (Development only) ─────────────────────────────────────────
-#if DEBUG
+// ── Debug endpoints (temporales - quitar en producción final) ──────────────────
 app.MapGet("/debug-config", () =>
 {
     var envConnDebug = Environment.GetEnvironmentVariable("CONNECTION_STRING_SQLSERVER");
@@ -244,7 +243,6 @@ app.MapGet("/debug-login", async (IAdministradorService authService, IAdministra
 
     return Results.Ok(resultado);
 });
-#endif
 
 // ── Auth Endpoints ─────────────────────────────────────────────────────────────
 var authGroup = app.MapGroup("/api/auth").WithTags("Auth");
