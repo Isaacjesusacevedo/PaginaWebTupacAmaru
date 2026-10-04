@@ -8,7 +8,7 @@
         alt="Panel de administración"
       />
 
-      <header class="text-center">
+      <header class="text-center home-header">
         <h1>Panel de Administración</h1>
         <p class="subtitle">
           Seleccioná la opción que deseas gestionar
