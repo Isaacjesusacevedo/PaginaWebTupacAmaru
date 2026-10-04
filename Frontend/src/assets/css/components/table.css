@@ -4,14 +4,14 @@
 .table-header,
 .table-row {
   display: grid;
-  gap: 12px;
+  gap: 16px;
   padding: 12px 0;
   align-items: center;
 }
 
 .table-header {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--color-muted);
   border-bottom: 1px solid var(--color-border);
 }
@@ -21,20 +21,12 @@
   border-bottom: 1px solid var(--color-border);
 }
 
-/* Texto en celdas: truncar con ellipsis por defecto */
+/* Texto en celdas: permitir wrap por defecto */
 .table-row > span,
 .table-header > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Excepción: columna Nombre (primera) permite wrap controlado */
-.table-row > span:first-child,
-.table-header > span:first-child {
-  white-space: normal;
+  min-width: 0;
+  overflow-wrap: break-word;
   word-break: break-word;
-  overflow-wrap: anywhere;
 }
 
 .table-row:hover {
@@ -44,19 +36,61 @@
 /* ================================
    COLUMN LAYOUTS
 =============================== */
+
 /* 7 columnas: Nombre | Duración | Turno | Modalidad | Horario | Estado | Acciones */
 .table-cols-default {
-  grid-template-columns: minmax(280px, 3fr) 1fr 1fr 1fr 1fr 1fr minmax(120px, 1.5fr);
+  grid-template-columns:
+    minmax(180px, 2.2fr)   /* Nombre */
+    90px                    /* Duración */
+    90px                    /* Turno */
+    110px                   /* Modalidad */
+    130px                   /* Horario */
+    90px                    /* Estado */
+    130px;                  /* Acciones */
 }
 
-/* 5 columnas: Nombre | Apellido | Email | Rol | Acciones (Administradores) */
+/* 5 columnas: Nombre | Apellido | Email | Role | Acciones (Administradores) */
 .table-cols-admin {
-  grid-template-columns: minmax(200px, 2fr) minmax(200px, 2fr) minmax(250px, 3fr) 1.5fr minmax(140px, 1.5fr);
+  grid-template-columns:
+    minmax(120px, 1.2fr)   /* Nombre */
+    minmax(120px, 1.2fr)   /* Apellido */
+    minmax(200px, 2fr)     /* Email */
+    minmax(90px, 0.8fr)    /* Role */
+    130px;                  /* Acciones */
 }
 
-/* 5 columnas: Nombre | Estado | Fecha apertura | Fecha cierre | Acciones (Formularios) */
+/* 5 columnas: Nombre | Estado | FechaApertura | FechaCierre | Acciones (Formularios) */
 .table-cols-formularios {
-  grid-template-columns: minmax(280px, 3fr) 1fr 1.5fr 1.5fr minmax(120px, 1.5fr);
+  grid-template-columns:
+    minmax(200px, 2.2fr)   /* Nombre */
+    100px                   /* Estado */
+    120px                   /* Fecha apertura */
+    120px                   /* Fecha cierre */
+    130px;                  /* Acciones */
+}
+
+/* 4 columnas: Nombre | Duracion | Turno | Modalidad | Horario | Estado | Acciones (Carreras) */
+.table-cols-carreras {
+  grid-template-columns:
+    minmax(200px, 2.2fr)   /* Nombre */
+    90px                    /* Duración */
+    90px                    /* Turno */
+    110px                   /* Modalidad */
+    110px                   /* Horario */
+    90px                    /* Estado */
+    130px;                  /* Acciones */
+}
+
+/* 7 columnas: Alumno | DNI | Edad | Carrera | Turno | Fecha egreso | Info académica (Listado) */
+.table-cols-listado {
+  grid-template-columns:
+    minmax(140px, 1.5fr)   /* Alumno */
+    90px                    /* DNI */
+    60px                    /* Edad */
+    minmax(200px, 2fr)     /* Carrera */
+    90px                    /* Turno */
+    110px                   /* Fecha egreso */
+    minmax(120px, 1.2fr);  /* Info académica */
 }
 
 /* ================================
@@ -66,15 +100,18 @@
   display: flex;
   gap: 8px;
   justify-content: center;
-  flex-wrap: wrap;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 
-.table-actions.center {
-  justify-content: center;
+.table-actions .btn {
+  min-width: 36px;
+  padding: 6px;
+  flex-shrink: 0;
 }
 
 /* ================================
-   ESTADO BADGES (para tablas)
+   ESTADO BADGES
 =============================== */
 .estado-badge {
   display: inline-block;
@@ -99,37 +136,33 @@
   background-color: #fef3c7;
   color: #92400e;
 }
-.table-cols-listado {
-  grid-template-columns:
-    minmax(140px, 1.4fr)   /* Alumno */
-    80px                    /* DNI */
-    50px                    /* Edad */
-    minmax(180px, 2fr)     /* Carrera */
-    80px                    /* Turno */
-    110px                   /* Fecha del título */
-    minmax(120px, 1.4fr);  /* Título secundario */
-}
 
-.table-cols-listado > span:nth-child(4),
-.table-cols-listado > span:nth-child(6),
-.table-cols-listado > span:nth-child(7) {
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
 /* ================================
-   TABLE EMPTY/ERROR STATE
+   TABLE EMPTY/ERROR
 =============================== */
 .table-empty-state {
   grid-column: 1 / -1;
   text-align: center;
-  padding: var(--space-xl) var(--space-md);
+  padding: 24px 16px;
   color: var(--color-muted);
 }
 
 /* ================================
    RESPONSIVE
 =============================== */
+@media (max-width: 900px) {
+  /* Scroll horizontal para tablas anchas */
+  .table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-header,
+  .table-row {
+    min-width: 700px;
+  }
+}
+
 @media (max-width: 768px) {
   .table-header {
     display: none;
@@ -140,22 +173,16 @@
     padding: 16px 0;
   }
 
-  .table-row > span,
-  .table-header > span {
-    white-space: normal;
-    word-break: break-word;
+  .table-cols-default,
+  .table-cols-admin,
+  .table-cols-formularios,
+  .table-cols-carreras,
+  .table-cols-listado {
+    grid-template-columns: 1fr;
+    min-width: auto;
   }
 
   .table-actions {
     justify-content: flex-start;
   }
-
-  .table-cols-default {
-    grid-template-columns: 1fr;
-  }
-
-  .table-cols-admin {
-    grid-template-columns: 1fr;
-  }
-
 }
