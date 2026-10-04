@@ -127,6 +127,17 @@ Instituto.sln
 │   └── Instituto.BR.csproj
 │
 ├── Instituto.MinimalAPI/            # API Principal
+│   ├── Endpoints/                   # Extension methods por dominio
+│   │   ├── AuthEndpoints.cs
+│   │   ├── SetupEndpoints.cs
+│   │   ├── AdminEndpoints.cs
+│   │   ├── AlumnoEndpoints.cs
+│   │   ├── CarreraEndpoints.cs
+│   │   ├── ProfesorEndpoints.cs
+│   │   ├── FormularioEndpoints.cs
+│   │   ├── ListadoEndpoints.cs
+│   │   ├── HealthEndpoints.cs
+│   │   └── DebugEndpoints.cs
 │   ├── Models/                      # ApiModels (LoginRequest, AdminCreateDto, etc.)
 │   ├── Program.cs                   # Composition root + DI + CORS + Global Exception Handler
 │   ├── appsettings.Development.json # ConnectionString (SQL Auth)
@@ -147,7 +158,23 @@ Instituto.sln
 │   ├── package.json
 │   ├── vite.config.js
 │   ├── .env                         # VITE_API_URL=http://localhost:5127
-│   └── src/                         # 19 vistas, composables, components, router, CSS modular
+│   └── src/
+│       ├── components/              # NavBar, Banner
+│       ├── composables/             # useAuth, useApiFetch
+│       ├── router/                  # Vue Router + guards
+│       ├── services/
+│       │   └── api/                 # Servicios API por dominio
+│       │       ├── adminApi.js
+│       │       ├── alumnoApi.js
+│       │       ├── carreraApi.js
+│       │       ├── profesorApi.js
+│       │       ├── formularioApi.js
+│       │       ├── listadoApi.js
+│       │       ├── authApi.js
+│       │       ├── statsApi.js
+│       │       └── index.js
+│       ├── views/                   # 19 vistas por módulo
+│       └── assets/css/              # CSS modular
 │
 └── Docs/                            # Documentación técnica completa
     ├── DATABASE/                    # 12 archivos modulares
@@ -359,7 +386,6 @@ dotnet test                              # Tests
 |-----------|------|
 | **Crítica** | `InscripciónView.vue` tipa `CarreraId: string` vs `number` (backend) |
 | **Crítica** | Sin autenticación real de servidor: endpoints administrativos son públicos |
-| **Alta** | Sin capa de servicios API centralizada (`src/services/`) |
 | **Alta** | Backend devuelve `PasswordHash` y `Role` en GET administradores (debería usar DTO) |
 | **Alta** | `sp_Administradores_GetById` / `GetByEmail` deben devolver `PasswordTemp` (EF Core) |
 | **Alta** | Sin rate limiting en login |

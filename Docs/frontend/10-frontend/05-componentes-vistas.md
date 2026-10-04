@@ -46,7 +46,7 @@ Se importan via alias `@/components/Banner/archivo.jpg`.
 #### `FormulariosView.vue` - `/formularios`
 - **Meta:** `requiereAuth: true`
 - **UI:** Tabla con columnas: Nombre, Estado, Fecha apertura, Fecha cierre, Acciones
-- **Fetch:** `GET ${API}/api/formularios` con `authHeaders()`
+- **Servicio:** `formularioApi.getAll()` → `GET /api/formularios`
 - **Acciones:** Editar (router-link) + Eliminar (router-link)
 - **Estados:** loading, error, empty state
 - **CTA footer:** "Agregar formulario" → `/agregarformulario`
@@ -54,17 +54,17 @@ Se importan via alias `@/components/Banner/archivo.jpg`.
 #### `AgregarFormularioView.vue` - `/agregarformulario`
 - **Meta:** `requiereAuth: true`
 - **Formulario:** nombre, estado (select), fechaApertura, fechaCierre, descripcion
-- **Submit:** `POST ${API}/api/formularios`
+- **Servicio:** `formularioApi.create()` → `POST /api/formularios`
 
 #### `EditarFormularioView.vue` - `/editarformulario/:id`
 - **Meta:** `requiereAuth: true`, `props: true`
-- **Carga:** `GET ${API}/api/formularios/${id}`
-- **Submit:** `PUT ${API}/api/formularios/${id}`
+- **Servicio:** `formularioApi.getById(id)` → `GET /api/formularios/${id}`
+- **Submit:** `formularioApi.update(id, formulario)` → `PUT /api/formularios/${id}`
 
 #### `EliminarFormularioView.vue` - `/eliminarformulario/:id`
 - **Meta:** `requiereAuth: true`, `props: true`
-- **Carga:** `GET ${API}/api/formularios/${id}`
-- **Acción:** `DELETE ${API}/api/formularios/${id}`
+- **Servicio:** `formularioApi.getById(id)` → `GET /api/formularios/${id}`
+- **Acción:** `formularioApi.delete(id)` → `DELETE /api/formularios/${id}`
 
 ---
 
@@ -95,14 +95,14 @@ Patrón CRUD consistente en 4 vistas:
 #### `AdministradorView.vue` (Listado)
 - **Tabla** con columnas: Nombre, Apellido, Email, Acciones
 - **Acciones:** Botones Editar (router-link) + Eliminar (router-link) con icons Element Plus
-- **Fetch:** `GET ${API}/api/administradores` con `authHeaders()`
+- **Servicio:** `adminApi.getAll()` → `GET /api/administradores`
 - **Estados:** loading, error, empty state
 - **CTA footer:** "Agregar administrador" → `/agregaradministracion`
 
 #### `AgregarAdministradorView.vue` (Crear)
 - **Formulario reactivo:** nombre, apellido, email, role (select), passwordTemp (oculto, default)
 - **Validación:** required en campos
-- **Submit:** `POST ${API}/api/administradores` con body JSON
+- **Servicio:** `adminApi.create({ nombre, apellido, email, role, password })` → `POST /api/administradores/with-password`
 - **Éxito:** `router.push({ name: 'administracion' })`
 
 #### `EditarAdministradorView.vue` (Editar) ⭐ **Re-autenticación**
@@ -110,16 +110,16 @@ Patrón CRUD consistente en 4 vistas:
 - **Flujo único:** Antes de cargar datos → modal de verificación de contraseña actual
   1. Abre modal `showReauthDialog`
   2. Usuario ingresa password actual
-  3. `POST ${API}/api/auth/verify-password` → si OK, guarda `passwordVerificada` en ref (memoria)
-  4. Carga datos admin: `GET ${API}/api/administradores/${id}`
-- **Submit datos:** `PUT ${API}/api/administradores/${id}` (nombre, apellido, email)
-- **Cambio password opcional:** Si usuario ingresa nueva → `PUT ${API}/api/administradores/${id}/password` usando `passwordVerificada` guardada
+  3. `authApi.verifyPassword()` → `POST /api/auth/verify-password` → si OK, guarda `passwordVerificada` en ref (memoria)
+  4. Carga datos admin: `adminApi.getById(id)` → `GET /api/administradores/${id}`
+- **Submit datos:** `adminApi.update(id, { nombre, apellido, email })` → `PUT /api/administradores/${id}`
+- **Cambio password opcional:** Si usuario ingresa nueva → `adminApi.changePassword(id, { passwordActual, nuevaPassword })` usando `passwordVerificada` guardada
 - **Limpieza:** `onUnmounted` limpia `passwordVerificada`
 
 #### `EliminarAdministradorView.vue` (Eliminar)
 - **Props:** `defineProps<{ id: string }>()`
-- **UI:** Confirmación con datos del admin (fetch GET previo)
-- **Acción:** `DELETE ${API}/api/administradores/${id}`
+- **UI:** Confirmación con datos del admin (`adminApi.getById()` previo)
+- **Acción:** `adminApi.delete(id)` → `DELETE /api/administradores/${id}`
 - **Éxito:** redirect a listado
 - ⚠️ **Deuda técnica:** Usa `http://localhost:5089` hardcoded (2 líneas)
 
@@ -139,7 +139,10 @@ Estructura idéntica a Administradores:
 #### Diferencias clave:
 - **Interfaz `Carrera`:** id, nombre, duracionAnios, turno, modalidad, horario, estado
 - **Tabla columnas:** Nombre, Duración, Turno, Modalidad, Horario, Estado, Acciones
-- **Fetch:** `GET ${API}/api/carreras`
+- **Servicio:** `carreraApi.getAll()` → `GET /api/carreras`
+- **Crear:** `carreraApi.create(carrera)` → `POST /api/carreras`
+- **Actualizar:** `carreraApi.update(id, carrera)` → `PUT /api/carreras/${id}`
+- **Eliminar:** `carreraApi.delete(id)` → `DELETE /api/carreras/${id}`
 - ⚠️ **Deuda técnica:** `CarreraView.vue` usa `http://localhost:5089` hardcoded (1 línea)
 
 ---
@@ -150,14 +153,14 @@ Estructura idéntica a Administradores:
 - **Meta:** `requiereAuth: true`
 - **Propósito:** Reporte de alumnos inscriptos por carrera
 - **Interfaz `AlumnoListado`:** alumnoId, nombreCompleto, dni, email, carrera, turno, edad
-- **Fetch:** `GET ${API}/api/listado` con `authHeaders()`
+- **Servicio:** `listadoApi.getAll()` → `GET /api/listado`
 - **Tabla:** Alumno, DNI, Edad, Carrera, Turno, (2 columnas vacías para acciones futuras)
 
 #### `InscripciónView.vue` - `/inscripcion`
 - **Acceso público** (sin auth, sin navbar)
 - **Formulario extenso:** datos personales, contacto, carrera, turno, modalidad, horario
-- **Carreras:** `GET ${API}/api/carreras` (público)
-- **Submit:** `POST ${API}/api/alumnos` (público, `[AllowAnonymous]`)
+- **Carreras:** `alumnoApi.getCarreras()` → `GET /api/carreras` (público)
+- **Submit:** `alumnoApi.inscribir({...})` → `POST /api/inscripcion` (público, `[AllowAnonymous]`)
 - ⚠️ **Deuda técnica:** Usa `http://localhost:5089` hardcoded (2 líneas)
 
 ---
@@ -171,25 +174,44 @@ Estructura idéntica a Administradores:
 
 ## Patrones Comunes en Vistas
 
-### 1. Fetch con Loading/Error
+### 1. Uso de Servicios API (Nuevo - Recomendado)
 ```typescript
+import { adminApi, carreraApi, formularioApi } from '@/services/api'
+
 const data = ref<T[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
 const cargar = async () => {
   try {
-    const res = await fetch(`${API}/api/endpoint`, { headers: authHeaders() })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    data.value = await res.json()
+    data.value = await adminApi.getAll()  // Auto-unwrap, maneja 401/403
   } catch (err) {
-    error.value = 'Mensaje amigable'
+    error.value = err.message  // Mensaje amigable ya parseado
   } finally {
     loading.value = false
   }
 }
 
 onMounted(cargar)
+
+// Crear
+await adminApi.create({ nombre, apellido, email, role, password })
+
+// Actualizar
+await adminApi.update(id, { nombre, apellido, email })
+
+// Cambiar password
+await adminApi.changePassword(id, { passwordActual, nuevaPassword })
+
+// Eliminar
+await adminApi.delete(id)
+```
+
+### 2. Fetch Manual (Legacy - En Deuda Técnica)
+```typescript
+const res = await fetch(`${API}/api/administradores`, { headers: authHeaders() })
+if (!res.ok) throw new Error(`HTTP ${res.status}`)
+const data = await res.json()
 ```
 
 ### 2. Props de Ruta Tipadas
@@ -231,3 +253,22 @@ Define:
 - Variables CSS (colores, spacing, breakpoints)
 - Clases utilitarias: `.section`, `.card`, `.card-center`, `.card-lg`, `.table`, `.table-header`, `.table-row`, `.table-cols-admin`, `.table-cols-default`, `.table-cols-formularios`, `.table-actions`, `.btn`, `.btn-primary`, `.btn-success`, `.btn-danger`, `.btn-secondary`, `.btn-menu`, `.text-center`, `.text-muted`, `.text-danger`, `.error-msg`, `.center`
 - Reset básico y tipografía
+
+---
+
+## Responsive Mobile (CSS) — Actualización 2026
+
+### Archivos modificados:
+| Archivo | Cambios |
+|---------|---------|
+| `src/assets/css/layout/section.css` | Padding reducido a `16px 12px` en ≤640px |
+| `src/assets/css/components/card.css` | `width: 100%`, `box-sizing: border-box`, padding `20px` en mobile |
+| `src/assets/css/components/forms.css` | Breakpoint `.form-row` cambiado a `768px` (era 640px) |
+| `src/assets/css/components/innputs.css` | `width: 100%`, `font-size: 1rem` (16px) para evitar zoom iOS, `box-sizing: border-box` |
+
+### Principios aplicados:
+1. **Mobile-first** en breakpoints: `768px` para formularios, `640px` para layout general
+2. **Touch-friendly**: inputs con `16px` font-size (evita zoom automático en iOS)
+3. **Single-column layout** en formularios en tablet/mobile
+4. **Cards con box-sizing** para evitar overflow
+5. **Padding responsivo** en `.section` para no consumir viewport en móvil

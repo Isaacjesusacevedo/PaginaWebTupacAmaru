@@ -49,27 +49,35 @@ Instituto.sln
 │   ├── Instituto.BR.csproj
 │   └── Dependencies: Instituto.AD, BCrypt.Net-Next
 │
-├── Instituto.API/             # Presentation Layer (ASP.NET Core)
-│   ├── Controllers/
-│   │   ├── AuthController.cs        # POST /api/auth/login, /verify-password
-│   │   ├── SetupController.cs       # POST /api/setup/admin (solo Dev)
-│   │   ├── AdministradorController.cs # CRUD /api/administradores + change-password
-│   │   ├── AlumnosController.cs     # CRUD /api/alumnos (POST público)
-│   │   ├── CarreraController.cs     # CRUD /api/carreras
-│   │   ├── ProfesorController.cs    # CRUD /api/profesores
-│   │   ├── FormularioController.cs  # CRUD /api/formularios
-│   │   └── ListadoController.cs     # GET /api/listado
+├── Instituto.MinimalAPI/      # Presentation Layer (ASP.NET Core 9 Minimal APIs)
+│   ├── Endpoints/             # Extension methods por dominio
+│   │   ├── AuthEndpoints.cs
+│   │   ├── SetupEndpoints.cs
+│   │   ├── AdminEndpoints.cs
+│   │   ├── AlumnoEndpoints.cs
+│   │   ├── CarreraEndpoints.cs
+│   │   ├── ProfesorEndpoints.cs
+│   │   ├── FormularioEndpoints.cs
+│   │   ├── ListadoEndpoints.cs
+│   │   ├── HealthEndpoints.cs
+│   │   └── DebugEndpoints.cs
 │   ├── Models/                # DTOs de API (Request/Response)
 │   │   └── ApiModels.cs
-│   ├── Program.cs             # Composition root + pipeline + DI
-│   ├── appsettings.json       # Config base
-│   ├── appsettings.Development.json  # ConnectionString SQLEXPRESS, JWT
-│   ├── Instituto.API.csproj
+│   ├── Program.cs             # Composition root + pipeline + DI + CORS + Global Exception Handler
+│   ├── appsettings.json       # Config base (LocalDB)
+│   ├── appsettings.Development.json  # ConnectionString SQL Auth, JWT
+│   ├── Instituto.MinimalAPI.csproj
 │   └── Dependencies: Instituto.BR, JWT Bearer, BCrypt.Net-Next
+│
+├── Instituto.MinimalAPI.Academica/  # API Académica (puerto 5128)
+│   ├── Endpoints/             # 12 Endpoint classes por dominio
+│   ├── ApiResults.cs          # Wrapper {isSuccess, message, data}
+│   ├── Program.cs             # DI académico + Swagger
+│   └── Instituto.MinimalAPI.Academica.csproj
 │
 ├── Instituto.AD.Test/         # Unit tests AD (MSTest + Moq)
 ├── Instituto.BR.Test/         # Unit tests BR (MSTest + Moq)
-├── Instituto.API.Test/        # Integration tests API (MSTest + WebApplicationFactory)
+├── Instituto.MinimalAPI.Test/ # Integration tests API (MSTest + WebApplicationFactory)
 │
 ├── Database/                  # Scripts SQL compartidos
 │   └── CreateDatabase.sql     # DDL completo (tablas, índices, FKs)
@@ -80,12 +88,13 @@ Instituto.sln
 
 ## Responsabilidades por Capa
 
-### API Layer (`Instituto.API`)
-- **Recibe** HTTP requests, validan `ModelState`
+### API Layer (`Instituto.MinimalAPI` + `Instituto.MinimalAPI.Academica`)
+- **Reciben** HTTP requests, validan entrada
 - **Delegan** a servicios BR (no contienen lógica de negocio)
 - **Manejan** excepciones de dominio → HTTP status codes
-- **Retornan** `IActionResult` con JSON serializado (`ApiResponse<T>`)
-- **Middleware**: JWT Auth, CORS, Global Exception Handler
+- **Retornan** JSON serializado (`ApiResponse<T>` / `ApiResult<T>`)
+- **Middleware**: CORS, Global Exception Handler, Swagger (Dev)
+- **Organización**: Endpoints en carpeta `Endpoints/` como extension methods `MapXxxEndpoints(this WebApplication app)`
 
 ### BR Layer (`Instituto.BR`)
 - **Contienen** lógica de negocio y reglas de validación
@@ -188,8 +197,8 @@ classDiagram
 
 | Elemento | Convención | Ejemplo |
 |----------|------------|---------|
-| **Projects** | `Instituto.{Layer}` | `Instituto.AD`, `Instituto.BR`, `Instituto.API` |
-| **Controllers** | `{Entidad}Controller` | `AlumnosController`, `AuthController` |
+| **Projects** | `Instituto.{Layer}` | `Instituto.AD`, `Instituto.BR`, `Instituto.MinimalAPI` |
+| **Endpoints** | `{Entidad}Endpoints` | `AlumnoEndpoints`, `AuthEndpoints` |
 | **Services** | `{Entidad}Service` | `AlumnoService`, `AdministradorService` |
 | **Repositories** | `{Entidad}Repository` | `AlumnoRepository`, `CarreraRepository` |
 | **Interfaces** | `I{Funcionalidad}` | `IAlumnoRepository`, `IAlumnoService` |

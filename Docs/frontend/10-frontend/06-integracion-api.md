@@ -16,9 +16,36 @@ Se define en `.env`:
 VITE_API_URL=http://localhost:5127
 ```
 
+## Arquitectura de Servicios API
+
+El frontend cuenta con una **capa de servicios API** en `src/services/api/` que encapsula todas las llamadas al backend:
+
+| Servicio | Archivo | Endpoints cubiertos |
+|----------|---------|---------------------|
+| `authApi` | `authApi.js` | Login, verify-password, setup admin |
+| `adminApi` | `adminApi.js` | CRUD administradores + change-password |
+| `alumnoApi` | `alumnoApi.js` | CRUD alumnos + inscripción pública + getCarreras |
+| `carreraApi` | `carreraApi.js` | CRUD carreras |
+| `profesorApi` | `profesorApi.js` | CRUD profesores |
+| `formularioApi` | `formularioApi.js` | CRUD formularios |
+| `listadoApi` | `listadoApi.js` | Listado consolidado alumnos |
+| `statsApi` | `statsApi.js` | Stats del dashboard |
+
+**Uso en vistas:**
+```javascript
+import { adminApi } from '@/services/api'
+
+// En lugar de fetch manual:
+const data = await adminApi.getAll()
+await adminApi.create({ nombre, apellido, email, role, password })
+await adminApi.update(id, { nombre, apellido, email })
+await adminApi.changePassword(id, { passwordActual, nuevaPassword })
+await adminApi.delete(id)
+```
+
 ## Headers Estándar
 
-Generados por `useAuth().authHeaders()`:
+Generados internamente por `useApiFetch` → `useAuth().authHeaders()`:
 
 ```typescript
 // Con sesión activa
@@ -36,162 +63,85 @@ Generados por `useAuth().authHeaders()`:
 ## Endpoints Consumidos
 
 ### Autenticación
-| Método | Endpoint | Vista | Descripción |
-|--------|----------|-------|-------------|
-| POST | `/api/auth/login` | `LoginView` | Login, retorna `{ token, admin }` |
-| POST | `/api/auth/verify-password` | `EditarAdministradorView` | Verifica password actual |
+| Método | Endpoint | Servicio | Descripción |
+|--------|----------|----------|-------------|
+| POST | `/api/auth/login` | `authApi.login()` | Login, retorna `{ token, admin }` |
+| POST | `/api/auth/verify-password` | `authApi.verifyPassword()` | Verifica password actual |
+| POST | `/api/setup/admin` | `authApi.setupAdmin()` | Crea primer admin (solo Dev) |
+| GET | `/api/setup/status` | `authApi.setupStatus()` | Verifica si hay admin |
 
 ### Administradores
-| Método | Endpoint | Vista | Descripción |
-|--------|----------|-------|-------------|
-| GET | `/api/administradores` | `AdministradorView` | Listado completo |
-| GET | `/api/administradores/:id` | `EditarAdministradorView`, `EliminarAdministradorView` | Detalle por ID |
-| POST | `/api/administradores` | `AgregarAdministradorView` | Crear nuevo |
-| PUT | `/api/administradores/:id` | `EditarAdministradorView` | Actualizar datos |
-| PUT | `/api/administradores/:id/password` | `EditarAdministradorView` | Cambiar contraseña |
-| DELETE | `/api/administradores/:id` | `EliminarAdministradorView` | Eliminar |
+| Método | Endpoint | Servicio | Descripción |
+|--------|----------|----------|-------------|
+| GET | `/api/administradores` | `adminApi.getAll()` | Listado completo |
+| GET | `/api/administradores/:id` | `adminApi.getById()` | Detalle por ID |
+| POST | `/api/administradores/with-password` | `adminApi.create()` | Crear nuevo con password |
+| PUT | `/api/administradores/:id` | `adminApi.update()` | Actualizar datos |
+| PUT | `/api/administradores/:id/password` | `adminApi.changePassword()` | Cambiar contraseña |
+| DELETE | `/api/administradores/:id` | `adminApi.delete()` | Eliminar |
 
 ### Carreras
-| Método | Endpoint | Vista | Descripción |
-|--------|----------|-------|-------------|
-| GET | `/api/carreras` | `CarreraView`, `InscripciónView` | Listado completo (público) |
-| GET | `/api/carreras/:id` | `EditarCarreraView`, `EliminarCarreraView` | Detalle por ID |
-| POST | `/api/carreras` | `AgregarCarreraView` | Crear nueva |
-| PUT | `/api/carreras/:id` | `EditarCarreraView` | Actualizar |
-| DELETE | `/api/carreras/:id` | `EliminarCarreraView` | Eliminar |
+| Método | Endpoint | Servicio | Descripción |
+|--------|----------|----------|-------------|
+| GET | `/api/carreras` | `carreraApi.getAll()` | Listado completo (público) |
+| GET | `/api/carreras/:id` | `carreraApi.getById()` | Detalle por ID |
+| POST | `/api/carreras` | `carreraApi.create()` | Crear nueva |
+| PUT | `/api/carreras/:id` | `carreraApi.update()` | Actualizar |
+| DELETE | `/api/carreras/:id` | `carreraApi.delete()` | Eliminar |
 
 ### Alumnos
-| Método | Endpoint | Vista | Descripción |
-|--------|----------|-------|-------------|
-| GET | `/api/alumnos` | (admin) | Listado completo |
-| GET | `/api/alumnos/:id` | (admin) | Detalle por ID |
-| POST | `/api/alumnos` | `InscripciónView` | **Pública** - Nueva inscripción |
-| PUT | `/api/alumnos/:id` | (admin) | Actualizar |
-| DELETE | `/api/alumnos/:id` | (admin) | Eliminar |
+| Método | Endpoint | Servicio | Descripción |
+|--------|----------|----------|-------------|
+| GET | `/api/alumnos` | `alumnoApi.getAll()` | Listado completo |
+| GET | `/api/alumnos/:id` | `alumnoApi.getById()` | Detalle por ID |
+| POST | `/api/alumnos` | `alumnoApi.create()` | Crear (admin) |
+| POST | `/api/inscripcion` | `alumnoApi.inscribir()` | **Pública** - Nueva inscripción |
+| PUT | `/api/alumnos/:id` | `alumnoApi.update()` | Actualizar |
+| DELETE | `/api/alumnos/:id` | `alumnoApi.delete()` | Eliminar |
+| GET | `/api/carreras` | `alumnoApi.getCarreras()` | Catálogo para inscripción |
 
 ### Formularios
-| Método | Endpoint | Vista | Descripción |
-|--------|----------|-------|-------------|
-| GET | `/api/formularios` | `FormulariosView` | Listado completo |
-| GET | `/api/formularios/:id` | `EditarFormularioView`, `EliminarFormularioView` | Detalle por ID |
-| POST | `/api/formularios` | `AgregarFormularioView` | Crear nuevo |
-| PUT | `/api/formularios/:id` | `EditarFormularioView` | Actualizar |
-| DELETE | `/api/formularios/:id` | `EliminarFormularioView` | Eliminar |
+| Método | Endpoint | Servicio | Descripción |
+|--------|----------|----------|-------------|
+| GET | `/api/formularios` | `formularioApi.getAll()` | Listado completo |
+| GET | `/api/formularios/:id` | `formularioApi.getById()` | Detalle por ID |
+| POST | `/api/formularios` | `formularioApi.create()` | Crear nuevo |
+| PUT | `/api/formularios/:id` | `formularioApi.update()` | Actualizar |
+| DELETE | `/api/formularios/:id` | `formularioApi.delete()` | Eliminar |
 
 ### Listados / Reportes
-| Método | Endpoint | Vista | Descripción |
-|--------|----------|-------|-------------|
-| GET | `/api/listado` | `ListadoView` | Alumnos inscriptos por carrera (join) |
+| Método | Endpoint | Servicio | Descripción |
+|--------|----------|----------|-------------|
+| GET | `/api/listado` | `listadoApi.getAll()` | Alumnos inscriptos por carrera (join) |
 
-## Patrones de Request
+### Stats
+| Método | Endpoint | Servicio | Descripción |
+|--------|----------|----------|-------------|
+| GET | `/api/stats` | `statsApi.getAll()` | Contadores totales por módulo |
 
-### GET Listado
-```typescript
-const res = await fetch(`${API}/api/administradores`, { headers: authHeaders() })
-if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-const data = await res.json()
+## Patrón de Respuestas (Auto-Unwrap)
+
+Todos los servicios usan `useApiFetch` que **desenvuelve automáticamente** el wrapper `ApiResponse<T>` del backend:
+
+```javascript
+// Backend retorna: { isSuccess: true, message: "OK", data: { id: 1, nombre: "Juan" } }
+// Servicio retorna directamente: { id: 1, nombre: "Juan" }
+
+const admin = await adminApi.getById(1)  // ← ya es el objeto Admin, no el wrapper
 ```
 
-### GET By ID
-```typescript
-const res = await fetch(`${API}/api/administradores/${id}`, { headers: authHeaders() })
-```
+### Manejo de Errores
 
-### POST Crear
-```typescript
-const res = await fetch(`${API}/api/administradores`, {
-  method: 'POST',
-  headers: authHeaders(),
-  body: JSON.stringify({ nombre, apellido, email, role, passwordTemp: 'Cambiar1234!' })
-})
-```
+Los servicios lanzan `Error` con mensaje descriptivo si:
+- `response.ok === false` (HTTP 4xx/5xx)
+- `json.isSuccess === false` (error de negocio del backend)
 
-### PUT Actualizar (datos)
-```typescript
-const res = await fetch(`${API}/api/administradores/${id}`, {
-  method: 'PUT',
-  headers: authHeaders(),
-  body: JSON.stringify({ nombre, apellido, email })
-})
-```
-
-### PUT Cambiar Contraseña
-```typescript
-const res = await fetch(`${API}/api/administradores/${id}/password`, {
-  method: 'PUT',
-  headers: authHeaders(),
-  body: JSON.stringify({ passwordActual: '...', nuevaPassword: '...' })
-})
-```
-
-### DELETE
-```typescript
-const res = await fetch(`${API}/api/administradores/${id}`, {
-  method: 'DELETE',
-  headers: authHeaders()
-})
-```
-
-## Manejo de Errores
-
-```typescript
+```javascript
 try {
-  const res = await fetch(url, options)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const data = await res.json()
+  const admin = await adminApi.getById(id)
 } catch (err) {
-  console.error(err)
-  error.value = 'Mensaje amigable para el usuario'
-}
-```
-
-- **Errores de red/HTTP:** Capturados en `catch`
-- **Errores 401/403:** No hay manejo específico (el token expira → backend rechaza → UI muestra error genérico)
-- **Validación backend:** Los errores 400 con detalles no se parsean estructuralmente
-
-## Tipado de Respuestas
-
-Interfaces locales en cada vista:
-
-```typescript
-// AdministradorView.vue
-interface AdministradorView {
-  id: number
-  nombre: string
-  apellido: string
-  email: string
-}
-
-// CarreraView.vue
-interface Carrera {
-  id: number
-  nombre: string
-  duracionAnios: number
-  turno: string
-  modalidad: string
-  horario: string
-  estado: string
-}
-
-// ListadoView.vue
-interface AlumnoListado {
-  alumnoId: number
-  nombreCompleto: string
-  dni: number
-  email: string
-  carrera: string
-  turno: string
-  edad: number
-}
-
-// FormulariosView.vue
-interface Formulario {
-  id: number
-  nombre: string
-  estado: 'Abierto' | 'Cerrado' | 'Borrador'
-  fechaApertura: string
-  fechaCierre: string
-  descripcion: string
+  // err.message = "Administrador con Id 999 no fue encontrado."
+  error.value = err.message
 }
 ```
 
@@ -223,3 +173,11 @@ No implementados actualmente. El `fetch` nativo no tiene timeout por defecto.
 - **Expiración:** Manejada por backend (JWT). Frontend no valida `exp` claim.
 - **Refresh token:** No implementado
 - **Logout:** Limpia `sessionStorage` localmente; no notifica a backend
+
+## 401/403 Auto-Handling
+
+`useApiFetch` maneja automáticamente:
+- Si respuesta es 401/403 **y** había token válido **y** no está en `/login`:
+  1. Limpia `sessionStorage`
+  2. Muestra toast "Sesión expirada. Iniciá sesión nuevamente."
+  3. Redirige a `/login` con `redirect` query param

@@ -1,7 +1,7 @@
 # Endpoints de Autenticación
 
 **Base Path**: `/api/auth`  
-**Controller**: `AuthController`  
+**Endpoint Class**: `AuthEndpoints` (en `Instituto.MinimalAPI.Endpoints`)  
 **Autenticación**: Pública (excepto donde se indique)
 
 ---
@@ -107,9 +107,8 @@ Content-Type: application/json
 1. Cliente → POST /api/auth/login { email, password }
            │
            ▼
-2. Server: AuthController.Login()
-   ├─ ModelState.IsValid?
-   │   └─ No → 400
+2. Server: AuthEndpoints.MapAuthEndpoints() → AuthEndpoints.Login()
+   ├─ Validación de entrada
    ├─ _authService.LoginAsync(email, password)
    │   ├─ Buscar admin en BD (email + Activo=1)
    │   ├─ BCrypt.Verify(password, hash)
@@ -120,7 +119,7 @@ Content-Type: application/json
            │
            ▼
 3. Cliente recibe { token, expiraEn, admin }
-   └─ Guarda token (localStorage/cookie)
+   └─ Guarda token (sessionStorage)
    └─ Usa en headers: Authorization: Bearer <token>
 ```
 
@@ -144,7 +143,7 @@ Content-Type: application/json
 }
 ```
 
-**Configuración** (`Program.cs` + `appsettings.json`):
+**Configuración** (`Instituto.MinimalAPI/Program.cs` + `appsettings.json`):
 - **Algoritmo**: HMAC-SHA256
 - **Expiración**: 8 horas
 - **ClockSkew**: `TimeSpan.FromMinutes(5)` (margen de gracia 5 min)
@@ -161,7 +160,7 @@ GET /api/administradores
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-**Middleware Pipeline** (`Program.cs`):
+**Middleware Pipeline** (`Instituto.MinimalAPI/Program.cs`):
 1. `UseAuthentication()` → Valida token, popula `HttpContext.User`
 2. `UseAuthorization()` → Evalúa `[Authorize]` / policies
 

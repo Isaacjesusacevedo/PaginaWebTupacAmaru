@@ -1,9 +1,11 @@
 # Endpoints de Administradores
 
 **Base Path**: `/api/administradores`  
-**Controller**: `AdministradorController`  
-**Autenticación**: **Requerida** (`[Authorize]` en clase)  
-**Roles**: Admin / SuperAdmin (validado por `[Authorize]` + policy futuro)
+**Endpoint Class**: `AdminEndpoints` (en `Instituto.MinimalAPI.Endpoints`)  
+**Autenticación**: **Requerida** (JWT validado en middleware)  
+**Roles**: Admin / SuperAdmin (validado por policy)
+
+---
 
 ---
 

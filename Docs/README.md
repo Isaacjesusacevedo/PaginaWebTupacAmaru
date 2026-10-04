@@ -44,16 +44,16 @@ Docs/
 - [Servicios CRUD](./backend/04-servicios/03-servicios-crud.md) — Detalle 6 servicios: Admin, Alumno, Carrera, Profesor, Formulario, Listado
 - [Servicio Auth](./backend/04-servicios/04-auth-service.md) — Login, BCrypt work factor 12, setup inicial, JWT claims, change-password (en `AdministradorService`)
 
-### [API / Controladores](./backend/05-api-controladores/)
-- [Convenciones API](./backend/05-api-controladores/01-convenciones-api.md) — REST standards, status codes, formatos, versionado
-- [Auth Endpoints](./backend/05-api-controladores/02-auth-endpoints.md) — `POST /api/auth/login`, JWT generation, claims, verify-password
-- [Administradores](./backend/05-api-controladores/03-admin-endpoints.md) — CRUD completo `/api/administradores` + change-password + verify-password
-- [Alumnos](./backend/05-api-controladores/04-alumnos-endpoints.md) — CRUD + inscripción pública `/api/alumnos`
-- [Carreras](./backend/05-api-controladores/05-carreras-endpoints.md) — CRUD + catálogo público `/api/carreras`
-- [Profesores](./backend/05-api-controladores/06-profesores-endpoints.md) — CRUD `/api/profesores`
-- [Formularios](./backend/05-api-controladores/09-formularios-endpoints.md) — CRUD `/api/formularios`
-- [Listados](./backend/05-api-controladores/07-listados-endpoints.md) — Join en memoria `/api/listado`
-- [Setup Inicial](./backend/05-api-controladores/08-setup-endpoint.md) — `POST /api/setup/admin` (solo Dev)
+### [API / Endpoints](./backend/05-api-endpoints/)
+- [Convenciones Minimal API](./backend/05-api-endpoints/01-convenciones-minimal-api.md) — REST standards, status codes, formatos, versionado
+- [Auth Endpoints](./backend/05-api-endpoints/02-auth-endpoints.md) — `POST /api/auth/login`, JWT generation, claims, verify-password
+- [Administradores](./backend/05-api-endpoints/03-admin-endpoints.md) — CRUD completo `/api/administradores` + change-password + verify-password
+- [Alumnos](./backend/05-api-endpoints/04-alumnos-endpoints.md) — CRUD + inscripción pública `/api/alumnos`
+- [Carreras](./backend/05-api-endpoints/05-carreras-endpoints.md) — CRUD + catálogo público `/api/carreras`
+- [Profesores](./backend/05-api-endpoints/06-profesores-endpoints.md) — CRUD `/api/profesores`
+- [Formularios](./backend/05-api-endpoints/09-formularios-endpoints.md) — CRUD `/api/formularios`
+- [Listados](./backend/05-api-endpoints/07-listados-endpoints.md) — Join en memoria `/api/listado`
+- [Setup Inicial](./backend/05-api-endpoints/08-setup-endpoint.md) — `POST /api/setup/admin` (solo Dev)
 
 ### [Autenticación y Autorización](./backend/06-autenticacion-autorizacion/)
 - [JWT Authentication](./backend/06-autenticacion-autorizacion/01-jwt-auth.md) — Config, token generation, validation, claims
@@ -134,8 +134,8 @@ npm run dev  # → http://localhost:5176
 | **Base URL** | `http://localhost:5127` | `VITE_API_URL=http://localhost:5127` |
 | **Auth** | JWT Bearer 8h | `sessionStorage` + `useAuth` |
 | **CORS** | `AllowAnyOrigin()` (dev) | Fetch directo a `VITE_API_URL` (sin proxy Vite) |
-| **Endpoints** | Documentados en [05-api-controladores](./backend/05-api-controladores/) | Consumidos en [06-integracion-api](./frontend/10-frontend/06-integracion-api.md) |
-| **Response Wrapper** | `ApiResponse<T>` | Se desempaqueta en composables |
+| **Endpoints** | Documentados en [05-api-endpoints](./backend/05-api-endpoints/) | Consumidos en [06-integracion-api](./frontend/10-frontend/06-integracion-api.md) |
+| **Response Wrapper** | `ApiResponse<T>` | Se desempaqueta en composables/services |
 
 ---
 

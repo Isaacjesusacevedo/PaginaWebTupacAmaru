@@ -18,6 +18,22 @@ Hooks de Vue 3 con lógica reactiva reutilizable.
 | Archivo | Descripción |
 |---------|-------------|
 | `useAuth.js` | Gestión completa de autenticación: token, sesión admin, headers, login/logout. |
+| `useApiFetch.js` | Cliente HTTP base: `apiFetch`, `apiGet`, `apiPost`, `apiPut`, `apiDelete`, auto-unwrap, 401/403 handling. |
+
+### `src/services/`
+Servicios API organizados por dominio (encapsulan llamadas al backend).
+
+| Archivo | Descripción |
+|---------|-------------|
+| `api/adminApi.js` | CRUD administradores + change-password |
+| `api/alumnoApi.js` | CRUD alumnos + inscripción pública + getCarreras |
+| `api/carreraApi.js` | CRUD carreras |
+| `api/profesorApi.js` | CRUD profesores |
+| `api/formularioApi.js` | CRUD formularios |
+| `api/listadoApi.js` | Listado consolidado alumnos |
+| `api/authApi.js` | Login, verify-password, setup admin |
+| `api/statsApi.js` | Stats del dashboard |
+| `api/index.js` | Barrel export |
 
 ### `src/router/`
 Configuración de enrutamiento SPA.
