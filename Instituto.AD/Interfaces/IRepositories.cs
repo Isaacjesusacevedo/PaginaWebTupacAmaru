@@ -60,6 +60,18 @@ public interface IFormularioRepository
     Task<bool> ExistsAsync(int id);
 }
 
+public interface IInfAcademicaEstRepository
+{
+    Task<List<InfAcademicaEst>> GetAllAsync();
+    Task<InfAcademicaEst?> GetByIdAsync(int id);
+    Task<InfAcademicaEst?> GetByAlumnoIdAsync(int alumnoId);
+    Task<int> CreateAsync(InfAcademicaEst entity);
+    Task UpdateAsync(InfAcademicaEst entity);
+    Task<bool> ExistsAsync(int id);
+    Task<bool> ExistsByAlumnoIdAsync(int alumnoId);
+    Task DeleteAsync(int id);
+}
+
 public interface IListadoRepository
 {
     Task<List<ListadoItem>> GetListadoAsync();

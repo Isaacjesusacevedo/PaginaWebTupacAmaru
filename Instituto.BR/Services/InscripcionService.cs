@@ -1,120 +1,83 @@
-using Instituto.AD.Interfaces;
 using Instituto.AD.Models;
 using Instituto.BR.DTOs;
 using Instituto.BR.Interfaces;
-using Microsoft.Data.SqlClient;
 
 namespace Instituto.BR.Services;
 
 public class InscripcionService : IInscripcionService
 {
-    private readonly IInfAcademicaRepository _infAcademicaRepository;
-    private readonly IInfAcademicaEstRepository _infAcademicaEstRepository;
-    private readonly IAlumnoRepository _alumnoRepository;
     private readonly IAlumnoService _alumnoService;
+    private readonly IInfAcademicaEstService _infAcademicaEstService;
 
     public InscripcionService(
-        IInfAcademicaRepository infAcademicaRepository,
-        IInfAcademicaEstRepository infAcademicaEstRepository,
-        IAlumnoRepository alumnoRepository,
-        IAlumnoService alumnoService)
+        IAlumnoService alumnoService,
+        IInfAcademicaEstService infAcademicaEstService)
     {
-        _infAcademicaRepository = infAcademicaRepository ?? throw new ArgumentNullException(nameof(infAcademicaRepository));
-        _infAcademicaEstRepository = infAcademicaEstRepository ?? throw new ArgumentNullException(nameof(infAcademicaEstRepository));
-        _alumnoRepository = alumnoRepository ?? throw new ArgumentNullException(nameof(alumnoRepository));
         _alumnoService = alumnoService ?? throw new ArgumentNullException(nameof(alumnoService));
+        _infAcademicaEstService = infAcademicaEstService ?? throw new ArgumentNullException(nameof(infAcademicaEstService));
     }
 
     public async Task<ServiceResult<InscripcionResultDto>> InscribirAsync(InscripcionDto dto)
     {
-        if (dto.InformacionAcademica is null || dto.InformacionAcademica.Count == 0)
+        // 1. Validar el bloque académico PRIMERO (sin tocar la BD)
+        if (!dto.PoseeTitulo && !dto.TituloEnTramite && !dto.ConsMaterias && !dto.ConsAlumnoRegular)
             return ServiceResult<InscripcionResultDto>.Fail("Debe informar al menos un dato académico.");
 
-        var catalogo = await _infAcademicaRepository.GetAllAsync();
-        var registros = new List<InfAcademicaEst>();
-        var tiposUsados = new HashSet<int>();
+        if (dto.PoseeTitulo && dto.TituloEnTramite)
+            return ServiceResult<InscripcionResultDto>.Fail("No puede poseer el título y tenerlo en trámite al mismo tiempo.");
 
-        foreach (var item in dto.InformacionAcademica)
-        {
-            if (string.IsNullOrWhiteSpace(item.Tipo))
-                return ServiceResult<InscripcionResultDto>.Fail("El tipo de información académica es obligatorio.");
+        if ((dto.PoseeTitulo || dto.TituloEnTramite) && string.IsNullOrWhiteSpace(dto.TituloSecundario))
+            return ServiceResult<InscripcionResultDto>.Fail("Si posee título (o está en trámite), debe informar el título secundario.");
 
-            var tipo = catalogo.FirstOrDefault(c => c.Descripcion == item.Tipo);
-            if (tipo is null)
-                return ServiceResult<InscripcionResultDto>.Fail($"El tipo '{item.Tipo}' no existe en el catálogo.");
+        if (dto.PoseeTitulo && dto.FechaEgreso is null)
+            return ServiceResult<InscripcionResultDto>.Fail("Si posee el título, debe informar la fecha de egreso.");
 
-            if (tipo.Estado != InfAcademicaConstants.CatalogoHabilitado)
-                return ServiceResult<InscripcionResultDto>.Fail($"El tipo '{item.Tipo}' no está habilitado.");
-
-            if (!tiposUsados.Add(tipo.Id))
-                return ServiceResult<InscripcionResultDto>.Fail($"El tipo '{item.Tipo}' está repetido.");
-
-            var estado = InfAcademicaValidator.ResolverEstadoPorDefecto(item.EstadoTitulo, tipo.Descripcion);
-
-            var errorEstado = InfAcademicaValidator.ValidarEstado(estado);
-            if (errorEstado is not null)
-                return ServiceResult<InscripcionResultDto>.Fail(errorEstado);
-
-            var errorFecha = InfAcademicaValidator.ValidarFechaEmision(item.FechaEmision, estado);
-            if (errorFecha is not null)
-                return ServiceResult<InscripcionResultDto>.Fail(errorFecha);
-
-            var (errorCampos, tituloSecundario, institucion) = InfAcademicaValidator.ResolverCamposPorTipo(
-                tipo.Descripcion, item.TituloSecundario, item.Institucion);
-            if (errorCampos is not null)
-                return ServiceResult<InscripcionResultDto>.Fail(errorCampos);
-
-            registros.Add(new InfAcademicaEst
-            {
-                InfAcademicaId = tipo.Id,
-                FechaEmision = item.FechaEmision,
-                TituloSecundario = tituloSecundario,
-                Institucion = institucion,
-                EstadoTitulo = estado
-            });
-        }
-
+        // 2. Crear el alumno
         var alumno = new Alumno
         {
             Nombre = dto.Nombre,
             Apellido = dto.Apellido,
-            Email = dto.Email,
+            Email = dto.Email.ToLower().Trim(),
             DNI = dto.Dni,
             FechaNacimiento = dto.FechaNacimiento,
             Direccion = dto.Direccion,
             Nacionalidad = dto.Nacionalidad,
             Telefono = dto.Telefono,
             Turno = dto.Turno,
-            CarreraId = dto.CarreraId
+            CarreraId = dto.CarreraId,
+            FechaInscripcion = DateTime.Now
         };
 
-        var alumnoResult = await _alumnoService.CreateAsync(alumno);
-        if (!alumnoResult.Success || alumnoResult.Data is null)
-            return ServiceResult<InscripcionResultDto>.Fail(alumnoResult.Message ?? "No se pudo crear el alumno.");
+        var resultAlumno = await _alumnoService.CreateAsync(alumno);
+        if (!resultAlumno.Success)
+            return ServiceResult<InscripcionResultDto>.Fail(resultAlumno.Message!);
 
-        var alumnoCreado = alumnoResult.Data;
+        var alumnoId = resultAlumno.Data!.Id;
 
-        try
+        // 3. Crear la info académica (si falla, borrar el alumno)
+        var infoAcademica = new InfAcademicaEst
         {
-            foreach (var registro in registros)
-            {
-                registro.AlumnoId = alumnoCreado.Id;
-                registro.Id = await _infAcademicaEstRepository.CreateAsync(registro);
-            }
-        }
-        catch (Exception ex)
+            AlumnoId = alumnoId,
+            FechaEgreso = dto.FechaEgreso,
+            TituloSecundario = dto.TituloSecundario,
+            PoseeTitulo = dto.PoseeTitulo,
+            TituloEnTramite = dto.TituloEnTramite,
+            ConsMaterias = dto.ConsMaterias,
+            ConsAlumnoRegular = dto.ConsAlumnoRegular
+        };
+
+        var resultInfo = await _infAcademicaEstService.CreateAsync(infoAcademica);
+
+        if (!resultInfo.Success)
         {
-            await _alumnoRepository.DeleteAsync(alumnoCreado.Id);
-
-            var mensaje = ex is SqlException sqlEx && (sqlEx.Number == 2627 || sqlEx.Number == 2601)
-                ? "El alumno ya tiene un registro de ese tipo de información académica."
-                : "No se pudo guardar la información académica. Se revirtió la inscripción.";
-
-            return ServiceResult<InscripcionResultDto>.Fail(mensaje);
+            // Rollback manual
+            await _alumnoService.DeleteAsync(alumnoId);
+            return ServiceResult<InscripcionResultDto>.Fail(
+                "Error al guardar la información académica. Se canceló la inscripción.");
         }
 
         return ServiceResult<InscripcionResultDto>.Ok(
-            new InscripcionResultDto { AlumnoId = alumnoCreado.Id },
-            "Inscripción realizada correctamente.");
+            new InscripcionResultDto { AlumnoId = alumnoId },
+            "Inscripción completada correctamente.");
     }
 }

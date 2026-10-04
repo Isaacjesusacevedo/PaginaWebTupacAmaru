@@ -12,7 +12,6 @@ public class InstitutoDbContext : DbContext
     public DbSet<Administrador> Administradores => Set<Administrador>();
     public DbSet<Profesor> Profesores => Set<Profesor>();
     public DbSet<Formulario> Formularios => Set<Formulario>();
-    public DbSet<InfAcademica> InfAcademicas => Set<InfAcademica>();
     public DbSet<InfAcademicaEst> InfAcademicaEsts => Set<InfAcademicaEst>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -111,31 +110,21 @@ public class InstitutoDbContext : DbContext
             entity.Property(e => e.FechaCreacion).HasDefaultValueSql("GETDATE()");
         });
 
-        // InfAcademica (catálogo)
-        modelBuilder.Entity<InfAcademica>(entity =>
-        {
-            entity.ToTable("Inf_Academica");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasColumnName("ID_Inf_Aca").ValueGeneratedOnAdd();
-            entity.Property(e => e.Descripcion).HasColumnName("Inf_Aca_Descripcion").IsRequired().HasMaxLength(100);
-            entity.Property(e => e.Fecha).HasColumnName("Inf_Aca_Fecha").IsRequired();
-            entity.Property(e => e.Estado).HasColumnName("Inf_Aca_Estado").IsRequired().HasMaxLength(15).HasDefaultValue("DESHABILITADO");
-        });
-
         // InfAcademicaEst
         modelBuilder.Entity<InfAcademicaEst>(entity =>
         {
             entity.ToTable("Inf_Academica_Est");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnName("ID_Inf_Academica_Est").ValueGeneratedOnAdd();
-            entity.Property(e => e.InfAcademicaId).HasColumnName("ID_Inf_Aca").IsRequired();
             entity.Property(e => e.AlumnoId).HasColumnName("ID_Est").IsRequired();
-            entity.Property(e => e.FechaEmision).HasColumnName("Fecha_Emision").IsRequired();
+            entity.Property(e => e.FechaEgreso).HasColumnName("Fecha_Egreso");
             entity.Property(e => e.TituloSecundario).HasColumnName("Titulo_Secundario").HasMaxLength(100);
-            entity.Property(e => e.Institucion).HasColumnName("Institucion").HasMaxLength(150);
-            entity.Property(e => e.EstadoTitulo).HasColumnName("Estado_Titulo").IsRequired().HasMaxLength(15);
+            entity.Property(e => e.PoseeTitulo).HasColumnName("Posee_Titulo").HasDefaultValue(false);
+            entity.Property(e => e.TituloEnTramite).HasColumnName("Titulo_En_Tramite").HasDefaultValue(false);
+            entity.Property(e => e.ConsMaterias).HasColumnName("Cons_Materias").HasDefaultValue(false);
+            entity.Property(e => e.ConsAlumnoRegular).HasColumnName("Cons_Alumno_Regular").HasDefaultValue(false);
 
-            entity.HasIndex(e => new { e.InfAcademicaId, e.AlumnoId }).IsUnique();
+            entity.HasIndex(e => e.AlumnoId).IsUnique();
         });
     }
 }

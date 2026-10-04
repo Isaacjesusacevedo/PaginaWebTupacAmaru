@@ -117,9 +117,10 @@
             </label>
           </div>
 
+          <!-- Título: pide fecha de egreso + título secundario -->
           <div v-if="documentacion.titulo" class="form-row mt-3">
             <div class="field">
-              <label>Fecha de emisión del título (o constancia)</label>
+              <label>Fecha de egreso del título</label>
               <input type="date" v-model="academico.tituloFechaEmision" required />
             </div>
 
@@ -129,29 +130,11 @@
             </div>
           </div>
 
+          <!-- Título en trámite: pide solo el título secundario -->
           <div v-if="documentacion.tituloEnTramite" class="form-row mt-3">
             <div class="field">
-              <label>Fecha estimada de obtención del título</label>
-              <input type="date" v-model="academico.tramiteFechaEstimada" required />
-            </div>
-
-            <div class="field">
-              <label>Institución donde cursa</label>
-              <input type="text" v-model="academico.tramiteInstitucion" required />
-            </div>
-          </div>
-
-          <div v-if="documentacion.materiasAdeudadas" class="form-row mt-3">
-            <div class="field">
-              <label>Fecha de emisión del título (o constancia)</label>
-              <input type="date" v-model="academico.materiasFechaEmision" required />
-            </div>
-          </div>
-
-          <div v-if="documentacion.alumnoRegular" class="form-row mt-3">
-            <div class="field">
-              <label>Fecha de emisión del título (o constancia)</label>
-              <input type="date" v-model="academico.regularFechaEmision" required />
+              <label>Título secundario</label>
+              <input type="text" v-model="academico.tituloSecundario" required />
             </div>
           </div>
 
@@ -256,37 +239,25 @@ const documentacion = reactive({
   alumnoRegular: false,
 })
 
-// Título y Título en trámite son excluyentes.
+// Campos de info académica que se envían al backend (modelo simplificado)
 const academico = reactive({
   tituloFechaEmision: '',
   tituloSecundario: '',
-  tramiteFechaEstimada: '',
-  tramiteInstitucion: '',
-  materiasFechaEmision: '',
-  regularFechaEmision: '',
 })
 
+// Título y Título en trámite son excluyentes.
 watch(() => documentacion.titulo, (v) => {
   if (v) {
     documentacion.tituloEnTramite = false
   } else {
     academico.tituloFechaEmision = ''
-    academico.tituloSecundario = ''
   }
 })
 watch(() => documentacion.tituloEnTramite, (v) => {
   if (v) {
     documentacion.titulo = false
-  } else {
-    academico.tramiteFechaEstimada = ''
-    academico.tramiteInstitucion = ''
+    academico.tituloFechaEmision = ''
   }
-})
-watch(() => documentacion.materiasAdeudadas, (v) => {
-  if (!v) academico.materiasFechaEmision = ''
-})
-watch(() => documentacion.alumnoRegular, (v) => {
-  if (!v) academico.regularFechaEmision = ''
 })
 
 const loading = ref(false)
@@ -324,46 +295,6 @@ const resetFormulario = () => {
 
   academico.tituloFechaEmision = ''
   academico.tituloSecundario = ''
-  academico.tramiteFechaEstimada = ''
-  academico.tramiteInstitucion = ''
-  academico.materiasFechaEmision = ''
-  academico.regularFechaEmision = ''
-}
-
-const construirInformacionAcademica = () => {
-  const informacionAcademica = []
-
-  if (documentacion.titulo) {
-    informacionAcademica.push({
-      tipo: 'Título',
-      fechaEmision: academico.tituloFechaEmision,
-      tituloSecundario: academico.tituloSecundario,
-    })
-  }
-
-  if (documentacion.tituloEnTramite) {
-    informacionAcademica.push({
-      tipo: 'Título en trámite',
-      fechaEmision: academico.tramiteFechaEstimada,
-      institucion: academico.tramiteInstitucion,
-    })
-  }
-
-  if (documentacion.materiasAdeudadas) {
-    informacionAcademica.push({
-      tipo: 'Constancia de materias adeudadas',
-      fechaEmision: academico.materiasFechaEmision,
-    })
-  }
-
-  if (documentacion.alumnoRegular) {
-    informacionAcademica.push({
-      tipo: 'Constancia de alumno regular',
-      fechaEmision: academico.regularFechaEmision,
-    })
-  }
-
-  return informacionAcademica
 }
 
 const validar = () => {
@@ -372,19 +303,11 @@ const validar = () => {
   }
 
   if (documentacion.titulo && (!academico.tituloFechaEmision || !academico.tituloSecundario)) {
-    return "Si posee título, debe completar la fecha de emisión y el título secundario"
+    return "Si posee título, debe completar la fecha de egreso y el título secundario"
   }
 
-  if (documentacion.tituloEnTramite && (!academico.tramiteFechaEstimada || !academico.tramiteInstitucion)) {
-    return "Si tiene título en trámite, debe completar la fecha estimada y la institución"
-  }
-
-  if (documentacion.materiasAdeudadas && !academico.materiasFechaEmision) {
-    return "Si posee constancia de materias adeudadas, debe completar su fecha de emisión"
-  }
-
-  if (documentacion.alumnoRegular && !academico.regularFechaEmision) {
-    return "Si posee constancia de alumno regular, debe completar su fecha de emisión"
+  if (documentacion.tituloEnTramite && !academico.tituloSecundario) {
+    return "Si tiene título en trámite, debe completar el título secundario"
   }
 
   if (!documentacion.titulo && !documentacion.tituloEnTramite && !documentacion.materiasAdeudadas && !documentacion.alumnoRegular) {
@@ -417,7 +340,13 @@ const guardarAlumno = async () => {
       telefono: alumno.Telefono || null,
       turno: alumno.Turno || null,
       carreraId: Number(alumno.CarreraId),
-      informacionAcademica: construirInformacionAcademica(),
+      // Info académica (modelo simplificado):
+      fechaEgreso: academico.tituloFechaEmision || null,
+      tituloSecundario: academico.tituloSecundario || null,
+      poseeTitulo: documentacion.titulo,
+      tituloEnTramite: documentacion.tituloEnTramite,
+      consMaterias: documentacion.materiasAdeudadas,
+      consAlumnoRegular: documentacion.alumnoRegular,
     })
 
     alert("Inscripción enviada correctamente")

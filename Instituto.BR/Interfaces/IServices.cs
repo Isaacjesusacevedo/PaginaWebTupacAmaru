@@ -53,6 +53,21 @@ public interface IFormularioService
     Task<ServiceResult> DeleteAsync(int id);
 }
 
+public interface IInfAcademicaEstService
+{
+    Task<List<InfAcademicaEst>> GetAllAsync();
+    Task<InfAcademicaEst?> GetByIdAsync(int id);
+    Task<InfAcademicaEst?> GetByAlumnoIdAsync(int alumnoId);
+    Task<ServiceResult<InfAcademicaEst>> CreateAsync(InfAcademicaEst entity);
+    Task<ServiceResult<InfAcademicaEst>> UpdateAsync(int id, InfAcademicaEst entity);
+    Task<ServiceResult> DeleteAsync(int id);
+}
+
+public interface IInscripcionService
+{
+    Task<ServiceResult<InscripcionResultDto>> InscribirAsync(InscripcionDto dto);
+}
+
 public interface IListadoService
 {
     Task<List<AlumnoListadoDto>> GetListadoAsync();

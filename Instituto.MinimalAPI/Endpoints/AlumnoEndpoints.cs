@@ -1,4 +1,5 @@
 using Instituto.AD.Models;
+using Instituto.BR.DTOs;
 using Instituto.BR.Interfaces;
 
 namespace Instituto.MinimalAPI.Endpoints;
@@ -41,7 +42,20 @@ public static class AlumnoEndpoints
         group.MapDelete("/{id:int}", async (int id, IAlumnoService service) =>
         {
             var result = await service.DeleteAsync(id);
-            return !result.Success ? Results.NotFound(new { isSuccess = false, message = result.Message }) : Results.NoContent();
+            return !result.Success
+                ? Results.NotFound(new { isSuccess = false, message = result.Message })
+                : Results.NoContent();
         }).WithName("DeleteAlumno");
+
+        // ── Inscripción pública (alumno + info académica) ─────────────────────
+        app.MapPost("/api/inscripcion", async (InscripcionDto dto, IInscripcionService service) =>
+        {
+            var result = await service.InscribirAsync(dto);
+
+            return !result.Success
+                ? Results.BadRequest(new { isSuccess = false, message = result.Message })
+                : Results.Created($"/api/alumnos/{result.Data!.AlumnoId}",
+                    new { isSuccess = true, message = result.Message, data = result.Data });
+        }).WithName("InscripcionPublica").AllowAnonymous();
     }
 }

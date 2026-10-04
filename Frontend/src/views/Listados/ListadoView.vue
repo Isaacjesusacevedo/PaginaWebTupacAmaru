@@ -18,29 +18,28 @@
       <div class="table">
 
         <div class="table-header table-cols-listado">
-          <span>Alumno</span>
-          <span>DNI</span>
-          <span>Edad</span>
-          <span>Carrera</span>
-          <span>Turno</span>
-          <span>Fecha del título</span>
-          <span>Título secundario</span>
-        </div>
+  <span>Alumno</span>
+  <span>DNI</span>
+  <span>Edad</span>
+  <span>Carrera</span>
+  <span>Turno</span>
+  <span>Fecha de egreso</span>
+  <span>Info académica</span>
+</div>
 
-        <div
-          v-for="item in listado"
-          :key="item.alumnoId"
-          class="table-row table-cols-listado"
-        >
-          <span>{{ item.nombreCompleto }}</span>
-          <span>{{ item.dni }}</span>
-          <span>{{ item.edad }}</span>
-          <span>{{ item.carrera }}</span>
-          <span>{{ item.turno }}</span>
-          <span>{{ formatFecha(item.fechaEmision) || '—' }}</span>
-          <span>{{ item.tituloSecundario || '—' }}</span>
-        </div>
-
+<div
+  v-for="item in listado"
+  :key="item.alumnoId"
+  class="table-row table-cols-listado"
+>
+  <span>{{ item.nombreCompleto }}</span>
+  <span>{{ item.dni }}</span>
+  <span>{{ item.edad }}</span>
+  <span>{{ item.carrera }}</span>
+  <span>{{ item.turno }}</span>
+  <span>{{ formatFecha(item.fechaEgreso) || '—' }}</span>
+  <span>{{ formatInfoAcademica(item) }}</span>
+</div>
         <div v-if="listado.length === 0" class="table-row table-cols-listado">
           <span class="text-center" style="grid-column: 1 / -1;">No hay alumnos inscriptos</span>
         </div>
@@ -67,6 +66,15 @@ function formatFecha(fechaIso) {
   if (!fechaIso) return ''
   const fecha = new Date(fechaIso)
   return Number.isNaN(fecha.getTime()) ? '' : fecha.toLocaleDateString('es-AR')
+}
+
+function formatInfoAcademica(item) {
+  const flags = []
+  if (item.poseeTitulo) flags.push('Título')
+  if (item.tituloEnTramite) flags.push('En trámite')
+  if (item.consMaterias) flags.push('Const. materias')
+  if (item.consAlumnoRegular) flags.push('Const. regular')
+  return flags.length ? flags.join(' · ') : '—'
 }
 
 const cargarListado = async () => {

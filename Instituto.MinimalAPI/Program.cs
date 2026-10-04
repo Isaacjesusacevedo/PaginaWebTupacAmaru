@@ -79,6 +79,9 @@ builder.Services.AddScoped<IAdministradorService, AdministradorService>();
 builder.Services.AddScoped<IProfesorService, ProfesorService>();
 builder.Services.AddScoped<IFormularioService, FormularioService>();
 builder.Services.AddScoped<IListadoService, ListadoService>();
+builder.Services.AddScoped<IInfAcademicaEstRepository, InfAcademicaEstRepository>();
+builder.Services.AddScoped<IInfAcademicaEstService, InfAcademicaEstService>();
+builder.Services.AddScoped<IInscripcionService, InscripcionService>();
 
 // ── Swagger/OpenAPI ────────────────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();

@@ -55,10 +55,12 @@ public class AlumnoListadoDto
     public string? Carrera { get; set; }
     public string? Turno { get; set; }
     public int Edad { get; set; }
-    public string? TipoAcademico { get; set; }
-    public string? EstadoTitulo { get; set; }
-    public DateTime? FechaEmision { get; set; }
+    public DateTime? FechaEgreso { get; set; }
     public string? TituloSecundario { get; set; }
+    public bool PoseeTitulo { get; set; }
+    public bool TituloEnTramite { get; set; }
+    public bool ConsMaterias { get; set; }
+    public bool ConsAlumnoRegular { get; set; }
 }
 
 public class ServiceResult

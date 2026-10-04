@@ -1,14 +1,5 @@
 namespace Instituto.BR.DTOs;
 
-public class InformacionAcademicaItemDto
-{
-    public string Tipo { get; set; } = string.Empty;
-    public DateTime FechaEmision { get; set; }
-    public string? TituloSecundario { get; set; }
-    public string? Institucion { get; set; }
-    public string? EstadoTitulo { get; set; }
-}
-
 public class InscripcionDto
 {
     public string Nombre { get; set; } = string.Empty;
@@ -21,7 +12,14 @@ public class InscripcionDto
     public string? Telefono { get; set; }
     public string? Turno { get; set; }
     public int CarreraId { get; set; }
-    public List<InformacionAcademicaItemDto> InformacionAcademica { get; set; } = new();
+
+    // Info académica (dentro de la misma inscripción)
+    public DateTime? FechaEgreso { get; set; }
+    public string? TituloSecundario { get; set; }
+    public bool PoseeTitulo { get; set; }
+    public bool TituloEnTramite { get; set; }
+    public bool ConsMaterias { get; set; }
+    public bool ConsAlumnoRegular { get; set; }
 }
 
 public class InscripcionResultDto
