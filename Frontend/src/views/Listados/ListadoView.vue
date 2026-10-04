@@ -57,7 +57,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { academicaGet } from '@/composables/useAcademicaApi'
+import { apiGet } from '@/composables/useApiFetch'
 
 const listado = ref([])
 const loading = ref(true)
@@ -71,7 +71,7 @@ function formatFecha(fechaIso) {
 
 const cargarListado = async () => {
   try {
-    listado.value = await academicaGet('/api/listado')
+    listado.value = await apiGet('/api/listado')
   } catch (err) {
     console.error(err)
     error.value = err.message ?? 'No se pudo cargar el listado'
